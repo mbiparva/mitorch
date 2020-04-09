@@ -35,6 +35,9 @@ _C.PROJECT.EXPERIMENT_DIR = os.path.abspath(os.path.join(_C.PROJECT.ROOT_DIR, 'e
 _C.PROJECT.TVSR = 0.80
 _C.PROJECT.TSR = 0.20
 
+# Data file names that are loaded by the dataset getitem function
+_C.PROJECT.DATA_FILE_NAMES = ('T1.nii.gz', 'FLAIR.nii.gz', 'wmh.nii.gz')
+
 
 # ---------------------------------------------------------------------------- #
 # Batch norm options

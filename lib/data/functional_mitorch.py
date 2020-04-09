@@ -27,6 +27,7 @@ def crop(volume, i, j, h, w):
         h (int): Height of the cropped region.
         w (int): Width of the cropped region.
     """
+    raise NotImplementedError
     assert _is_tensor_image_volume(volume)
     return volume[..., i:i + h, j:j + w]
 
@@ -46,10 +47,28 @@ def resize(volume, target_size, interpolation_mode):
         volume (torch.tensor): Resized volume. Size is (C, T, H, W)
 
     """
-    assert len(target_size) == 3, "target size must be tuple (depth, height, width)"
-    return torch.nn.functional.interpolate(
-        volume, size=target_size, mode=interpolation_mode
-    )
+    raise NotImplementedError
+    assert isinstance(target_size, int) or len(target_size) == 3, "target size must be int or " \
+                                                                  "tuple (depth, height, width)"
+    if isinstance(target_size, int):
+        _, d, h, w = volume.shape
+        dim_min = min(d, h, w)
+        if dim_min == target_size:
+            return volume
+        if dim_min == w:
+            ow = target_size
+            oh = int(target_size * h / w)
+            od = int(target_size * d / w)
+        elif dim_min == h:
+            oh = target_size
+            ow = int(target_size * w / h)
+            od = int(target_size * d / h)
+        else:
+            od = target_size
+            ow = int(target_size * w / d)
+            oh = int(target_size * h / d)
+        target_size = (od, oh, ow)
+    return torch.nn.functional.interpolate(volume, size=target_size, mode=interpolation_mode)
 
 
 def resized_crop(volume, i, j, h, w, size, interpolation_mode="bilinear"):
@@ -68,6 +87,7 @@ def resized_crop(volume, i, j, h, w, size, interpolation_mode="bilinear"):
     Returns:
         volume (torch.tensor): Resized and cropped volume. Size is (C, T, H, W)
     """
+    raise NotImplementedError
     assert _is_tensor_image_volume(volume), "volume should be a 4D torch.tensor"
     volume = crop(volume, i, j, h, w)
     volume = resize(volume, size, interpolation_mode)
@@ -75,6 +95,7 @@ def resized_crop(volume, i, j, h, w, size, interpolation_mode="bilinear"):
 
 
 def center_crop(volume, crop_size):
+    raise NotImplementedError
     assert _is_tensor_image_volume(volume), "volume should be a 4D torch.tensor"
     h, w = volume.size(-2), volume.size(-1)
     th, tw = crop_size
@@ -93,6 +114,7 @@ def to_tensor(volume):
     Return:
         volume (torch.tensor, dtype=torch.float): Size is (C, T, H, W)
     """
+    raise NotImplementedError
     _is_tensor_image_volume(volume)
     if not volume.dtype == torch.int:
         raise TypeError("volume tensor should have data type int. Got %s" % str(volume.dtype))
@@ -109,6 +131,7 @@ def normalize(volume, mean, std, inplace=False):
     Returns:
         normalized volume (torch.tensor): Size is (C, T, H, W)
     """
+    raise NotImplementedError
     assert _is_tensor_image_volume(volume), "volume should be a 4D torch.tensor"
     if not inplace:
         volume = volume.clone()
@@ -126,5 +149,8 @@ def flip(volume, dim=3):
     Returns:
         flipped volume (torch.tensor): Size is (C, T, H, W)
     """
+    raise NotImplementedError
     assert _is_tensor_image_volume(volume), "volume should be a 4D torch.tensor"
     return volume.flip(dim)
+
+# TODO Develop SimpleITK Modules like Adaptive Histogram Equalization
