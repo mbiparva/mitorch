@@ -45,16 +45,17 @@ class OrientationToRAI(object):
 
     def __call__(self, volume):
         image, annot, meta = volume
-        direction = torch.tensor(meta['direction'], dtype=torch.float).reshape(3, 3).diagonal()
-        direction_sign = direction.sign()
+        direction = torch.tensor(meta['direction'], dtype=torch.float)
+        direction_diagonal = direction.reshape(3, 3).diagonal()
+        direction_sign = direction_diagonal.sign()
         assert (direction_sign.abs() == 1).all().item()
         for i, d in enumerate(direction_sign):
             if d > 0:
                 continue
             image = F.flip(image, i)
             annot = F.flip(annot, i)
-            direction *= -1
-        meta['direction'] = tuple(direction)
+            direction_diagonal *= -1
+        meta['direction'] = tuple(direction.tolist())
         return (
             image,
             annot,
@@ -63,7 +64,7 @@ class OrientationToRAI(object):
 
 
 class ResampleTo1mm(object):
-    def __init__(self, interpolation='bicubic'):
+    def __init__(self, interpolation='trilinear'):
         self.interpolation = interpolation
 
     def __call__(self, volume):
@@ -73,12 +74,12 @@ class ResampleTo1mm(object):
         iso1mm = torch.tensor([1]*3, dtype=torch.float)
         if (spacing == iso1mm).all().item():
             return volume
-        size = (size * spacing).floor().type(torch.uint8)
+        size = (size * spacing).floor().type(torch.uint8).tolist()[::-1]
         image, annot = (
             F.resize(image, size, self.interpolation),
-            F.resize(annot, size, Image.NEAREST),
+            F.resize(annot, size, 'nearest'),
         )
-        meta['size'] = size
+        meta['size'] = size[::-1]
 
         return image, annot, meta
 
@@ -114,7 +115,7 @@ class RandomCropImageVolume(RandomCrop):
 
 # noinspection PyMissingConstructor
 class RandomResizedCropImageVolume(RandomResizedCrop):
-    def __init__(self, size, scale=(0.08, 1.0), ratio=(3.0 / 4.0, 4.0 / 3.0), interpolation='bicubic'):
+    def __init__(self, size, scale=(0.08, 1.0), ratio=(3.0 / 4.0, 4.0 / 3.0), interpolation='trilinear'):
         raise NotImplementedError
         if isinstance(size, tuple):
             assert len(size) == 2, "size should be tuple (height, width)"
@@ -159,11 +160,10 @@ class ResizeImageVolume(object):
             smaller edge of the image will be matched to this number.
             i.e, if depth > height > width, then image will be rescaled to
             (size * depth / width, size * height / width, size)
-        interpolation (int, optional): Desired interpolation. Default is
-            ``PIL.Image.BILINEAR``
+        interpolation (int, optional): Desired interpolation. Default is trilinear
     """
 
-    def __init__(self, size, interpolation='bicubic'):
+    def __init__(self, size, interpolation='trilinear'):
         assert isinstance(size, int) or (isinstance(size, Iterable) and len(size) == 3)
         self.size = size
         self.interpolation = interpolation

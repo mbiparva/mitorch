@@ -105,27 +105,27 @@ class WMHSegmentationChallenge(data.Dataset):
     def get_data_tensor(t1_nii, fl_nii, annot_nii):
         t1_tensor, fl_tensor, annot_tensor = (
             torch.tensor(
-                data=sitk.GetArrayFromImage(t1_nii),
+                data=sitk.GetArrayFromImage(t1_nii).astype(np.float32),
                 dtype=torch.float,
                 device='cpu',
                 requires_grad=False
             ),
             torch.tensor(
-                data=sitk.GetArrayFromImage(fl_nii),
+                data=sitk.GetArrayFromImage(fl_nii).astype(np.float32),
                 dtype=torch.float,
                 device='cpu',
                 requires_grad=False
             ),
             torch.tensor(
-                data=sitk.GetArrayFromImage(annot_nii),
-                dtype=torch.long,
+                data=sitk.GetArrayFromImage(annot_nii).astype(np.float32),
+                dtype=torch.float,
                 device='cpu',
                 requires_grad=False
             )
         )
 
-        assert annot_tensor.unique(sorted=True).tolist() == [0, 1, 2], 'only expect labels of (0, 1, 2) in annotations'
-        annot_tensor[annot_tensor == 2] = 255  # TODO check this with Unet3D to see what is done there.
+        assert annot_tensor.unique(sorted=True).tolist() == [0, 1], 'only expect labels of (0, 1) in annotations'
+        # annot_tensor[annot_tensor == 2] = 255  # TODO check this with Unet3D to see what is done there.
 
         return t1_tensor, fl_tensor, annot_tensor
 
@@ -137,16 +137,17 @@ class WMHSegmentationChallenge(data.Dataset):
         meta_data = self.extract_data_meta(t1_nii, fl_nii, annot_nii)
 
         meta_data = self.run_sanity_checks(*meta_data)
+        meta_data['sample_path'] = sample_path
 
         t1_tensor, fl_tensor, annot_tensor = self.get_data_tensor(t1_nii, fl_nii, annot_nii)
 
         image_tensor = torch.stack((t1_tensor, fl_tensor), dim=-1)  # D x H x W x C
-        annot_tensor.unsqueeze(dim=0)
+        annot_tensor = annot_tensor.unsqueeze(dim=0)
 
         if self.transform is not None:
             image_tensor, annot_tensor = self.transform((image_tensor, annot_tensor, meta_data))
 
-        return image_tensor, annot_tensor
+        return image_tensor, annot_tensor, meta_data
 
     def __len__(self):
         return len(self.sample_path_list)

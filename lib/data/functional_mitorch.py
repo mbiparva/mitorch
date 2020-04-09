@@ -47,7 +47,6 @@ def resize(volume, target_size, interpolation_mode):
         volume (torch.tensor): Resized volume. Size is (C, T, H, W)
 
     """
-    raise NotImplementedError
     assert isinstance(target_size, int) or len(target_size) == 3, "target size must be int or " \
                                                                   "tuple (depth, height, width)"
     if isinstance(target_size, int):
@@ -68,7 +67,19 @@ def resize(volume, target_size, interpolation_mode):
             ow = int(target_size * w / d)
             oh = int(target_size * h / d)
         target_size = (od, oh, ow)
-    return torch.nn.functional.interpolate(volume, size=target_size, mode=interpolation_mode)
+    if interpolation_mode == 'nearest':
+        return torch.nn.functional.interpolate(
+            volume.unsqueeze(dim=0),
+            size=target_size,
+            mode=interpolation_mode,
+        ).squeeze(dim=0)
+    else:
+        return torch.nn.functional.interpolate(
+            volume.unsqueeze(dim=0),
+            size=target_size,
+            mode=interpolation_mode,
+            align_corners=False
+        ).squeeze(dim=0)
 
 
 def resized_crop(volume, i, j, h, w, size, interpolation_mode="bilinear"):
@@ -114,11 +125,10 @@ def to_tensor(volume):
     Return:
         volume (torch.tensor, dtype=torch.float): Size is (C, T, H, W)
     """
-    raise NotImplementedError
     _is_tensor_image_volume(volume)
-    if not volume.dtype == torch.int:
-        raise TypeError("volume tensor should have data type int. Got %s" % str(volume.dtype))
-    return volume.float().permute(3, 0, 1, 2) / 1  # TODO: decide whether division is needed
+    if not volume.dtype == torch.float32:
+        raise TypeError("volume tensor should have data type torch.float32. Got %s" % str(volume.dtype))
+    return volume.permute(3, 0, 1, 2) / 1  # TODO: decide whether division is needed
 
 
 def normalize(volume, mean, std, inplace=False):

@@ -4,19 +4,20 @@ from torch.utils.data import DataLoader
 from config.defaults import _C as cfg
 from data.WMHSegChal import WMHSegmentationChallenge
 import data.transforms_mitorch as tf
+from torchvision.transforms import Compose
 
 
 if __name__ == '__main__':
     dataset = WMHSegmentationChallenge(
         cfg,
-        [
+        Compose([
             tf.ToTensorImageVolume(),
             tf.OrientationToRAI(),
             tf.ResampleTo1mm(),
             tf.ResizeImageVolume(160),
             tf.CenterCropImageVolume(100),
             tf.RandomFlipImageVolume(dim=-1)
-        ]
+        ])
     )
     dataloader = DataLoader(
         dataset,
