@@ -27,7 +27,6 @@ def crop(volume, i, j, h, w):
         h (int): Height of the cropped region.
         w (int): Width of the cropped region.
     """
-    raise NotImplementedError
     assert _is_tensor_image_volume(volume)
     return volume[..., i:i + h, j:j + w]
 
@@ -106,7 +105,6 @@ def resized_crop(volume, i, j, h, w, size, interpolation_mode="bilinear"):
 
 
 def center_crop(volume, crop_size):
-    raise NotImplementedError
     assert _is_tensor_image_volume(volume), "volume should be a 4D torch.tensor"
     h, w = volume.size(-2), volume.size(-1)
     th, tw = crop_size
@@ -159,7 +157,6 @@ def flip(volume, dim=3):
     Returns:
         flipped volume (torch.tensor): Size is (C, T, H, W)
     """
-    raise NotImplementedError
     assert _is_tensor_image_volume(volume), "volume should be a 4D torch.tensor"
     return volume.flip(dim)
 

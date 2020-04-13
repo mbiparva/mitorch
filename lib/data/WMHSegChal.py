@@ -6,6 +6,37 @@ import numpy as np
 import torch.utils.data as data
 import SimpleITK as sitk
 
+import re
+from torch._six import container_abcs, string_classes, int_classes
+
+np_str_obj_array_pattern = re.compile(r'[SaUO]')
+
+
+default_collate_err_msg_format = (
+    "default_collate: batch must contain tensors, numpy arrays, numbers, "
+    "dicts or lists; found {}")
+
+
+def collate_fn(batch):
+    elem = batch[0]
+    elem_type = type(elem)
+    if isinstance(elem, torch.Tensor):
+        out = None
+        if torch.utils.data.get_worker_info() is not None:
+            # If we're in a background process, concatenate directly into a
+            # shared memory tensor to avoid an extra copy
+            numel = sum([x.numel() for x in batch])
+            storage = elem.storage()._new_shared(numel)
+            out = elem.new(storage)
+        return torch.stack(batch, 0, out=out)
+    elif isinstance(elem, container_abcs.Mapping):  # this is called for the meta
+        return batch
+    elif isinstance(elem, container_abcs.Sequence):  # this is called at the beginning
+        transposed = zip(*batch)
+        return [collate_fn(samples) for samples in transposed]
+
+    raise TypeError(default_collate_err_msg_format.format(elem_type))
+
 
 def read_nii_file(file_path):
     return sitk.ReadImage(file_path)
@@ -102,7 +133,18 @@ class WMHSegmentationChallenge(data.Dataset):
         return t1_meta  # we keep only one of them
 
     @staticmethod
-    def get_data_tensor(t1_nii, fl_nii, annot_nii):
+    def curate_annotation(annot_tensor):
+        cat_labels = set(annot_tensor.unique(sorted=True).tolist())
+        known_labels = set(tuple([0, 1, 2]))
+        assert cat_labels.issubset(known_labels), 'only expect labels of {} in annotations {}'.format(
+            known_labels,
+            cat_labels
+        )
+        if 2 in cat_labels:
+            annot_tensor[annot_tensor == 2] = 255  # TODO check this with Unet3D to see what is done there.
+        return annot_tensor
+
+    def get_data_tensor(self, t1_nii, fl_nii, annot_nii):
         t1_tensor, fl_tensor, annot_tensor = (
             torch.tensor(
                 data=sitk.GetArrayFromImage(t1_nii).astype(np.float32),
@@ -124,8 +166,7 @@ class WMHSegmentationChallenge(data.Dataset):
             )
         )
 
-        assert annot_tensor.unique(sorted=True).tolist() == [0, 1], 'only expect labels of (0, 1) in annotations'
-        # annot_tensor[annot_tensor == 2] = 255  # TODO check this with Unet3D to see what is done there.
+        annot_tensor = self.curate_annotation(annot_tensor)
 
         return t1_tensor, fl_tensor, annot_tensor
 
@@ -145,7 +186,7 @@ class WMHSegmentationChallenge(data.Dataset):
         annot_tensor = annot_tensor.unsqueeze(dim=0)
 
         if self.transform is not None:
-            image_tensor, annot_tensor = self.transform((image_tensor, annot_tensor, meta_data))
+            image_tensor, annot_tensor, meta_data = self.transform((image_tensor, annot_tensor, meta_data))
 
         return image_tensor, annot_tensor, meta_data
 

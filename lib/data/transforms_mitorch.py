@@ -74,7 +74,7 @@ class ResampleTo1mm(object):
         iso1mm = torch.tensor([1]*3, dtype=torch.float)
         if (spacing == iso1mm).all().item():
             return volume
-        size = (size * spacing).floor().type(torch.uint8).tolist()[::-1]
+        size = (size * spacing).floor().int().tolist()[::-1]  # reverse size since F.resize works in DxHxW space
         image, annot = (
             F.resize(image, size, self.interpolation),
             F.resize(annot, size, 'nearest'),
@@ -179,7 +179,7 @@ class ResizeImageVolume(object):
         image, annot, meta = volume
         image, annot = (
             F.resize(image, self.size, self.interpolation),
-            F.resize(annot, self.size, Image.NEAREST),
+            F.resize(annot, self.size, 'nearest'),
         )
         meta['size'] = tuple(image.shape[1:])
 
