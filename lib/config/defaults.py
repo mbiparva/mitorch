@@ -40,27 +40,6 @@ _C.PROJECT.DATA_FILE_NAMES = ('T1.nii.gz', 'FLAIR.nii.gz', 'wmh.nii.gz')
 
 
 # ---------------------------------------------------------------------------- #
-# Batch norm options
-# ---------------------------------------------------------------------------- #
-_C.BN = CfgNode()
-
-# BN epsilon.
-_C.BN.EPSILON = 1e-5
-
-# BN momentum.
-_C.BN.MOMENTUM = 0.1
-
-# Precise BN stats.
-_C.BN.USE_PRECISE_STATS = False
-
-# Number of samples use to compute precise bn.
-_C.BN.NUM_BATCHES_PRECISE = 200
-
-# Weight decay value that applies on BN.
-_C.BN.WEIGHT_DECAY = 0.0
-
-
-# ---------------------------------------------------------------------------- #
 # Training options.
 # ---------------------------------------------------------------------------- #
 _C.TRAIN = CfgNode()
@@ -174,6 +153,27 @@ _C.TEST.CHECKPOINT_TYPE = "pytorch"
 # _C.RESNET.SPATIAL_DILATIONS = [[1], [1], [1], [1]]
 
 
+# # ---------------------------------------------------------------------------- #
+# # Batch norm options
+# # ---------------------------------------------------------------------------- #
+# _C.BN = CfgNode()
+#
+# # BN epsilon.
+# _C.BN.EPSILON = 1e-5
+#
+# # BN momentum.
+# _C.BN.MOMENTUM = 0.1
+#
+# # Precise BN stats.
+# _C.BN.USE_PRECISE_STATS = False
+#
+# # Number of samples use to compute precise bn.
+# _C.BN.NUM_BATCHES_PRECISE = 200
+#
+# # Weight decay value that applies on BN.
+# _C.BN.WEIGHT_DECAY = 0.0
+
+
 # # -----------------------------------------------------------------------------
 # # Nonlocal options
 # # -----------------------------------------------------------------------------
@@ -209,29 +209,34 @@ _C.MODEL = CfgNode()
 _C.MODEL.ID = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
 
 # Model architecture.
-_C.MODEL.ARCH = "lenet5"
+_C.MODEL.ARCH = "unet3d"
 
 # Model name
-_C.MODEL.MODEL_NAME = ('LeNet5', )[0]
+_C.MODEL.MODEL_NAME = ('Unet3D', )[0]
 
 # The number of classes to predict for the model.
-_C.MODEL.NUM_CLASSES = 10
+_C.MODEL.NUM_CLASSES = 2
 
 # Loss function.
 _C.MODEL.LOSS_FUNC = "cross_entropy"
 
-# # Model architectures that has one single pathway.
-# _C.MODEL.SINGLE_PATHWAY_ARCH = ["c2d", "i3d", "slowonly"]
-#
-# # Model architectures that has multiple pathways.
-# _C.MODEL.MULTI_PATHWAY_ARCH = ["slowfast"]
-
 # Dropout rate before final projection in the backbone.
-_C.MODEL.DROPOUT_RATE = 0.5
+_C.MODEL.DROPOUT_RATE = 0.3  # according to TF implementation
 
 # The std to initialize the fc layer(s).
 _C.MODEL.FC_INIT_STD = 0.01
 
+# Number of base filters to the network
+_C.MODEL.N_BASE_FILTERS = 16
+
+# Encoder depth
+_C.MODEL.ENCO_DEPTH = 5
+
+# Decoder depth
+_C.MODEL.DECO_DEPTH = 3
+
+# Number of input channels to the model
+_C.MODEL.INPUT_CHANNELS = 2  # T1 & FLAIR
 
 # # -----------------------------------------------------------------------------
 # # Slowfast options
@@ -303,10 +308,7 @@ _C.MODEL.FC_INIT_STD = 0.01
 _C.SOLVER = CfgNode()
 
 # Base learning rate.
-_C.SOLVER.BASE_LR = 0.1
-
-# Learning rate policy (see utils/lr_policy.py for options and examples).
-_C.SOLVER.LR_POLICY = "cosine"
+_C.SOLVER.BASE_LR = 5e-3
 
 # Exponential decay factor.
 _C.SOLVER.GAMMA = 0.1
@@ -321,7 +323,7 @@ _C.SOLVER.STEPS = []
 _C.SOLVER.LRS = []
 
 # Maximal number of epochs.
-_C.SOLVER.MAX_EPOCH = 50
+_C.SOLVER.MAX_EPOCH = 200
 
 # Momentum.
 _C.SOLVER.MOMENTUM = 0.9
@@ -330,7 +332,7 @@ _C.SOLVER.MOMENTUM = 0.9
 _C.SOLVER.DAMPENING = 0.0
 
 # Nesterov momentum.
-_C.SOLVER.NESTEROV = True
+_C.SOLVER.NESTEROV = False
 
 # L2 regularization.
 _C.SOLVER.WEIGHT_DECAY = 1e-4
@@ -345,13 +347,13 @@ _C.SOLVER.WARMUP_EPOCHS = 0
 _C.SOLVER.WARMUP_START_LR = 0.01
 
 # Optimization method.
-_C.SOLVER.OPTIMIZING_METHOD = "sgd"
+_C.SOLVER.OPTIMIZING_METHOD = ('sgd', 'adam')[1]
 
 # Enable Scheduler
-_C.SOLVER.SCHEDULER_MODE = True
+_C.SOLVER.SCHEDULER_MODE = False
 
 # Set the type of scheduler
-_C.SOLVER.SCHEDULER_TYPE = ('step', 'step_restart', 'multi', 'lambda', 'plateau', 'cosine')[-1]
+_C.SOLVER.SCHEDULER_TYPE = ('step', 'step_restart', 'multi', 'lambda', 'plateau', 'cosine')[0]
 
 # ---------------------------------------------------------------------------- #
 # Misc options
