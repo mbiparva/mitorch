@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import os
-import datetime
 import torch
 import numpy as np
 from torch.utils.data import DataLoader

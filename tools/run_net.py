@@ -33,29 +33,9 @@ def parse_args():
         description="Provide generic neural network training and testing pipeline."
     )
     parser.add_argument(
-        "--shard_id",
-        help="The shard id of current node, Starts from 0 to num_shards - 1",
-        default=0,
-        type=int,
-    )
-    parser.add_argument(
-        "--num_shards",
-        help="Number of shards using by the job",
-        default=1,
-        type=int,
-    )
-    parser.add_argument(
-        "--init_method",
-        help="Initialization method, includes TCP or shared file-system",
-        # default="tcp://localhost:9999",
-        default=None,
-        type=str,
-    )
-    parser.add_argument(
         "--cfg",
         dest="cfg_file",
         help="Path to the config file",
-        # default="configs/Kinetics/SLOWFAST_4x16_R50.yaml",
         default=None,
         type=str,
     )
@@ -65,8 +45,6 @@ def parse_args():
         default=None,
         nargs=argparse.REMAINDER,
     )
-    if len(sys.argv) == 1:
-        parser.print_help()
     return parser.parse_args()
 
 
@@ -87,16 +65,9 @@ def load_config(args):
         cfg.merge_from_list(args.opts)
 
     # Inherit parameters from args.
-    if hasattr(args, "num_shards") and hasattr(args, "shard_id"):
-        cfg.NUM_SHARDS = args.num_shards
-        cfg.SHARD_ID = args.shard_id
-    if hasattr(args, "rng_seed"):
-        cfg.RNG_SEED = args.rng_seed
     if hasattr(args, "output_dir"):
         cfg.OUTPUT_DIR = args.output_dir
 
-    # Create the checkpoint dir.
-    cu.make_checkpoint_dir(cfg.OUTPUT_DIR)
     return cfg
 
 

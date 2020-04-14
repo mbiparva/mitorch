@@ -419,25 +419,11 @@ _C.DATA_LOADER.ENABLE_MULTI_THREAD_DECODE = False
 
 
 def _assert_and_infer_cfg(cfg):
-    # BN assertions.
-    if cfg.BN.USE_PRECISE_STATS:
-        assert cfg.BN.NUM_BATCHES_PRECISE >= 0
-    # TRAIN assertions.
-    assert cfg.TRAIN.CHECKPOINT_TYPE in ["pytorch", "caffe2"]
-    assert cfg.TRAIN.BATCH_SIZE % cfg.NUM_GPUS == 0
-
-    # TEST assertions.
-    assert cfg.TEST.CHECKPOINT_TYPE in ["pytorch", "caffe2"]
-    assert cfg.TEST.BATCH_SIZE % cfg.NUM_GPUS == 0
-    assert cfg.TEST.NUM_SPATIAL_CROPS == 3
-
     # # RESNET assertions.
     # assert cfg.RESNET.NUM_GROUPS > 0
     # assert cfg.RESNET.WIDTH_PER_GROUP > 0
     # assert cfg.RESNET.WIDTH_PER_GROUP % cfg.RESNET.NUM_GROUPS == 0
 
-    # General assertions.
-    assert cfg.SHARD_ID < cfg.NUM_SHARDS
     return cfg
 
 

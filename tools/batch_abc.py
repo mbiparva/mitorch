@@ -56,7 +56,7 @@ class BatchBase(ABC):
     def batch_loop(self, netwrapper, cur_epoch):
 
         self.meters.iter_tic()
-        for cur_iter, (image, annotation) in enumerate(self.data_container.dataloader):
+        for cur_iter, (image, annotation, meta) in enumerate(self.data_container.dataloader):
 
             image = image.to(self.device, non_blocking=True)
             annotation = annotation.to(self.device, non_blocking=True)

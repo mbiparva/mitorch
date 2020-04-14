@@ -7,7 +7,7 @@ from .weight_init_helper import init_weights
 
 
 @MODEL_REGISTRY.register()
-class LeNet5(nn.Module):
+class Unet3D(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
