@@ -233,7 +233,7 @@ _C.MODEL.N_BASE_FILTERS = 16
 _C.MODEL.ENCO_DEPTH = 5
 
 # Decoder depth
-_C.MODEL.DECO_DEPTH = 3
+_C.MODEL.NUM_PRED_LEVELS = 3
 
 # Number of input channels to the model
 _C.MODEL.INPUT_CHANNELS = 2  # T1 & FLAIR

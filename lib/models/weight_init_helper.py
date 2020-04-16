@@ -15,7 +15,7 @@ def init_weights(model, fc_init_std=0.01):
         fc_init_std (float): the expected standard deviation for fc layer.
     """
     for m in model.modules():
-        if isinstance(m, nn.Conv2d):
+        if isinstance(m, nn.Conv3d):
             """
             Follow the initialization method proposed in:
             {He, Kaiming, et al.
@@ -24,9 +24,10 @@ def init_weights(model, fc_init_std=0.01):
             arXiv preprint arXiv:1502.01852 (2015)}
             """
             c2_msra_fill(m)
-        elif isinstance(m, nn.BatchNorm2d):
+        elif isinstance(m, nn.BatchNorm3d) or isinstance(m, nn.InstanceNorm3d):
             m.weight.data.fill_(1.0)
             m.bias.data.zero_()
         if isinstance(m, nn.Linear):  # This assumes nn.Linear is the final layers
+            # TODO check to see if this is effective in this architecture since the final is a conv3d
             m.weight.data.normal_(mean=0.0, std=fc_init_std)
             m.bias.data.zero_()

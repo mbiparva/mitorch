@@ -14,12 +14,12 @@ The call should return a `torch.nn.Module` object.
 """
 
 
+# noinspection PyCallingNonCallable
 def build_model(cfg, cur_device):
     """
     Builds the video model.
     Args:
-        cfg (configs): configs that contains the hyper-parameters to build the
-        backbone. Details can be seen in slowfast/config/defaults.py.
+        cfg (configs): configs that contains the hyper-parameters to build the backbone.
         cur_device (int): select the GPU id to load the model to its memory
     """
     assert (
@@ -38,4 +38,5 @@ def build_model(cfg, cur_device):
         model = torch.nn.parallel.DistributedDataParallel(
             module=model, device_ids=[cur_device], output_device=cur_device
         )
+        raise NotImplementedError
     return model

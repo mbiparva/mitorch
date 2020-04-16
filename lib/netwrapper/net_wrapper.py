@@ -16,23 +16,23 @@ class NetWrapper(nn.Module):
 
         self._create_net(device)
 
-        self.criterion = self.create_criterion()
+        self.criterion = self._create_criterion()
 
-        self.optimizer = self.create_optimizer()
+        self.optimizer = self._create_optimizer()
 
-        self.scheduler = self.create_scheduler()
+        self.scheduler = self._create_scheduler()
 
     def _create_net(self, device):
         self.net_core = build_model(self.cfg, device)  # this moves to device memory too
 
     @staticmethod
-    def create_criterion():
+    def _create_criterion():
         return nn.CrossEntropyLoss()
 
-    def create_optimizer(self):
+    def _create_optimizer(self):
         return construct_optimizer(self.net_core, self.cfg)
 
-    def create_scheduler(self):
+    def _create_scheduler(self):
         return construct_scheduler(self.optimizer, self.cfg)
 
     def schedule_step(self, eval_meter_avg=None):
