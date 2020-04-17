@@ -218,7 +218,7 @@ _C.MODEL.MODEL_NAME = ('Unet3D', )[0]
 _C.MODEL.NUM_CLASSES = 2
 
 # Loss function.
-_C.MODEL.LOSS_FUNC = "cross_entropy"
+_C.MODEL.LOSS_FUNC = ('cross_entropy', 'dice')[0]
 
 # Dropout rate before final projection in the backbone.
 _C.MODEL.DROPOUT_RATE = 0.3  # according to TF implementation

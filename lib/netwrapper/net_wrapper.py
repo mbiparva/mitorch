@@ -7,7 +7,9 @@ import numpy as np
 from models.build import build_model
 import utils.checkpoint as checkops
 from netwrapper.optimizer import construct_optimizer, construct_scheduler
+from netwrapper.build import build_loss
 
+from torchvision.transforms import ColorJitter
 
 class NetWrapper(nn.Module):
     def __init__(self, device, cfg):
@@ -25,9 +27,8 @@ class NetWrapper(nn.Module):
     def _create_net(self, device):
         self.net_core = build_model(self.cfg, device)  # this moves to device memory too
 
-    @staticmethod
-    def _create_criterion():
-        return nn.CrossEntropyLoss()
+    def _create_criterion(self):
+        return build_loss(self.cfg)
 
     def _create_optimizer(self):
         return construct_optimizer(self.net_core, self.cfg)

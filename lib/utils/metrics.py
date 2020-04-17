@@ -4,7 +4,7 @@
 """Functions for computing metrics."""
 
 import torch
-
+from netwrapper.functional import dice_coeff
 # Could be implemented manually or called from another external packages like FastAI
 # Could add metrics of all different sort of tasks e.g. segmentation, detection, classification
 
@@ -67,3 +67,17 @@ def topk_accuracies(preds, labels, ks):
     """
     num_topks_correct = topks_correct(preds, labels, ks)
     return [(x / preds.size(0)) * 100.0 for x in num_topks_correct]
+
+
+def dice_coefficient_metric(input, target, ignore_index, threshold=0.5):
+    # TODO this is the dice coefficient metric that can be used in the loss too
+    # Can use fastai metric too
+    prediction_mask = input.ge(threshold)
+    input.masked_fill(prediction_mask, 1)
+    input.masked_fill(torch.logical_not(prediction_mask), 0)
+    dice_coeff(
+        input,
+        target,
+        ignore_index,
+        'mean'
+    )
