@@ -1,8 +1,16 @@
-from torch.nn.modules.loss import _WeightedLoss
+from torch.nn.modules.loss import _WeightedLoss, CrossEntropyLoss
 from netwrapper.functional import dice_coeff
+from .build import LOSS_REGISTRY
+
+
+@LOSS_REGISTRY.register()
+class CrossEntropyLoss(CrossEntropyLoss):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
 
 # noinspection PyArgumentList
+@LOSS_REGISTRY.register()
 class DiceLoss(_WeightedLoss):
     __constants__ = ['weight', 'ignore_index', 'reduction']
 

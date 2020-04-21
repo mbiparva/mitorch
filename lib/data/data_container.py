@@ -43,7 +43,7 @@ class DataContainer:
             drop_last = True
         elif self.mode == 'valid':
             dataset_name = self.cfg.TRAIN.DATASET
-            batch_size = self.cfg.TRAIN.BATCH_SIZE
+            batch_size = self.cfg.VALID.BATCH_SIZE
             shuffle = False
             drop_last = False
         elif self.mode == 'test':
@@ -67,7 +67,8 @@ class DataContainer:
         ]
         if self.mode == 'train':
             transformations = [
-                tf.RandomFlipImageVolume(p=0.5, dim=-1)
+                # tf.ResizeImageVolume(scale_factor=0.75),
+                tf.RandomFlipImageVolume(p=0.5, dim=2)  # TODO later randomize dim with dim=-1
             ]
         elif self.mode in ('valid', 'test'):
             transformations = []
@@ -79,7 +80,7 @@ class DataContainer:
         )
 
     def data_split(self):
-        torch.manual_seed(110)
+        torch.manual_seed(self.cfg.RNG_SEED)
         n_tst = int(len(self.dataset) * self.cfg.PROJECT.TSR)
         n_traval = len(self.dataset) - n_tst
         n_tra = int(n_traval * self.cfg.PROJECT.TVSR)

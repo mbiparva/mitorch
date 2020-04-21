@@ -14,7 +14,7 @@ class Evaluator(BatchBase):
     # @torch.no_grad
     def batch_main(self, netwrapper, x, annotation):
         with torch.no_grad():
-            p = netwrapper.net_core.forward(x)
+            p = netwrapper.forward(x)
 
             a = self.generate_gt(annotation)
 

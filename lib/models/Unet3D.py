@@ -7,6 +7,23 @@ from .build import MODEL_REGISTRY
 from .weight_init_helper import init_weights
 
 
+def pad_if_necessary(x, x_b):
+    mode = ('one', 'two')[1]
+    size_x = torch.tensor(x.shape[2:], dtype=torch.int)
+    size_x_b = torch.tensor(x_b.shape[2:], dtype=torch.int)
+    padding_size = size_x - size_x_b
+    assert (padding_size >= 0).all(), 'we always pad the backbone outputs not the decoding ones'
+    if (padding_size == 0).all():
+        return x, x_b
+    if mode == 'one':
+        padding_size_l = padding_size / 2
+        padding_size_r = padding_size - padding_size_l
+        padding_tensor = torch.stack((padding_size_l, padding_size_r)).T.flatten().flip(dims=(0,)).tolist()
+        return x, nn.functional.pad(x_b, pad=padding_tensor, mode='constant', value=0)
+    else:
+        return x[:, :, :x_b.size(2), :x_b.size(3), :x_b.size(4)], x_b
+
+
 class BasicBlock(nn.Sequential):
     def __init__(self, in_channels, out_channels, kernel_size=(3, 3, 3), stride=(1, 1, 1), dilation=(1, 1, 1),
                  normalization='instancenorm', nonlinearity='leakyrelu'):
@@ -54,23 +71,23 @@ class ContextBlock(nn.Sequential):
         super().__init__(
             BasicBlock(in_channels, out_channels, dilation=dilation),
             nn.Dropout3d(p=p),
-            BasicBlock(in_channels, out_channels, dilation=dilation),
+            BasicBlock(out_channels, out_channels, dilation=dilation),
         )
 
 
 class ParamUpSamplingBlock(nn.Sequential):
     def __init__(self, in_channels, out_channels, scale_factor=(2, 2, 2)):
         super().__init__(
-            nn.Upsample(scale_factor=scale_factor, mode='trilinear'),
+            nn.Upsample(scale_factor=scale_factor, mode='trilinear', align_corners=False),
             BasicBlock(in_channels, out_channels),
         )
 
 
 class LocalizationBlock(nn.Sequential):
-    def __init__(self, in_channels, out_channels, scale_factor=(2, 2, 2)):
+    def __init__(self, in_channels, out_channels, kernel_size=(1, 1, 1), dilation=(2, 2, 2)):
         super().__init__(
-            BasicBlock(in_channels, out_channels, dilation=(2, 2, 2)),
-            BasicBlock(in_channels, out_channels, kernel_size=(1, 1, 1)),
+            BasicBlock(in_channels, out_channels, dilation=dilation),
+            BasicBlock(out_channels, out_channels, kernel_size=kernel_size),
         )
 
 
@@ -87,7 +104,7 @@ class CompoundBlock(nn.Module):
         else:
             kwargs['stride'] = stride
         self.input_layer = BasicBlock(in_channels, out_channels, **kwargs)
-        self.context_layer = ContextBlock(in_channels, out_channels, dilation=dilation, p=p)
+        self.context_layer = ContextBlock(out_channels, out_channels, dilation=dilation, p=p)
 
     def forward(self, x):
         x_input = self.input_layer(x)
@@ -139,31 +156,34 @@ class Decoder(nn.Module):
         return 'decoder_layer{:03}_{}'.format(i, postfix)
 
     def _create_net(self):
-        self.enco_depth = self.cfg.MODEL.ENCO_DEPTH-1  # the for loop begins from 0 ends at d-1
+        self.enco_depth = self.cfg.MODEL.ENCO_DEPTH - 1  # the for loop begins from 0 ends at d-1
         in_channels = self.cfg.MODEL.N_BASE_FILTERS * 2 ** self.enco_depth
-        for i in reversed(range(self.enco_depth)):
-            out_channels = self.cfg.MODEL.N_BASE_FILTERS * 2 ** i
+        for i in range(self.enco_depth):
+            i_r = self.enco_depth - 1 - i
+            out_channels = self.cfg.MODEL.N_BASE_FILTERS * 2 ** i_r
             self.add_module(
-                self.get_layer_name(self.enco_depth-1-i, 'upsampling'),
+                self.get_layer_name(i, 'upsampling'),
                 ParamUpSamplingBlock(in_channels, out_channels, scale_factor=(2, 2, 2)),
             )
             self.add_module(
-                self.get_layer_name(self.enco_depth-1-i, 'localization'),
-                ParamUpSamplingBlock(2*out_channels, out_channels, scale_factor=(2, 2, 2)),
+                self.get_layer_name(i, 'localization'),
+                LocalizationBlock(2 * out_channels, out_channels),
             )
             in_channels = out_channels
 
-    def forward(self, xs):
-        x = xs[self.enco_depth]
+    def forward(self, x_input):
+        x = x_input[self.enco_depth]
         outputs = list()
-        for i in reversed(range(self.enco_depth)):
+        for i in range(self.enco_depth):
+            i_r = self.enco_depth - 1 - i
             x = getattr(self, self.get_layer_name(i, 'upsampling'))(x)
-            x = torch.cat((x, xs[i]), dim=1)
+            x, x_input[i_r] = pad_if_necessary(x, x_input[i_r])
+            x = torch.cat((x, x_input[i_r]), dim=1)
             x = getattr(self, self.get_layer_name(i, 'localization'))(x)
-            if i < self.cfg.MODEL.NUM_PRED_LEVELS:
+            if i_r < self.cfg.MODEL.NUM_PRED_LEVELS:
                 outputs.append(x)
 
-        return reversed(outputs)
+        return outputs
 
 
 class SegHead(nn.Module):
@@ -178,25 +198,28 @@ class SegHead(nn.Module):
         return 'seghead_layer{:03}_{}'.format(i, postfix)
 
     def _create_net(self):
-        self.num_pred_levels = self.cfg.MODEL.NUM_PRED_LEVELS-1
-        for i in reversed(range(self.num_pred_levels)):
-            in_channels = self.cfg.MODEL.N_BASE_FILTERS * 2 ** i
-            layer_num = self.num_pred_levels-1-i
+        self.num_pred_levels = self.cfg.MODEL.NUM_PRED_LEVELS
+        for i in range(self.num_pred_levels):
+            i_r = self.num_pred_levels - 1 - i
+            in_channels = self.cfg.MODEL.N_BASE_FILTERS * 2 ** i_r
             self.add_module(
-                self.get_layer_name(layer_num, 'conv'),
+                self.get_layer_name(i, 'conv'),
                 nn.Conv3d(in_channels, self.cfg.MODEL.NUM_CLASSES, kernel_size=(1, 1, 1)),
             )
-            if not i:
+            if not i == self.num_pred_levels - 1:
                 self.add_module(
-                    self.get_layer_name(layer_num, 'upsam'),
-                    nn.Upsample(scale_factor=(2, 2, 2), mode='trilinear'),
+                    self.get_layer_name(i, 'upsam'),
+                    nn.Upsample(scale_factor=(2, 2, 2), mode='trilinear', align_corners=False),
                 )
 
-    def forward(self, xs):
+    def forward(self, x_input):
         x = 0
-        for i in range(self.enco_depth):
-            x = x + getattr(self, self.get_layer_name(i, 'conv'))(xs[i])
-            if not i:
+        for i in range(self.num_pred_levels):
+            x_b = getattr(self, self.get_layer_name(i, 'conv'))(x_input[i])
+            if not i == 0:
+                x, x_b = pad_if_necessary(x, x_b)
+            x = x + x_b
+            if not i == self.num_pred_levels - 1:
                 x = getattr(self, self.get_layer_name(i, 'upsam'))(x)
         return x
 

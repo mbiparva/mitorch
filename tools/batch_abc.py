@@ -6,8 +6,8 @@ import datetime
 import torch
 
 from data.data_container import DataContainer
-from utils.meters import TrainMeter, ValMeter, TestMeter
-from fastai.metrics import accuracy, top_k_accuracy
+from utils.meters import TVTMeter
+# from fastai.metrics import accuracy, top_k_accuracy
 
 
 class BatchBase(ABC):
@@ -24,7 +24,7 @@ class BatchBase(ABC):
         self.meters = self.create_meters()
 
     def create_meters(self):
-        meters = (TrainMeter, ValMeter, ValMeter)[BatchBase.modes.index(self.mode)]  # TestMeter for now is ValidMeter
+        meters = TVTMeter
         return meters(
             len(self.data_container.dataloader),
             self.cfg
@@ -43,11 +43,13 @@ class BatchBase(ABC):
 
     @staticmethod
     def generate_gt(annotation):
-        return annotation
+        assert annotation.size(1) == 1
+        return annotation.squeeze(dim=1).long()
 
     @staticmethod
     def evaluate(p, a):
-        return accuracy(p, a).item(), top_k_accuracy(p, a, 5).item()
+        # return accuracy(p, a).item(), top_k_accuracy(p, a, 5).item()
+        raise NotImplementedError
 
     @abstractmethod
     def batch_main(self, net, x, annotation):

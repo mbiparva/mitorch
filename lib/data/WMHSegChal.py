@@ -53,8 +53,9 @@ def extract_meta(data_nii):
 
 @DATASET_REGISTRY.register()
 class WMHSegmentationChallenge(data.Dataset):
-    def __init__(self, cfg, transform):
+    def __init__(self, cfg, mode, transform):
         self.cfg = cfg
+        self.mode = mode
         self.transform = transform
         self.dataset_path = os.path.join(self.cfg.PROJECT.DATASET_DIR, self.__class__.__name__, 'uncompressed')
         self.t1_file_name, self.fl_file_name, self.annot_file_name = self.cfg.PROJECT.DATA_FILE_NAMES

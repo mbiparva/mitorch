@@ -33,7 +33,7 @@ _C.PROJECT.EXPERIMENT_DIR = os.path.abspath(os.path.join(_C.PROJECT.ROOT_DIR, 'e
 
 # Training, Validation, and Test Split Ratio
 _C.PROJECT.TVSR = 0.80
-_C.PROJECT.TSR = 0.20
+_C.PROJECT.TSR = 0.0
 
 # Data file names that are loaded by the dataset getitem function
 _C.PROJECT.DATA_FILE_NAMES = ('T1.nii.gz', 'FLAIR.nii.gz', 'wmh.nii.gz')
@@ -48,10 +48,10 @@ _C.TRAIN = CfgNode()
 _C.TRAIN.ENABLE = True
 
 # Dataset.
-_C.TRAIN.DATASET = ('MNIST', 'FashionMNIST')[0]
+_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SriBilData')[0]
 
 # Total mini-batch size.
-_C.TRAIN.BATCH_SIZE = 64
+_C.TRAIN.BATCH_SIZE = 1
 
 # Shuffle the training data, valid / test are never shuffled
 _C.TRAIN.SHUFFLE = True
@@ -84,7 +84,7 @@ _C.VALID = CfgNode()
 _C.VALID.ENABLE = True
 
 # Total mini-batch size
-_C.VALID.BATCH_SIZE = 32
+_C.VALID.BATCH_SIZE = 1
 
 
 # ---------------------------------------------------------------------------- #
@@ -96,10 +96,10 @@ _C.TEST = CfgNode()
 _C.TEST.ENABLE = False
 
 # Dataset for testing.
-_C.TEST.DATASET = ('MNIST', 'FashionMNIST')[0]
+_C.TEST.DATASET = _C.TRAIN.DATASET  # ('MNIST', 'FashionMNIST')[0]
 
 # Total mini-batch size
-_C.TEST.BATCH_SIZE = 32
+_C.TEST.BATCH_SIZE = 1
 
 # Path to the checkpoint to load the initial weight.
 _C.TEST.CHECKPOINT_FILE_PATH = ""
@@ -156,8 +156,8 @@ _C.TEST.CHECKPOINT_TYPE = "pytorch"
 # # ---------------------------------------------------------------------------- #
 # # Batch norm options
 # # ---------------------------------------------------------------------------- #
-# _C.BN = CfgNode()
-#
+_C.BN = CfgNode()
+
 # # BN epsilon.
 # _C.BN.EPSILON = 1e-5
 #
@@ -169,9 +169,9 @@ _C.TEST.CHECKPOINT_TYPE = "pytorch"
 #
 # # Number of samples use to compute precise bn.
 # _C.BN.NUM_BATCHES_PRECISE = 200
-#
-# # Weight decay value that applies on BN.
-# _C.BN.WEIGHT_DECAY = 0.0
+
+# Weight decay value that applies on BN.
+_C.BN.WEIGHT_DECAY = 0.0
 
 
 # # -----------------------------------------------------------------------------
@@ -218,7 +218,7 @@ _C.MODEL.MODEL_NAME = ('Unet3D', )[0]
 _C.MODEL.NUM_CLASSES = 2
 
 # Loss function.
-_C.MODEL.LOSS_FUNC = ('cross_entropy', 'dice')[0]
+_C.MODEL.LOSS_FUNC = ('CrossEntropyLoss', 'DiceLoss')[0]
 
 # Dropout rate before final projection in the backbone.
 _C.MODEL.DROPOUT_RATE = 0.3  # according to TF implementation
@@ -381,7 +381,7 @@ if not os.path.exists(_C.OUTPUT_DIR):
 _C.RNG_SEED = 110
 
 # Log period in iters.
-_C.LOG_PERIOD = 50
+_C.LOG_PERIOD = 50  # TODO check to see what this is??????
 
 # Distributed backend.
 _C.DIST_BACKEND = "nccl"
@@ -393,7 +393,7 @@ _C.DIST_BACKEND = "nccl"
 _C.DATA_LOADER = CfgNode()
 
 # Number of data loader workers per training process.
-_C.DATA_LOADER.NUM_WORKERS = 8
+_C.DATA_LOADER.NUM_WORKERS = 0
 
 # Load data to pinned host memory.
 _C.DATA_LOADER.PIN_MEMORY = True

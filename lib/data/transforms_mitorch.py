@@ -80,6 +80,7 @@ class ResampleTo1mm(object):
             F.resize(annot, size, 'nearest'),
         )
         meta['size'] = size[::-1]
+        meta['spacing'] = (1, 1, 1)
 
         return image, annot, meta
 
@@ -163,8 +164,13 @@ class ResizeImageVolume(object):
         interpolation (int, optional): Desired interpolation. Default is trilinear
     """
 
-    def __init__(self, size, interpolation='trilinear'):
-        assert isinstance(size, int) or (isinstance(size, Iterable) and len(size) == 3)
+    def __init__(self, size=None, scale_factor=None, interpolation='trilinear'):
+        assert size or scale_factor, 'either size or scale_factor must be given'
+        if size:
+            assert isinstance(size, int) or (isinstance(size, Iterable) and len(size) == 3)
+        if scale_factor:
+            assert isinstance(scale_factor, float)
+        self.scale_factor = scale_factor
         self.size = size
         self.interpolation = interpolation
 
@@ -177,9 +183,13 @@ class ResizeImageVolume(object):
             volume (tuple(torch.tensor, torch.tensor, dict)): Image and mask volumes resized
         """
         image, annot, meta = volume
+        assert image.shape[1:] == annot.shape[1:]
+        size = self.size
+        if self.scale_factor:
+            size = (torch.tensor(image.shape[1:], dtype=torch.float) * self.scale_factor).floor().int().tolist()
         image, annot = (
-            F.resize(image, self.size, self.interpolation),
-            F.resize(annot, self.size, 'nearest'),
+            F.resize(image, size, self.interpolation),
+            F.resize(annot, size, 'nearest'),
         )
         meta['size'] = tuple(image.shape[1:])
 

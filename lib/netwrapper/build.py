@@ -22,6 +22,6 @@ def build_loss(cfg):
         cfg (configs): configs that contains the hyper-parameters to build the backbone.
     """
     # Construct the loss
-    name = cfg.MODEL.MODEL_NAME
-    loss = LOSS_REGISTRY.get(name)(cfg)
+    name = cfg.MODEL.LOSS_FUNC
+    loss = LOSS_REGISTRY.get(name)(ignore_index=255)
     return loss

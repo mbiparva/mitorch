@@ -14,7 +14,7 @@ class Trainer(BatchBase):
         return netwrapper.scheduler.get_last_lr() if self.cfg.SOLVER.SCHEDULER_MODE else self.cfg.SOLVER.BASE_LR
 
     def batch_main(self, netwrapper, x, annotation):
-        p = netwrapper.net_core.forward(x)
+        p = netwrapper.forward(x)
 
         a = self.generate_gt(annotation)
 

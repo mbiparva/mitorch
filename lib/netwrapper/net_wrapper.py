@@ -9,7 +9,6 @@ import utils.checkpoint as checkops
 from netwrapper.optimizer import construct_optimizer, construct_scheduler
 from netwrapper.build import build_loss
 
-from torchvision.transforms import ColorJitter
 
 class NetWrapper(nn.Module):
     def __init__(self, device, cfg):
