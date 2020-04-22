@@ -132,7 +132,7 @@ class WMHSegmentationChallenge(data.Dataset):
         return t1_meta  # we keep only one of them
 
     @staticmethod
-    def curate_annotation(annot_tensor):
+    def curate_annotation(annot_tensor, ignore_index):
         cat_labels = set(annot_tensor.unique(sorted=True).tolist())
         known_labels = set(tuple([0, 1, 2]))
         assert cat_labels.issubset(known_labels), 'only expect labels of {} in annotations {}'.format(
@@ -140,7 +140,7 @@ class WMHSegmentationChallenge(data.Dataset):
             cat_labels
         )
         if 2 in cat_labels:
-            annot_tensor[annot_tensor == 2] = 255  # TODO check this with Unet3D to see what is done there.
+            annot_tensor[annot_tensor == 2] = ignore_index  # TODO check this with Unet3D to see what is done there.
         return annot_tensor
 
     def get_data_tensor(self, t1_nii, fl_nii, annot_nii):
@@ -165,7 +165,7 @@ class WMHSegmentationChallenge(data.Dataset):
             )
         )
 
-        annot_tensor = self.curate_annotation(annot_tensor)
+        annot_tensor = self.curate_annotation(annot_tensor, ignore_index=self.cfg.MODEL.IGNORE_INDEX)
 
         return t1_tensor, fl_tensor, annot_tensor
 

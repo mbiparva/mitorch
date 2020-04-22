@@ -213,4 +213,7 @@ class TVTMeter(object):
         for k, m in meters.items():
             yield k, m
 
+    def get_epoch_loss(self):
+        return self.loss_total.avg
+
 # For a sample meter for multi-view/multi-patch ensemble for testing check out deep_abc

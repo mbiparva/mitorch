@@ -20,8 +20,8 @@ class Trainer(BatchBase):
 
         loss = netwrapper.loss_update(p, a, step=True)
 
-        acc, acc5 = self.evaluate(p, a)
+        dice = self.evaluate(p, a)
 
         self.meters.iter_toc()
 
-        self.meters.update_stats(acc, acc5, loss, self._get_lr(netwrapper), self.cfg.TRAIN.BATCH_SIZE)
+        self.meters.update_stats(dice, loss, self._get_lr(netwrapper), self.cfg.TRAIN.BATCH_SIZE)

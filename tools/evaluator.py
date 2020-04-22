@@ -11,6 +11,9 @@ class Evaluator(BatchBase):
     def set_net_mode(self, net):
         net.eval()
 
+    def _get_lr(self, netwrapper):
+        return netwrapper.scheduler.get_last_lr() if self.cfg.SOLVER.SCHEDULER_MODE else self.cfg.SOLVER.BASE_LR
+
     # @torch.no_grad
     def batch_main(self, netwrapper, x, annotation):
         with torch.no_grad():
@@ -20,8 +23,8 @@ class Evaluator(BatchBase):
 
             loss = netwrapper.loss_update(p, a, step=False)
 
-            acc, acc5 = self.evaluate(p, a)
+            dice = self.evaluate(p, a)
 
             self.meters.iter_toc()
 
-            self.meters.update_stats(acc, acc5, loss, self.cfg.TRAIN.BATCH_SIZE)
+            self.meters.update_stats(dice, loss, self._get_lr(netwrapper), self.cfg.TRAIN.BATCH_SIZE)

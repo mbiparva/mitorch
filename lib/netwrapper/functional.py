@@ -6,7 +6,7 @@ def dice_coeff(input, target, weight=None, ignore_index=-100, reduction='mean', 
     assert (input.is_contiguous() and target.is_contiguous())
     # TODO check to see if contiguous() is needed anywhere in the function
     assert input.size() == target.size(), "'input' and 'target' must have the same shape"
-    assert input.dtype() == target.dtype(), 'dtype does not match'
+    assert input.dtype == target.dtype, 'dtype does not match'
     N, C = input.shape[:2]
 
     if ignore_index > 0:
@@ -35,7 +35,7 @@ def dice_coeff(input, target, weight=None, ignore_index=-100, reduction='mean', 
 
     dice_coefficient = dice_coefficient.mean(dim=1)  # class dimension
 
-    return {
+    return 1 - {
         'mean': dice_coefficient.mean(),
         'sum': dice_coefficient.sum(),
         'none': dice_coefficient

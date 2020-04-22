@@ -7,7 +7,7 @@ import torch
 
 from data.data_container import DataContainer
 from utils.meters import TVTMeter
-# from fastai.metrics import accuracy, top_k_accuracy
+from utils.metrics import dice_coefficient_metric
 
 
 class BatchBase(ABC):
@@ -39,17 +39,29 @@ class BatchBase(ABC):
 
     @abstractmethod
     def set_net_mode(self, net):
-        pass
+        raise NotImplementedError
 
-    @staticmethod
-    def generate_gt(annotation):
+    def generate_gt(self, annotation):
         assert annotation.size(1) == 1
+        if self.cfg.MODEL.LOSS_FUNC == 'DiceLoss':
+            annotation = annotation.unsqueeze(dim=1)
+            annotation = annotation.to(dtype=torch.float)
         return annotation.squeeze(dim=1).long()
 
-    @staticmethod
-    def evaluate(p, a):
-        # return accuracy(p, a).item(), top_k_accuracy(p, a, 5).item()
-        raise NotImplementedError
+    def evaluate(self, p, a):
+        # method = ('own', 'fastai')[0]
+        if self.cfg.MODEL.LOSS_FUNC == 'CrossEntropyLoss':
+            p = p.softmax(dim=1)
+            p = p[:, 1, ...]
+            # true for p.ndim==5 and a.ndim==4 --- check other scenarios
+            assert p.ndim == a.ndim == 4
+            p = p.unsqueeze(dim=1)
+        # a = a.unsqueeze(dim=1)
+        # if method == 'fastai':
+        #     from fastai.metrics import dice
+        #     return dice(p, a, iou=False, eps=1e-6).item()
+        # else:
+        return dice_coefficient_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX, threshold=0.5)
 
     @abstractmethod
     def batch_main(self, net, x, annotation):

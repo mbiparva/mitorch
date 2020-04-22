@@ -215,10 +215,12 @@ _C.MODEL.ARCH = "unet3d"
 _C.MODEL.MODEL_NAME = ('Unet3D', )[0]
 
 # The number of classes to predict for the model.
-_C.MODEL.NUM_CLASSES = 2
+_C.MODEL.NUM_CLASSES = 1
 
 # Loss function.
-_C.MODEL.LOSS_FUNC = ('CrossEntropyLoss', 'DiceLoss')[0]
+_C.MODEL.LOSS_FUNC = ('CrossEntropyLoss', 'DiceLoss')[1]
+
+_C.MODEL.IGNORE_INDEX = 255
 
 # Dropout rate before final projection in the backbone.
 _C.MODEL.DROPOUT_RATE = 0.3  # according to TF implementation
@@ -381,7 +383,7 @@ if not os.path.exists(_C.OUTPUT_DIR):
 _C.RNG_SEED = 110
 
 # Log period in iters.
-_C.LOG_PERIOD = 50  # TODO check to see what this is??????
+_C.LOG_PERIOD = 1  # TODO check to see what this is??????
 
 # Distributed backend.
 _C.DIST_BACKEND = "nccl"
@@ -393,7 +395,7 @@ _C.DIST_BACKEND = "nccl"
 _C.DATA_LOADER = CfgNode()
 
 # Number of data loader workers per training process.
-_C.DATA_LOADER.NUM_WORKERS = 0
+_C.DATA_LOADER.NUM_WORKERS = 10
 
 # Load data to pinned host memory.
 _C.DATA_LOADER.PIN_MEMORY = True

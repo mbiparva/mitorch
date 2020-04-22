@@ -67,8 +67,8 @@ class DataContainer:
         ]
         if self.mode == 'train':
             transformations = [
-                # tf.ResizeImageVolume(scale_factor=0.75),
-                tf.RandomFlipImageVolume(p=0.5, dim=2)  # TODO later randomize dim with dim=-1
+                tf.ResizeImageVolume(scale_factor=0.75),
+                # tf.RandomFlipImageVolume(p=0.5, dim=2)  # TODO later randomize dim with dim=-1
             ]
         elif self.mode in ('valid', 'test'):
             transformations = []

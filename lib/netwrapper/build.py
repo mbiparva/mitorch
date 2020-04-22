@@ -23,5 +23,6 @@ def build_loss(cfg):
     """
     # Construct the loss
     name = cfg.MODEL.LOSS_FUNC
-    loss = LOSS_REGISTRY.get(name)(ignore_index=255)
+    ignore_index = cfg.MODEL.IGNORE_INDEX
+    loss = LOSS_REGISTRY.get(name)(ignore_index=ignore_index)
     return loss
