@@ -75,8 +75,8 @@ def dice_coefficient_metric(p, a, ignore_index, threshold=0.5):
     p = p.masked_fill(prediction_mask, 1)
     p = p.masked_fill(~prediction_mask, 0)
     return 1 - dice_coeff(
-        p.float(),
-        a.float(),
+        p,
+        a,
         ignore_index=ignore_index,
         reduction='mean'
     ).item()

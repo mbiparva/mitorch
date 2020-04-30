@@ -20,7 +20,7 @@ def build_dataset(dataset_name, cfg, split, transformations):
         cfg (CfgNode): configs.
         split (str): the split of the data loader. Options include `train`,
             `val`, and `test`.
-        transformations (list): the list of all pre-processing transformations
+        transformations: the list of all pre-processing transformations
     Returns:
         Dataset: a constructed dataset specified by dataset_name.
     """

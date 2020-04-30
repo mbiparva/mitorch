@@ -8,7 +8,7 @@ import data.transforms_mitorch as tf
 import torchvision.transforms as torch_tf
 from torch.utils.data import random_split
 from .build import build_dataset
-from data.WMHSegChal import collate_fn
+from data.VolSet import collate_fn
 
 
 # noinspection PyUnresolvedReferences

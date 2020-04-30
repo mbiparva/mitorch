@@ -35,10 +35,6 @@ _C.PROJECT.EXPERIMENT_DIR = os.path.abspath(os.path.join(_C.PROJECT.ROOT_DIR, 'e
 _C.PROJECT.TVSR = 0.80
 _C.PROJECT.TSR = 0.0
 
-# Data file names that are loaded by the dataset getitem function
-_C.PROJECT.DATA_FILE_NAMES = ('T1.nii.gz', 'FLAIR.nii.gz', 'wmh.nii.gz')
-
-
 # ---------------------------------------------------------------------------- #
 # Training options.
 # ---------------------------------------------------------------------------- #
@@ -48,7 +44,7 @@ _C.TRAIN = CfgNode()
 _C.TRAIN.ENABLE = True
 
 # Dataset.
-_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SriBilData')[0]
+_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL')[0]
 
 # Total mini-batch size.
 _C.TRAIN.BATCH_SIZE = 1
@@ -60,7 +56,7 @@ _C.TRAIN.SHUFFLE = True
 _C.TRAIN.EVAL_PERIOD = 1
 
 # Save model checkpoint every checkpoint period epochs. < 1 will deactivate
-_C.TRAIN.CHECKPOINT_PERIOD = 1
+_C.TRAIN.CHECKPOINT_PERIOD = 20
 
 # Resume training from the latest checkpoint in the output directory.
 _C.TRAIN.AUTO_RESUME = True

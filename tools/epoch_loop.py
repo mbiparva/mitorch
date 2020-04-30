@@ -46,6 +46,7 @@ class EpochLoop:
         worker.tb_logger_update(self.tb_logger_writer, e)
 
     def save_checkpoint(self, cur_epoch):
+        # TODO add if it is the best, save it separately too
         if checkops.is_checkpoint_epoch(cur_epoch, self.cfg.TRAIN.CHECKPOINT_PERIOD):
             self.net_wrapper.save_checkpoint(self.cfg.OUTPUT_DIR, cur_epoch)
 

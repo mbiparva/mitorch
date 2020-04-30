@@ -2,15 +2,16 @@ import _init_lib_path  # or use export PYTHONPATH=/path/to/lib:$PYTHONPATH
 from torch.utils.data import DataLoader
 # noinspection PyProtectedMember,PyPep8Naming
 from config.defaults import _C as cfg
-from data.WMHSegChal import WMHSegmentationChallenge, collate_fn
 import data.transforms_mitorch as tf
 from torchvision.transforms import Compose
+from data.build import build_dataset
+from data.VolSet import collate_fn
 
 
-if __name__ == '__main__':
-    dataset = WMHSegmentationChallenge(
-        cfg,
-        Compose([
+def main():
+    dataset_name = cfg.TRAIN.DATASET
+    mode = 'training'
+    transformations = Compose([
             tf.ToTensorImageVolume(),
             tf.OrientationToRAI(),
             tf.ResampleTo1mm(),
@@ -19,7 +20,7 @@ if __name__ == '__main__':
             tf.ResizeImageVolume((50, 50, 50)),
             tf.RandomFlipImageVolume(dim=-1)
         ])
-    )
+    dataset = build_dataset(dataset_name, cfg, mode, transformations)
     dataloader = DataLoader(
         dataset,
         batch_size=8,
@@ -37,3 +38,7 @@ if __name__ == '__main__':
         print(image.shape)
         print(annot.shape)
         print('\n'*2)
+
+
+if __name__ == '__main__':
+    main()

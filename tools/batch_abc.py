@@ -43,24 +43,16 @@ class BatchBase(ABC):
 
     def generate_gt(self, annotation):
         assert annotation.size(1) == 1
-        if self.cfg.MODEL.LOSS_FUNC == 'DiceLoss':
-            annotation = annotation.unsqueeze(dim=1)
-            annotation = annotation.to(dtype=torch.float)
-        return annotation.squeeze(dim=1).long()
+        if self.cfg.MODEL.LOSS_FUNC == 'CrossEntropyLoss':
+            annotation = annotation.squeeze(dim=1).long()
+        return annotation
 
     def evaluate(self, p, a):
-        # method = ('own', 'fastai')[0]
         if self.cfg.MODEL.LOSS_FUNC == 'CrossEntropyLoss':
             p = p.softmax(dim=1)
             p = p[:, 1, ...]
-            # true for p.ndim==5 and a.ndim==4 --- check other scenarios
-            assert p.ndim == a.ndim == 4
             p = p.unsqueeze(dim=1)
-        # a = a.unsqueeze(dim=1)
-        # if method == 'fastai':
-        #     from fastai.metrics import dice
-        #     return dice(p, a, iou=False, eps=1e-6).item()
-        # else:
+            a = a.float()
         return dice_coefficient_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX, threshold=0.5)
 
     @abstractmethod
