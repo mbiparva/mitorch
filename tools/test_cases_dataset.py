@@ -17,6 +17,8 @@ class ComposePrintSize(Compose):
         # print(volume[2])
         # print('-'*50)
         for t in self.transforms:
+            if t.__class__.__name__ == 'PadToSizeVolume':
+                print('we are in ...')
             volume = t(volume)
             # image, annot, meta = volume
             # print("image: {image}, annot: {annot}".format(

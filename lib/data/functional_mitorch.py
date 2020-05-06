@@ -9,6 +9,7 @@ import sys
 import torch
 import numbers
 import collections
+import numpy as np
 
 if sys.version_info < (3, 3):
     Sequence = collections.Sequence
@@ -179,19 +180,21 @@ def flip(volume, dim=3):
 
 def pad(volume, padding, fill=0, padding_mode='constant'):
     r"""Pad the given Tensor volume on all sides with specified padding mode and fill value.
+    The overhead is to numpy back and forth. However, since the storage is shared should be fine.
 
     Args:
         volume (Torch Tensor): Volume to be padded.
         padding (int or tuple): Padding on each border. If a single int is provided this
             is used to pad all borders. If tuple of length 2 is provided this is the padding
-            on left/right and top/bottom respectively. If a tuple of length 4 is provided
-            this is the padding for the left, top, right and bottom borders
-            respectively.
+            on before/after on all axis. If a tuple of length 6 is provided
+            this is the padding for ((before_1, after_1), … (before_N, after_N)).
         fill: Pixel fill value for constant fill. Default is 0. If a tuple of
-            length 3, it is used to fill R, G, B channels respectively.
+            length 2, it is used to fill before and after for all channels. If length is 6,
+            ((before_1, after_1), … (before_N, after_N)).
             This value is only used when the padding_mode is constant
-        padding_mode: Type of padding. Should be: 'constant', 'reflect', 'replicate' or 'circular'. Default is constant.
-            check torch.nn.functional.pad for further details ### Deprecated - check np.pad
+        padding_mode: Type of padding. Should be: 'constant', 'edge', 'linear_ramp', 'maximum', 'mean',
+                            'median', 'minimum', 'reflect', 'symmetric', 'wrap', 'empty'. Default is constant.
+            check numpy.pad for further details.
 
     Returns:
         Torch Tensor: Padded volume.
@@ -205,16 +208,21 @@ def pad(volume, padding, fill=0, padding_mode='constant'):
     if not isinstance(padding_mode, str):
         raise TypeError('Got inappropriate padding_mode arg')
 
-    if isinstance(padding, Sequence) and len(padding) not in [2, 4, 6]:
+    if isinstance(padding, Sequence) and len(padding) not in [2, 6]:
         raise ValueError("Padding must be an int or a 2, 4, or 6 element tuple, not a " +
                          "{} element tuple".format(len(padding)))
 
-    assert padding_mode in ['constant', 'reflect', 'replicate', 'circular'], \
+    if isinstance(fill, Sequence) and len(fill) not in [2, 6]:
+        raise ValueError("Padding must be an int or a 2, 4, or 6 element tuple, not a " +
+                         "{} element tuple".format(len(fill)))
+
+    assert padding_mode in ['constant', 'edge', 'linear_ramp', 'maximum', 'mean',
+                            'median', 'minimum', 'reflect', 'symmetric', 'wrap', 'empty'], \
         'Padding mode should be either constant, reflect, replicate or circular'
     if isinstance(padding, int):
         padding = [padding]*6
 
-    return torch.nn.functional.pad(volume, padding, mode=padding_mode, value=fill)
+    return torch.from_numpy(np.pad(volume.numpy(), pad_width=padding, mode=padding_mode, constant_values=fill))
 
 
 # TODO Develop SimpleITK Modules like Adaptive Histogram Equalization
