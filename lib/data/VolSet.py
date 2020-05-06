@@ -56,6 +56,7 @@ class VolSetABC(ABC, data.Dataset):
     def __init__(self, cfg, mode, transform):
         self._init_pars(cfg, mode, transform)
         self._init_dataset()
+        self.sample_path_list = sorted(self.sample_path_list)
 
     def _init_pars(self, cfg, mode, transform):
         self.cfg = cfg
@@ -158,25 +159,9 @@ class VolSetABC(ABC, data.Dataset):
 
         return t1_tensor, fl_tensor, annot_tensor
 
+    @abstractmethod
     def __getitem__(self, index):
-        sample_path = self.sample_path_list[index]
-
-        t1_path, fl_path, annot_path = self.find_data_files_path(sample_path)
-        t1_nii, fl_nii, annot_nii = self.load_data(t1_path, fl_path, annot_path)
-        meta_data = self.extract_data_meta(t1_nii, fl_nii, annot_nii)
-
-        meta_data = self.run_sanity_checks(*meta_data)
-        meta_data['sample_path'] = sample_path
-
-        t1_tensor, fl_tensor, annot_tensor = self.get_data_tensor(t1_nii, fl_nii, annot_nii)
-
-        image_tensor = torch.stack((t1_tensor, fl_tensor), dim=-1)  # D x H x W x C
-        annot_tensor = annot_tensor.unsqueeze(dim=0)
-
-        if self.transform is not None:
-            image_tensor, annot_tensor, meta_data = self.transform((image_tensor, annot_tensor, meta_data))
-
-        return image_tensor, annot_tensor, meta_data
+        raise NotImplementedError
 
     def __len__(self):
         return len(self.sample_path_list)

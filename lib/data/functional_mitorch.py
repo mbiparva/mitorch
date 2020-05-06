@@ -5,7 +5,17 @@ This contains a list of transformation functionals to process image volumes.
 Image volumes represent dense 3D volumes generated from CT/MRI scans.
 """
 
+import sys
 import torch
+import numbers
+import collections
+
+if sys.version_info < (3, 3):
+    Sequence = collections.Sequence
+    Iterable = collections.Iterable
+else:
+    Sequence = collections.abc.Sequence
+    Iterable = collections.abc.Iterable
 
 
 def _is_tensor_image_volume(volume):
@@ -31,7 +41,7 @@ def crop(volume, i, j, h, w):
     return volume[..., i:i + h, j:j + w]
 
 
-def resize(volume, target_size, interpolation_mode):
+def resize(volume, target_size, interpolation_mode, min_side=True, ignore_depth=False):
     r"""
     Resize the image volume using the target size and interpolation mode.
     It uses the torch.nn.functional.interpolate function.
@@ -39,28 +49,34 @@ def resize(volume, target_size, interpolation_mode):
     Args:
         volume (torch.tensor): the image volume
         target_size (Tuple[int, int, int]): the target size
+        min_side (int): does it use minimum or maximum side if target_size is int
         interpolation_mode (str): algorithm used for upsampling:
         ``'nearest'`` | ``'linear'`` | ``'bilinear'`` | ``'bicubic'`` |
         ``'trilinear'`` | ``'area'``. Default: ``'nearest'``
+        ignore_depth (bool): Ignore resizing in the depth dimension when size is int
     Returns:
         volume (torch.tensor): Resized volume. Size is (C, T, H, W)
 
     """
     assert isinstance(target_size, int) or len(target_size) == 3, "target size must be int or " \
                                                                   "tuple (depth, height, width)"
+    assert isinstance(min_side, bool), "min_size must be bool"
+    assert isinstance(ignore_depth, bool), "ignore_depth is bool"
+    if isinstance(target_size, Sequence) and len(target_size) == 3 and ignore_depth:
+        print('warning: ignore_depth is valid when target_size is int')
     if isinstance(target_size, int):
         _, d, h, w = volume.shape
-        dim_min = min(d, h, w)
+        dim_min = min(d, h, w) if min_side else max(d, h, w)
         if dim_min == target_size:
             return volume
         if dim_min == w:
             ow = target_size
             oh = int(target_size * h / w)
-            od = int(target_size * d / w)
+            od = int(target_size * d / w) if not ignore_depth else d
         elif dim_min == h:
             oh = target_size
             ow = int(target_size * w / h)
-            od = int(target_size * d / h)
+            od = int(target_size * d / h) if not ignore_depth else d
         else:
             od = target_size
             ow = int(target_size * w / d)
@@ -160,4 +176,46 @@ def flip(volume, dim=3):
     assert _is_tensor_image_volume(volume), "volume should be a 4D torch.tensor"
     return volume.flip(dim)
 
+
+def pad(volume, padding, fill=0, padding_mode='constant'):
+    r"""Pad the given Tensor volume on all sides with specified padding mode and fill value.
+
+    Args:
+        volume (Torch Tensor): Volume to be padded.
+        padding (int or tuple): Padding on each border. If a single int is provided this
+            is used to pad all borders. If tuple of length 2 is provided this is the padding
+            on left/right and top/bottom respectively. If a tuple of length 4 is provided
+            this is the padding for the left, top, right and bottom borders
+            respectively.
+        fill: Pixel fill value for constant fill. Default is 0. If a tuple of
+            length 3, it is used to fill R, G, B channels respectively.
+            This value is only used when the padding_mode is constant
+        padding_mode: Type of padding. Should be: 'constant', 'reflect', 'replicate' or 'circular'. Default is constant.
+            check torch.nn.functional.pad for further details ### Deprecated - check np.pad
+
+    Returns:
+        Torch Tensor: Padded volume.
+    """
+    _is_tensor_image_volume(volume)
+
+    if not isinstance(padding, (numbers.Number, tuple)):
+        raise TypeError('Got inappropriate padding arg')
+    if not isinstance(fill, (numbers.Number, str, tuple)):
+        raise TypeError('Got inappropriate fill arg')
+    if not isinstance(padding_mode, str):
+        raise TypeError('Got inappropriate padding_mode arg')
+
+    if isinstance(padding, Sequence) and len(padding) not in [2, 4, 6]:
+        raise ValueError("Padding must be an int or a 2, 4, or 6 element tuple, not a " +
+                         "{} element tuple".format(len(padding)))
+
+    assert padding_mode in ['constant', 'reflect', 'replicate', 'circular'], \
+        'Padding mode should be either constant, reflect, replicate or circular'
+    if isinstance(padding, int):
+        padding = [padding]*6
+
+    return torch.nn.functional.pad(volume, padding, mode=padding_mode, value=fill)
+
+
 # TODO Develop SimpleITK Modules like Adaptive Histogram Equalization
+

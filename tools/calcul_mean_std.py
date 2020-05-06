@@ -3,11 +3,11 @@ import torch
 from torch.utils.data import DataLoader
 # noinspection PyProtectedMember,PyPep8Naming
 from config.defaults import _C as cfg
-from data.WMHSegChal import WMHSegmentationChallenge, collate_fn
 import data.transforms_mitorch as tf
 from torchvision.transforms import Compose
 from data.build import build_dataset
 from tqdm import tqdm
+from data.VolSet import collate_fn
 
 
 def run_calcul(in_dataloader):
@@ -67,3 +67,9 @@ if __name__ == '__main__':
 # std:      : [246.27, 91.64]
 # minimum:  : [0.0, 0.0]
 # maximum:  : [8460.0, 3179.92]
+
+# SRIBIL
+# mean      : [326.93, 118.37]
+# std:      : [496.88, 126.8]
+# minimum:  : [0.0, -66.0]
+# maximum:  : [32767.0, 7272.0]

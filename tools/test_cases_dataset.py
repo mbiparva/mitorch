@@ -8,24 +8,43 @@ from data.build import build_dataset
 from data.VolSet import collate_fn
 
 
+class ComposePrintSize(Compose):
+    def __init__(self, transforms):
+        super().__init__(transforms)
+
+    def __call__(self, volume):
+        # print('\n\n', '-'*50)
+        # print(volume[2])
+        # print('-'*50)
+        for t in self.transforms:
+            volume = t(volume)
+            # image, annot, meta = volume
+            # print("image: {image}, annot: {annot}".format(
+            #     image=list(image.shape), annot=list(annot.shape)
+            # ))
+        return volume
+
+
 def main():
     dataset_name = cfg.TRAIN.DATASET
     mode = 'training'
-    transformations = Compose([
-            tf.ToTensorImageVolume(),
-            tf.OrientationToRAI(),
-            tf.ResampleTo1mm(),
-            tf.ResizeImageVolume(160),
-            tf.CenterCropImageVolume(100),
-            tf.ResizeImageVolume((50, 50, 50)),
-            tf.RandomFlipImageVolume(dim=-1)
+    max_side = 256
+    depth_size = 160
+    transformations = ComposePrintSize([
+        tf.ToTensorImageVolume(),
+        tf.OrientationToRAI(),
+        tf.ResampleTo1mm(),
+        tf.ResizeImageVolume(max_side, min_side=False),
+        tf.PadToSizeVolume(max_side, fill=(-10, 99)),
+        # tf.ResizeImageVolume((depth_size, max_side, max_side)),
+        tf.RandomFlipImageVolume(dim=-1)
         ])
     dataset = build_dataset(dataset_name, cfg, mode, transformations)
     dataloader = DataLoader(
         dataset,
-        batch_size=8,
+        batch_size=1,
         shuffle=False,
-        num_workers=16,
+        num_workers=0,
         pin_memory=False,
         drop_last=True,
         collate_fn=collate_fn,
@@ -33,7 +52,7 @@ def main():
 
     for cnt, (image, annot, meta) in enumerate(dataloader):
         print('*'*50)
-        print(cnt)
+        print(cnt, len(dataloader))
         print(meta)
         print(image.shape)
         print(annot.shape)

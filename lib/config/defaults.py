@@ -4,6 +4,7 @@
 import os
 from fvcore.common.config import CfgNode
 import datetime
+import socket
 
 # -----------------------------------------------------------------------------
 # Config definition
@@ -44,7 +45,14 @@ _C.TRAIN = CfgNode()
 _C.TRAIN.ENABLE = True
 
 # Dataset.
-_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL')[0]
+_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb')[2]
+
+# Choose to load hfb annotations
+_C.TRAIN.SRIBIL_HFB_ANNOT = True
+
+if socket.gethostname() == 'cerveau.sri.utoronto.ca':
+    # _C.PROJECT.DATASET_DIR = '/data2/projects/dataset_hfb'
+    _C.PROJECT.DATASET_DIR = '/data3/projects/dataset_hfb'
 
 # Total mini-batch size.
 _C.TRAIN.BATCH_SIZE = 1
