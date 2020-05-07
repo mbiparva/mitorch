@@ -336,20 +336,24 @@ class PadVolume(object):
     """Pad the given Torch Tensor Volume on all sides with the given "pad" value.
 
     Args:
-        padding (int or tuple): Padding on each border. If a single int is provided this
+        padding (Number or tuple): Padding on each border. If a single int is provided this
             is used to pad all borders. If tuple of length 2 is provided this is the padding
-            on before/after on all axis. If a tuple of length 6 is provided
-            this is the padding for ((before_1, after_1), … (before_N, after_N)).
-        fill: Pixel fill value for constant fill. Default is 0. If a tuple of
-            length 2, it is used to fill before and after for all channels. If length is 6,
-            ((before_1, after_1), … (before_N, after_N)).
+            on left/right, 4 left/right and top/bottom, and 6 left/right, top/bottom, and front/back respectively.
+        fill (int or tuple): Pixel fill value for constant fill. Default is 0. If a tuple of
+            length K, it is used to fill all of the K channels respectively.
             This value is only used when the padding_mode is constant
-        padding_mode: Type of padding. Should be: 'constant', 'edge', 'linear_ramp', 'maximum', 'mean',
-                            'median', 'minimum', 'reflect', 'symmetric', 'wrap', 'empty'. Default is constant.
-            check numpy.pad for further details.
+        padding_mode: Type of padding. Should be: 'constant', 'reflect', 'replicate' or 'circular'. Default is constant.
+            check torch.nn.functional.pad for further details
     """
 
     def __init__(self, padding, fill=0, padding_mode='constant'):
+        assert isinstance(padding, (numbers.Number, tuple))
+        assert isinstance(fill, (numbers.Number, str, tuple))
+        assert padding_mode in ['constant', 'reflect', 'replicate', 'circular']
+        if isinstance(padding, Sequence) and len(padding) not in [2, 4, 6]:
+            raise ValueError("Padding must be an int or a 2, 4, or 6 element tuple, not a " +
+                             "{} element tuple".format(len(padding)))
+
         self.padding = padding
         self.fill = fill
         self.padding_mode = padding_mode
@@ -380,17 +384,17 @@ class PadToSizeVolume(object):
     Args:
         target_size (Number or tuple): Target size to be padded to. If a single int is provided this
             is used to pad all borders. Otherwise, a tuple of length 3 is needed to se the target size of the volume.
-        fill: Pixel fill value for constant fill. Default is 0. If a tuple of
-            length 2, it is used to fill before and after for all channels. If length is 6,
-            ((before_1, after_1), … (before_N, after_N)).
+        fill (int or tuple): Pixel fill value for constant fill. Default is 0. If a tuple of
+            length K, it is used to fill all of the K channels respectively.
             This value is only used when the padding_mode is constant
-        padding_mode: Type of padding. Should be: 'constant', 'edge', 'linear_ramp', 'maximum', 'mean',
-                            'median', 'minimum', 'reflect', 'symmetric', 'wrap', 'empty'. Default is constant.
-            check numpy.pad for further details.
+        padding_mode: Type of padding. Should be: 'constant', 'reflect', 'replicate' or 'circular'. Default is constant.
+            check torch.nn.functional.pad for further details
     """
 
     def __init__(self, target_size, fill=0, padding_mode='constant'):
         assert isinstance(target_size, (numbers.Number, tuple))
+        assert isinstance(fill, (numbers.Number, str, tuple))
+        assert padding_mode in ['constant', 'reflect', 'replicate', 'circular']
         if isinstance(target_size, Sequence) and not len(target_size) == 3:
             raise ValueError("Size must be an int or a 3 element tuple, not a " +
                              "{} element tuple".format(len(target_size)))
@@ -423,7 +427,7 @@ class PadToSizeVolume(object):
         size_offset = target_size - image_size
         padding_before = size_offset // 2
         padding_after = size_offset - padding_before
-        padding = tuple(torch.stack((padding_before, padding_after)).T.flatten().tolist())
+        padding = tuple(torch.stack((padding_before.flip(0), padding_after.flip(0))).T.flatten().tolist())
         return (
             F.pad(image, padding, self.fill, self.padding_mode),
             F.pad(annot, padding, 0, self.padding_mode),  # TODO assumes bg is always zero, change it
@@ -434,8 +438,6 @@ class PadToSizeVolume(object):
         return self.__class__.__name__ + '(target_size={0}, fill={1}, padding_mode={2})'.\
             format(self.target_size, self.fill, self.padding_mode)
 
-
-import torchvision.transforms
 
 # TODO Implement CropTightVolume based off of
 #  https://github.com/nilearn/nilearn/blob/c10248e43769f37eaea804f64d44a7816e3c6e03/nilearn/image/image.py
