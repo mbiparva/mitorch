@@ -37,7 +37,8 @@ def round_tensor(x):
 if __name__ == '__main__':
     transforms = Compose([
             tf.ToTensorImageVolume(),
-        ])
+            tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
+    ])
     dataset = build_dataset(
         cfg.TRAIN.DATASET,
         cfg,
@@ -48,7 +49,7 @@ if __name__ == '__main__':
         dataset,
         batch_size=1,
         shuffle=False,
-        num_workers=16,
+        num_workers=8,
         pin_memory=True,
         drop_last=True,
         collate_fn=collate_fn,
@@ -56,10 +57,14 @@ if __name__ == '__main__':
 
     mean_ds, std_ds, minimum_ds, maximum_ds = run_calcul(dataloader)
 
-    print(' {:<10}:'.format('mean'), round_tensor(mean_ds), '\n',
-          '{:<10}:'.format('std:'), round_tensor(std_ds), '\n',
-          '{:<10}:'.format('minimum:'), round_tensor(minimum_ds), '\n',
-          '{:<10}:'.format('maximum:'), round_tensor(maximum_ds))
+    print(' {:<10}:'.format('mean'), mean_ds, '\n',
+          '{:<10}:'.format('std:'), std_ds, '\n',
+          '{:<10}:'.format('minimum:'), minimum_ds, '\n',
+          '{:<10}:'.format('maximum:'), maximum_ds)
+    # print(' {:<10}:'.format('mean'), round_tensor(mean_ds), '\n',
+    #       '{:<10}:'.format('std:'), round_tensor(std_ds), '\n',
+    #       '{:<10}:'.format('minimum:'), round_tensor(minimum_ds), '\n',
+    #       '{:<10}:'.format('maximum:'), round_tensor(maximum_ds))
     print('*** Check dataset for the order of T1 and Flair. (default is this order)')
 
 # WMH-C
@@ -73,3 +78,9 @@ if __name__ == '__main__':
 # std:      : [496.88, 126.8]
 # minimum:  : [0.0, -66.0]
 # maximum:  : [32767.0, 7272.0]
+
+# SRIBILhfb
+# mean      : [0.18278566002845764, 0.1672040820121765]
+# std:      : [0.018310515210032463, 0.017989424988627434]
+# minimum:  : [0.0, 0.0]
+# maximum:  : [1.0, 1.0]

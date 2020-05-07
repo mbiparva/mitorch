@@ -29,17 +29,19 @@ def _is_tensor_image_volume(volume):
     return True
 
 
-def crop(volume, i, j, h, w):
+def crop(volume, k, i, j, d, h, w):
     """
     Args:
         volume (torch.tensor): Image volume to be cropped. Size is (C, T, H, W)
-        i (int): i in (i,j) i.e coordinates of the upper left corner.
-        j (int): j in (i,j) i.e coordinates of the upper left corner.
+        k (int): k in (k,i,j) i.e coordinates of the back upper left corner.
+        i (int): i in (k,i,j) i.e coordinates of the back upper left corner.
+        j (int): j in (k,i,j) i.e coordinates of the back upper left corner.
+        d (int): Depth of the cropped region.
         h (int): Height of the cropped region.
         w (int): Width of the cropped region.
     """
     assert _is_tensor_image_volume(volume)
-    return volume[..., i:i + h, j:j + w]
+    return volume[..., k:k + d, i:i + h, j:j + w]
 
 
 def resize(volume, target_size, interpolation_mode, min_side=True, ignore_depth=False):
@@ -98,13 +100,15 @@ def resize(volume, target_size, interpolation_mode, min_side=True, ignore_depth=
         ).squeeze(dim=0)
 
 
-def resized_crop(volume, i, j, h, w, size, interpolation_mode="bilinear"):
+def resized_crop(volume, k, i, j, d, h, w, size, interpolation_mode="bilinear"):
     """
     Do spatial cropping and resizing to the image volume
     Args:
         volume (torch.tensor): Image volume to be cropped. Size is (C, T, H, W)
-        i (int): i in (i,j) i.e coordinates of the upper left corner.
-        j (int): j in (i,j) i.e coordinates of the upper left corner.
+        k (int): k in (k,i,j) i.e coordinates of the back upper left corner.
+        i (int): i in (k,i,j) i.e coordinates of the back upper left corner.
+        j (int): j in (k,i,j) i.e coordinates of the back upper left corner.
+        d (int): Depth of the cropped region.
         h (int): Height of the cropped region.
         w (int): Width of the cropped region.
         size (tuple(int, int)): height and width of resized volume
@@ -114,22 +118,30 @@ def resized_crop(volume, i, j, h, w, size, interpolation_mode="bilinear"):
     Returns:
         volume (torch.tensor): Resized and cropped volume. Size is (C, T, H, W)
     """
-    raise NotImplementedError
     assert _is_tensor_image_volume(volume), "volume should be a 4D torch.tensor"
-    volume = crop(volume, i, j, h, w)
+    volume = crop(volume, k, i, j, d, h, w)
     volume = resize(volume, size, interpolation_mode)
     return volume
 
 
+# noinspection PyTypeChecker
 def center_crop(volume, crop_size):
     assert _is_tensor_image_volume(volume), "volume should be a 4D torch.tensor"
-    h, w = volume.size(-2), volume.size(-1)
-    th, tw = crop_size
-    assert h >= th and w >= tw, "height and width must be no smaller than crop_size"
+    if not isinstance(crop_size, (numbers.Number, tuple)):
+        raise TypeError('Got inappropriate crop_size arg')
+    if isinstance(crop_size, Sequence) and not len(crop_size) == 3:
+        raise ValueError("crop_size must be an int or 3 element tuple, not a " +
+                         "{} element tuple".format(len(crop_size)))
+    if isinstance(crop_size, numbers.Number):
+        crop_size = tuple([int(crop_size)]*3)
+    d, h, w = volume.shape[1:]
+    td, th, tw = crop_size
+    assert d >= td and h >= th and w >= tw, "depth, height and width must not be smaller than crop_size"
 
+    k = int(round((d - td) / 2.0))
     i = int(round((h - th) / 2.0))
     j = int(round((w - tw) / 2.0))
-    return crop(volume, i, j, th, tw)
+    return crop(volume, k, i, j, td, th, tw)
 
 
 def to_tensor(volume):
@@ -156,13 +168,34 @@ def normalize(volume, mean, std, inplace=False):
     Returns:
         normalized volume (torch.tensor): Size is (C, T, H, W)
     """
-    raise NotImplementedError
     assert _is_tensor_image_volume(volume), "volume should be a 4D torch.tensor"
     if not inplace:
         volume = volume.clone()
     mean = torch.as_tensor(mean, dtype=volume.dtype, device=volume.device)
     std = torch.as_tensor(std, dtype=volume.dtype, device=volume.device)
     volume.sub_(mean[:, None, None, None]).div_(std[:, None, None, None])
+    return volume
+
+
+def normalize_minmax(volume, max_div, inplace=False):
+    """
+    Args:
+        volume (torch.tensor): Image volume to be normalized. Size is (C, T, H, W)
+        max_div (bool): whether divide by the maximum (max of one).
+        inplace (bool): inplace operation
+    Returns:
+        normalized volume (torch.tensor): Size is (C, T, H, W)
+    """
+    assert _is_tensor_image_volume(volume), "volume should be a 4D torch.tensor"
+    if not inplace:
+        volume = volume.clone()
+    volume_reshaped = volume.reshape(volume.size(0), -1)
+    minimum = volume_reshaped.min(1)[0]
+    volume.sub_(minimum[:, None, None, None])
+    if max_div:
+        maximum = volume_reshaped.max(1)[0]
+        volume.div_(maximum[:, None, None, None])
+
     return volume
 
 

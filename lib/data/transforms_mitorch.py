@@ -8,11 +8,6 @@ Image volumes represent dense 3D volumes generated from CT/MRI scans.
 import torch
 import numbers
 import random
-from PIL import Image
-from torchvision.transforms import (
-    RandomCrop,
-    RandomResizedCrop,
-)
 from . import functional_mitorch as F
 import collections
 import sys
@@ -26,16 +21,18 @@ else:
 
 
 __all__ = [
-    "RandomCropImageVolume",
-    "RandomResizedCropImageVolume",
-    "CenterCropImageVolume",
-    "NormalizeImageVolume",
-    "ToTensorImageVolume",
-    "RandomFlipImageVolume",
-    'ResizeImageVolume',
     'OrientationToRAI',
     'ResampleTo1mm',
-
+    'RandomCropImageVolume',
+    'RandomResizedCropImageVolume',
+    'ResizeImageVolume',
+    'CenterCropImageVolume',
+    'NormalizeMeanStdVolume',
+    'NormalizeMinMaxVolume',
+    'ToTensorImageVolume',
+    'RandomFlipImageVolume',
+    'PadVolume',
+    'PadToSizeVolume',
 ]
 
 
@@ -92,13 +89,33 @@ class ResampleTo1mm(object):
 
 
 # noinspection PyMissingConstructor,PyTypeChecker
-class RandomCropImageVolume(RandomCrop):
+class RandomCropImageVolume(object):
     def __init__(self, size):
-        raise NotImplementedError
         if isinstance(size, numbers.Number):
-            self.size = (int(size), int(size))
+            self.size = (int(size), int(size), int(size))
         else:
             self.size = size
+
+    @staticmethod
+    def get_params(volume, output_size):
+        """Get parameters for ``crop`` for a random crop.
+
+        Args:
+            volume (Torch Tensor): Volume to be cropped.
+            output_size (tuple): Expected output size of the crop.
+
+        Returns:
+            tuple: params (i, j, h, w) to be passed to ``crop`` for random crop.
+        """
+        d, h, w = volume.shape[1:]
+        td, th, tw = output_size
+        if d == td and h == th and w == tw:
+            return 0, 0, 0, d, h, w
+
+        k = random.randint(0, d - td)
+        i = random.randint(0, h - th)
+        j = random.randint(0, w - tw)
+        return k, i, j, td, th, tw
 
     def __call__(self, volume):
         """
@@ -109,10 +126,10 @@ class RandomCropImageVolume(RandomCrop):
                 size is (C, T, OH, OW)
         """
         image, annot, meta = volume
-        i, j, h, w = self.get_params(image, self.size)
+        k, i, j, d, h, w = self.get_params(image, self.size)
         return (
-            F.crop(image, i, j, h, w),
-            F.crop(annot, i, j, h, w),
+            F.crop(image, k, i, j, d, h, w),
+            F.crop(annot, k, i, j, d, h, w),
             meta
         )
 
@@ -121,18 +138,50 @@ class RandomCropImageVolume(RandomCrop):
 
 
 # noinspection PyMissingConstructor
-class RandomResizedCropImageVolume(RandomResizedCrop):
-    def __init__(self, size, scale=(0.08, 1.0), ratio=(3.0 / 4.0, 4.0 / 3.0), interpolation='trilinear'):
-        raise NotImplementedError
+class RandomResizedCropImageVolume(object):
+    def __init__(self, size, scale=(0.80, 1.0), interpolation='trilinear', uni_scale=True):
+        assert isinstance(scale, tuple) and len(scale) == 2, 'scale is not defined right'
+        assert 0 < scale[0] < scale[1] <= 1, 'scale must fall in (lower_range, upper_range)'
+        assert isinstance(uni_scale, bool), 'iso_crop is bool'
         if isinstance(size, tuple):
-            assert len(size) == 2, "size should be tuple (height, width)"
+            assert len(size) == 3, "size should be tuple (depth, height, width)"
             self.size = size
         else:
-            self.size = (size, size)
+            self.size = tuple([int(size)]*3)
 
         self.interpolation = interpolation
         self.scale = scale
-        self.ratio = ratio
+        self.uni_scale = uni_scale
+
+    @staticmethod
+    def get_params(volume, scale, uni_scale):
+        """Get parameters for ``crop`` for a random crop.
+
+        Args:
+            volume (Torch Tensor): Volume to be cropped.
+            scale (tuple): Expected output size of the crop.
+            uni_scale: uniformly scale all three sides
+
+        Returns:
+            tuple: params (i, j, h, w) to be passed to ``crop`` for random crop.
+        """
+        d, h, w = volume.shape[1:]
+
+        if uni_scale:
+            scale_rnd = random.uniform(*scale)
+            td, th, tw = (torch.tensor(volume.shape[1:]) * scale_rnd).round().int().tolist()
+        else:
+            td_l, th_l, tw_l = (torch.tensor(volume.shape[1:]) * scale[0]).round().int().tolist()
+            td_u, th_u, tw_u = (torch.tensor(volume.shape[1:]) * scale[1]).round().int().tolist()
+            td = random.randint(td_l, td_u)
+            th = random.randint(th_l, th_u)
+            tw = random.randint(tw_l, tw_u)
+
+        k = random.randint(0, d - td)
+        i = random.randint(0, h - th)
+        j = random.randint(0, w - tw)
+
+        return k, i, j, td, th, tw
 
     def __call__(self, volume):
         """
@@ -143,17 +192,17 @@ class RandomResizedCropImageVolume(RandomResizedCrop):
                 size is (C, T, H, W)
         """
         image, annot, meta = volume
-        i, j, h, w = self.get_params(volume, self.scale, self.ratio)
+        k, i, j, d, h, w = self.get_params(image, self.scale, self.uni_scale)
         return (
-            F.resized_crop(image, i, j, h, w, self.size, self.interpolation),
-            F.resized_crop(annot, i, j, h, w, self.size, 'nearest'),
+            F.resized_crop(image, k, i, j, d, h, w, self.size, self.interpolation),
+            F.resized_crop(annot, k, i, j, d, h, w, self.size, 'nearest'),
             meta
         )
 
     def __repr__(self):
         return self.__class__.__name__ + \
-            '(size={0}, interpolation_mode={1}, scale={2}, ratio={3})'.format(
-                self.size, self.interpolation, self.scale, self.ratio
+            '(size={0}, interpolation_mode={1}, scale={2})'.format(
+                self.size, self.interpolation, self.scale
             )
 
 
@@ -215,7 +264,7 @@ class ResizeImageVolume(object):
 class CenterCropImageVolume(object):
     def __init__(self, crop_size):
         if isinstance(crop_size, numbers.Number):
-            self.crop_size = (int(crop_size), int(crop_size))
+            self.crop_size = tuple([int(crop_size)]*3)
         else:
             self.crop_size = crop_size
 
@@ -238,7 +287,7 @@ class CenterCropImageVolume(object):
         return self.__class__.__name__ + '(crop_size={0})'.format(self.crop_size)
 
 
-class NormalizeImageVolume(object):
+class NormalizeMeanStdVolume(object):
     """
     Normalize the image volume by mean subtraction and division by standard deviation
     Args:
@@ -248,7 +297,6 @@ class NormalizeImageVolume(object):
     """
 
     def __init__(self, mean, std, inplace=False):
-        raise NotImplementedError
         self.mean = mean
         self.std = std
         self.inplace = inplace
@@ -268,6 +316,34 @@ class NormalizeImageVolume(object):
     def __repr__(self):
         return self.__class__.__name__ + '(mean={0}, std={1}, inplace={2})'.format(
             self.mean, self.std, self.inplace)
+
+
+class NormalizeMinMaxVolume(object):
+    """
+    Normalize the image volume by minimum subtraction and division by maximum
+    Args:
+        max_div (3-tuple): divide by the maximum
+        inplace (boolean): whether do in-place normalization
+    """
+
+    def __init__(self, max_div=True, inplace=False):
+        self.max_div = max_div
+        self.inplace = inplace
+
+    def __call__(self, volume):
+        """
+        Args:
+            volume (tuple(torch.tensor, torch.tensor, dict)): Image and mask volumes to be cropped. Size is (C, T, H, W)
+        """
+        image, annot, meta = volume
+        return (
+            F.normalize_minmax(image, self.max_div, self.inplace),
+            annot,
+            meta
+        )
+
+    def __repr__(self):
+        return self.__class__.__name__ + '(max_div={0}, inplace={1})'.format(self.max_div, self.inplace)
 
 
 class ToTensorImageVolume(object):
@@ -387,14 +463,17 @@ class PadToSizeVolume(object):
         fill (int or tuple): Pixel fill value for constant fill. Default is 0. If a tuple of
             length K, it is used to fill all of the K channels respectively.
             This value is only used when the padding_mode is constant
-        padding_mode: Type of padding. Should be: 'constant', 'reflect', 'replicate' or 'circular'. Default is constant.
+        padding_mode: Type of padding. Should be: 'constant', 'reflect', 'replicate' or 'circular',
+        'mean', 'median', 'min', 'max'. Default is constant.
             check torch.nn.functional.pad for further details
     """
 
     def __init__(self, target_size, fill=0, padding_mode='constant'):
         assert isinstance(target_size, (numbers.Number, tuple))
         assert isinstance(fill, (numbers.Number, str, tuple))
-        assert padding_mode in ['constant', 'reflect', 'replicate', 'circular']
+        assert padding_mode in ['constant', 'reflect', 'replicate', 'circular',
+                                'mean', 'median', 'min', 'max'
+                                ]
         if isinstance(target_size, Sequence) and not len(target_size) == 3:
             raise ValueError("Size must be an int or a 3 element tuple, not a " +
                              "{} element tuple".format(len(target_size)))
@@ -428,9 +507,16 @@ class PadToSizeVolume(object):
         padding_before = size_offset // 2
         padding_after = size_offset - padding_before
         padding = tuple(torch.stack((padding_before.flip(0), padding_after.flip(0))).T.flatten().tolist())
+
+        fill = self.fill
+        padding_mode = self.padding_mode
+        if self.padding_mode in ('mean', 'median', 'min', 'max'):
+            fill = getattr(image, self.padding_mode)().item()
+            padding_mode = 'constant'
+
         return (
-            F.pad(image, padding, self.fill, self.padding_mode),
-            F.pad(annot, padding, 0, self.padding_mode),  # TODO assumes bg is always zero, change it
+            F.pad(image, padding, fill, padding_mode),
+            F.pad(annot, padding, 0, padding_mode),  # TODO assumes bg is always zero, change it
             meta
         )
 
