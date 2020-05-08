@@ -126,7 +126,11 @@ def hausdorff_distance(input, target, ignore_index=-100, reduction='mean'):
 
     assert (input.is_contiguous() and target.is_contiguous())
 
+    input, target = input.bool(), target.bool()
+
     hausdorff_distance_output = _hausdorff_distance_prep(input, target)
+
+    hausdorff_distance_output = hausdorff_distance_output.float()
 
     return - {
         'mean': hausdorff_distance_output.mean(),

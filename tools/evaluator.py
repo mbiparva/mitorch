@@ -23,8 +23,8 @@ class Evaluator(BatchBase):
 
             loss = netwrapper.loss_update(p, a, step=False)
 
-            dice = self.evaluate(p, a)
+            dice, jaccard, hausdorff = self.evaluate(p, a)
 
             self.meters.iter_toc()
 
-            self.meters.update_stats(dice, loss, self._get_lr(netwrapper), self.cfg.TRAIN.BATCH_SIZE)
+            self.meters.update_stats(dice, jaccard, hausdorff, loss, self._get_lr(netwrapper), self.cfg.TRAIN.BATCH_SIZE)

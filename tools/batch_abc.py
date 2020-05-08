@@ -47,16 +47,32 @@ class BatchBase(ABC):
             annotation = annotation.squeeze(dim=1).long()
         return annotation
 
+    @staticmethod
+    def cel_prep(p, a):
+        p = p.softmax(dim=1)
+        p = p[:, 1, ...]
+        p = p.unsqueeze(dim=1)
+        a = a.float()
+
+        return p, a
+
+    @staticmethod
+    def binarize(p, binarize_threshold):
+        prediction_mask = p.ge(binarize_threshold)
+        p = p.masked_fill(prediction_mask, 1)
+        p = p.masked_fill(~prediction_mask, 0)
+
+        return p
+
     def evaluate(self, p, a):
+        BINARIZE_THRESHOLD = 0.5
         if self.cfg.MODEL.LOSS_FUNC == 'CrossEntropyLoss':
-            p = p.softmax(dim=1)
-            p = p[:, 1, ...]
-            p = p.unsqueeze(dim=1)
-            a = a.float()
+            p, a = self.cel_prep(p, a)
+        p = self.binarize(p, binarize_threshold=BINARIZE_THRESHOLD)
         return (
-            dice_coefficient_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX, threshold=0.5),
-            jaccard_index_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX, threshold=0.5),
-            hausdorff_distance_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX, threshold=0.5),
+            dice_coefficient_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX),
+            jaccard_index_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX),
+            hausdorff_distance_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX),
         )
 
     @abstractmethod

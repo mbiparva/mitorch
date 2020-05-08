@@ -60,8 +60,8 @@ class DataContainer:
         }
 
     def create_transform(self):
-        MAX_SIDE = 256
-        CROP_SIZE, CROP_SCALE = 224, (0.8, 1.0)
+        MAX_SIDE = 192
+        CROP_SIZE, CROP_SCALE = 160, (0.7, 1.0)
         transformations_head = [
             tf.ToTensorImageVolume(),
             tf.OrientationToRAI(),

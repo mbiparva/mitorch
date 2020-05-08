@@ -4,7 +4,7 @@
 """Functions for computing metrics."""
 
 import torch
-from netwrapper.functional import dice_coeff
+from netwrapper.functional import dice_coeff, jaccard_index, hausdorff_distance
 # Could be implemented manually or called from another external packages like FastAI
 # Could add metrics of all different sort of tasks e.g. segmentation, detection, classification
 
@@ -70,9 +70,6 @@ def topk_accuracies(preds, labels, ks):
 
 def dice_coefficient_metric(p, a, ignore_index, threshold=0.5):
     # Can use fastai metric too
-    prediction_mask = p.ge(threshold)
-    p = p.masked_fill(prediction_mask, 1)
-    p = p.masked_fill(~prediction_mask, 0)
     return 1 - dice_coeff(
         p,
         a,
@@ -83,10 +80,7 @@ def dice_coefficient_metric(p, a, ignore_index, threshold=0.5):
 
 def jaccard_index_metric(p, a, ignore_index, threshold=0.5):
     # Can use fastai metric too
-    prediction_mask = p.ge(threshold)
-    p = p.masked_fill(prediction_mask, 1)
-    p = p.masked_fill(~prediction_mask, 0)
-    return 1 - dice_coeff(
+    return 1 - jaccard_index(
         p,
         a,
         ignore_index=ignore_index,
@@ -95,12 +89,9 @@ def jaccard_index_metric(p, a, ignore_index, threshold=0.5):
 
 
 def hausdorff_distance_metric(p, a, ignore_index, threshold=0.5):
-    prediction_mask = p.ge(threshold)
-    p = p.masked_fill(prediction_mask, 1)
-    p = p.masked_fill(~prediction_mask, 0)
-    return -dice_coeff(
-        p.bool(),
-        a.bool(),
+    return -hausdorff_distance(
+        p,
+        a,
         ignore_index=ignore_index,
         reduction='mean'
     ).item()
