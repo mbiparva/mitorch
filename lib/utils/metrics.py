@@ -69,7 +69,6 @@ def topk_accuracies(preds, labels, ks):
 
 
 def dice_coefficient_metric(p, a, ignore_index, threshold=0.5):
-    # TODO this is the dice coefficient metric that can be used in the loss too
     # Can use fastai metric too
     prediction_mask = p.ge(threshold)
     p = p.masked_fill(prediction_mask, 1)
@@ -77,6 +76,31 @@ def dice_coefficient_metric(p, a, ignore_index, threshold=0.5):
     return 1 - dice_coeff(
         p,
         a,
+        ignore_index=ignore_index,
+        reduction='mean'
+    ).item()
+
+
+def jaccard_index_metric(p, a, ignore_index, threshold=0.5):
+    # Can use fastai metric too
+    prediction_mask = p.ge(threshold)
+    p = p.masked_fill(prediction_mask, 1)
+    p = p.masked_fill(~prediction_mask, 0)
+    return 1 - dice_coeff(
+        p,
+        a,
+        ignore_index=ignore_index,
+        reduction='mean'
+    ).item()
+
+
+def hausdorff_distance_metric(p, a, ignore_index, threshold=0.5):
+    prediction_mask = p.ge(threshold)
+    p = p.masked_fill(prediction_mask, 1)
+    p = p.masked_fill(~prediction_mask, 0)
+    return -dice_coeff(
+        p.bool(),
+        a.bool(),
         ignore_index=ignore_index,
         reduction='mean'
     ).item()

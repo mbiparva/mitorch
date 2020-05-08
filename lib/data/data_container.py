@@ -60,23 +60,40 @@ class DataContainer:
         }
 
     def create_transform(self):
-        transformations_init = [
+        MAX_SIDE = 256
+        CROP_SIZE, CROP_SCALE = 224, (0.8, 1.0)
+        transformations_head = [
             tf.ToTensorImageVolume(),
             tf.OrientationToRAI(),
             tf.ResampleTo1mm(),
         ]
+        transformations_tail = [
+            tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
+            tf.NormalizeMeanStdVolume(
+                mean=[0.18278566002845764, 0.1672040820121765],
+                std=[0.018310515210032463, 0.017989424988627434],
+                inplace=True
+            ),
+        ]
         if self.mode == 'train':
-            transformations = [
-                tf.ResizeImageVolume(scale_factor=0.75),
-                # tf.RandomFlipImageVolume(p=0.5, dim=2)  # TODO later randomize dim with dim=-1
+            transformations_body = [
+                tf.ResizeImageVolume(MAX_SIDE, min_side=False),
+                tf.PadToSizeVolume(MAX_SIDE, padding_mode=('mean', 'median', 'min', 'max')[0]),
+                # tf.CenterCropImageVolume(CROP_SIZE),
+                # tf.RandomCropImageVolume(224),
+                tf.RandomResizedCropImageVolume(CROP_SIZE, scale=CROP_SCALE),
+                tf.RandomFlipImageVolume(dim=-1),
             ]
         elif self.mode in ('valid', 'test'):
-            transformations = []
+            transformations_body = [
+                tf.ResizeImageVolume(MAX_SIDE, min_side=False),
+                tf.PadToSizeVolume(MAX_SIDE, padding_mode=('mean', 'median', 'min', 'max')[0]),
+            ]
         else:
             raise NotImplementedError
 
         return torch_tf.Compose(
-            transformations_init + transformations
+            transformations_head + transformations_body + transformations_tail
         )
 
     def data_split(self):

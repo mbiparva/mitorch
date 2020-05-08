@@ -387,7 +387,7 @@ if not os.path.exists(_C.OUTPUT_DIR):
 _C.RNG_SEED = 110
 
 # Log period in iters.
-_C.LOG_PERIOD = 1  # TODO check to see what this is??????
+_C.LOG_PERIOD = 2
 
 # Distributed backend.
 _C.DIST_BACKEND = "nccl"
@@ -399,7 +399,7 @@ _C.DIST_BACKEND = "nccl"
 _C.DATA_LOADER = CfgNode()
 
 # Number of data loader workers per training process.
-_C.DATA_LOADER.NUM_WORKERS = 10
+_C.DATA_LOADER.NUM_WORKERS = 16
 
 # Load data to pinned host memory.
 _C.DATA_LOADER.PIN_MEMORY = True

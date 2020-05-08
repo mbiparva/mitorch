@@ -1,4 +1,14 @@
 import torch
+import scipy.ndimage
+import numpy as np
+
+
+def _apply_ignore_index(input, target, ignore_index, fill_value=0):
+    if ignore_index > 0:
+        ignore_mask = target.eq(ignore_index)
+        if ignore_mask.any():
+            input.masked_fill(ignore_mask, fill_value)  # TODO find a better way, exclude rather than replace
+            target.masked_fill(ignore_mask, fill_value)
 
 
 # noinspection PyPep8Naming
@@ -7,13 +17,9 @@ def dice_coeff(input, target, weight=None, ignore_index=-100, reduction='mean', 
     # TODO check to see if contiguous() is needed anywhere in the function
     assert input.size() == target.size(), "'input' and 'target' must have the same shape"
     assert input.dtype == target.dtype, 'dtype does not match'
-    N, C = input.shape[:2]
 
-    if ignore_index > 0:
-        ignore_mask = target.eq(ignore_index)
-        if ignore_mask.any():
-            input.masked_fill(ignore_mask, 0)
-            target.masked_fill(ignore_mask, 0)
+    _apply_ignore_index(input, target, ignore_index, fill_value=0)
+
     assert (input.is_contiguous() and target.is_contiguous())
 
     intersect = input * target
@@ -23,6 +29,7 @@ def dice_coeff(input, target, weight=None, ignore_index=-100, reduction='mean', 
         union = input.pow(2) + target.pow(2)
     assert (intersect.is_contiguous() and union.is_contiguous())
 
+    N, C = input.shape[:2]
     intersect = intersect.contiguous().view(N, C, -1).sum(dim=2)
     union = union.contiguous().view(N, C, -1).sum(dim=2).clamp(min=epsilon)
     assert (input.is_contiguous() and target.is_contiguous())
@@ -40,3 +47,128 @@ def dice_coeff(input, target, weight=None, ignore_index=-100, reduction='mean', 
         'sum': dice_coefficient.sum(),
         'none': dice_coefficient
     }[reduction]
+
+
+# noinspection PyPep8Naming
+def jaccard_index(input, target, ignore_index=-100, reduction='mean', epsilon=1e-6):
+    assert (input.is_contiguous() and target.is_contiguous())
+    # TODO check to see if contiguous() is needed anywhere in the function
+    assert input.size() == target.size(), "'input' and 'target' must have the same shape"
+    assert input.dtype == target.dtype, 'dtype does not match'
+
+    _apply_ignore_index(input, target, ignore_index, fill_value=0)
+
+    assert (input.is_contiguous() and target.is_contiguous())
+
+    intersect = input * target
+    union = input + target
+    assert (intersect.is_contiguous() and union.is_contiguous())
+
+    N, C = input.shape[:2]
+    intersect = intersect.contiguous().view(N, C, -1).sum(dim=2)
+    union = union.contiguous().view(N, C, -1).sum(dim=2).clamp(min=epsilon)
+    assert (input.is_contiguous() and target.is_contiguous())
+
+    # TODO check dice_coeff for a class-weighted step
+
+    jaccard_index_metric = intersect / (union - intersect).clamp(min=epsilon)
+
+    jaccard_index_metric = jaccard_index_metric.mean(dim=1)  # class dimension
+
+    return 1 - {
+        'mean': jaccard_index_metric.mean(),
+        'sum': jaccard_index_metric.sum(),
+        'none': jaccard_index_metric
+    }[reduction]
+
+
+def _hausdorff_distance_func(e_1, e_2):
+    """This is based on the scipy.ndimage.morphology package. Check scikit-video for the reference implementation.
+    https://github.com/scikit-video/scikit-video/blob/master/skvideo/motion/gme.py
+    """
+    assert isinstance(e_1, np.ndarray) and isinstance(e_2, np.ndarray), 'expect np.ndarray ' \
+                                                                        'but got {}'.format(type(e_1), type(e_2))
+    # binary structure
+    diamond = scipy.ndimage.generate_binary_structure(3, 1)
+
+    # extract only 1-pixel border line of objects
+    e_1_per = e_1 ^ scipy.ndimage.morphology.binary_erosion(e_1, structure=diamond)
+    e_2_per = e_2 ^ scipy.ndimage.morphology.binary_erosion(e_2, structure=diamond)
+
+    # Max of euclidean distance transform
+    one_from_two = scipy.ndimage.morphology.distance_transform_edt(~e_2_per)[e_1_per].max()
+    two_from_one = scipy.ndimage.morphology.distance_transform_edt(~e_1_per)[e_2_per].max()
+
+    return np.max((one_from_two, two_from_one))
+
+
+def _hausdorff_distance_prep(input, target):
+    # In and out of Numpy/Scipy Scope
+    N, C = input.shape[:2]
+    input_np, target_np = input.numpy(), target.numpy()
+    hausdorff_distance_output = np.zeros((N, C))
+    for i in range(N):
+        for j in range(C):
+            hausdorff_distance_output[i, j] = _hausdorff_distance_func(input_np[i, j], target_np[i, j])
+    hausdorff_distance_output = torch.from_numpy(hausdorff_distance_output)
+
+    return hausdorff_distance_output
+
+
+# noinspection PyPep8Naming
+def hausdorff_distance(input, target, ignore_index=-100, reduction='mean'):
+    assert (input.is_contiguous() and target.is_contiguous())
+    # TODO check to see if contiguous() is needed anywhere in the function
+    assert input.size() == target.size(), "'input' and 'target' must have the same shape"
+    assert input.dtype == target.dtype, 'dtype does not match'
+
+    _apply_ignore_index(input, target, ignore_index, fill_value=0)
+
+    assert (input.is_contiguous() and target.is_contiguous())
+
+    hausdorff_distance_output = _hausdorff_distance_prep(input, target)
+
+    return - {
+        'mean': hausdorff_distance_output.mean(),
+        'sum': hausdorff_distance_output.sum(),
+        'none': hausdorff_distance_output
+    }[reduction]
+
+
+if __name__ == '__main__':
+    from PIL import Image
+    input_test = Image.open('/home/mbiparva/Downloads/input.jpg')
+    input_test = np.asanyarray(input_test)
+    input_test = torch.from_numpy(input_test).float()[:, :, 0]
+    input_test = torch.stack([input_test for _ in range(10)])
+    input_test[input_test < 100] = 1
+    input_test[input_test >= 100] = 0
+    input_test = input_test.bool()
+    input_test = input_test.unsqueeze(dim=0).unsqueeze(dim=0)
+
+    target_test = Image.open('/home/mbiparva/Downloads/target.jpg')
+    target_test = np.asanyarray(target_test)
+    target_test = torch.from_numpy(target_test).float()[:, :, 0]
+    target_test = torch.stack([target_test for _ in range(10)])
+    target_test[target_test < 100] = 1
+    target_test[target_test >= 100] = 0
+    target_test = target_test.bool()
+    target_test = target_test.unsqueeze(dim=0).unsqueeze(dim=0)
+
+    dc = 1 - dice_coeff(input_test.float(), target_test.float())
+
+    jc = 1 - jaccard_index(input_test.float(), target_test.float())
+
+    hd = -hausdorff_distance(input_test, target_test)
+
+    print(
+        '********\n\n'
+        'jaccard_index: {jaccard_index}\n'
+        'dice_coeff: {dice_coeff}\n'
+        'hausdorff_distance: {hausdorff_distance}\n\n'
+        '********'.format(
+            dice_coeff=dc,
+            jaccard_index=jc,
+            hausdorff_distance=hd,
+        )
+    )

@@ -7,7 +7,7 @@ import torch
 
 from data.data_container import DataContainer
 from utils.meters import TVTMeter
-from utils.metrics import dice_coefficient_metric
+from utils.metrics import dice_coefficient_metric, jaccard_index_metric, hausdorff_distance_metric
 
 
 class BatchBase(ABC):
@@ -53,7 +53,11 @@ class BatchBase(ABC):
             p = p[:, 1, ...]
             p = p.unsqueeze(dim=1)
             a = a.float()
-        return dice_coefficient_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX, threshold=0.5)
+        return (
+            dice_coefficient_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX, threshold=0.5),
+            jaccard_index_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX, threshold=0.5),
+            hausdorff_distance_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX, threshold=0.5),
+        )
 
     @abstractmethod
     def batch_main(self, net, x, annotation):
