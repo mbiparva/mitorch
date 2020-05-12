@@ -21,7 +21,7 @@ else:
 
 def _is_tensor_image_volume(volume):
     if not torch.is_tensor(volume):
-        raise TypeError("volume should be Tesnor. Got %s" % type(volume))
+        raise TypeError("volume should be Tensor. Got %s" % type(volume))
 
     if not volume.dim() == 4:
         raise ValueError("volume should be 4D. Got %dD" % volume.dim())
@@ -249,7 +249,3 @@ def pad(volume, padding, fill=0, padding_mode='constant'):
         padding = [padding]*6
 
     return torch.nn.functional.pad(volume, padding, mode=padding_mode, value=fill)
-
-
-# TODO Develop SimpleITK Modules like Adaptive Histogram Equalization
-

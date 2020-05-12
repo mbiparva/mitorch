@@ -53,7 +53,7 @@ class SRIBIL(VolSetABC):
             cat_labels
         )
         # if 2 in cat_labels:
-        #     annot_tensor[annot_tensor == 2] = ignore_index  # TODO check this with Unet3D to see what is done there.
+        #     annot_tensor[annot_tensor == 2] = ignore_index
         return annot_tensor
 
     def __getitem__(self, index):
