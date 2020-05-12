@@ -14,11 +14,7 @@ def train(cfg):
     except KeyboardInterrupt:
         print('*** The experiment is terminated by a keyboard interruption')
 
-    # TODO: This is a good place to have a multi-experimentation platform e.g. Manually or AX/BO TORCH
-    # results = dict()
-    # for name, m_avg in epoch_loop.evaluator.get_avg():
-    #     results[name] = m_avg
-    # return results
+    # TODO: setup experimentation platform e.g. Manually or AX/BO TORCH
 
 
 if __name__ == '__main__':

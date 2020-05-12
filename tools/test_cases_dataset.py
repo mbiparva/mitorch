@@ -14,9 +14,6 @@ class ComposePrintSize(Compose):
         super().__init__(transforms)
 
     def __call__(self, volume):
-        # print('\n\n', '-'*50)
-        # print(volume[2])
-        # print('-'*50)
         for t in self.transforms:
             # if t.__class__.__name__ == 'PadToSizeVolume':
             # if t.__class__.__name__ == 'RandomCropImageVolume':

@@ -36,9 +36,6 @@ class EpochLoop:
             self.device = torch.device('cpu')
 
     def setup_tb_logger(self):
-        # logger_dir = os.path.join(self.cfg.OUTPUT_DIR, 'tensorboard_logs')
-        # if not os.path.exists(logger_dir):
-        #     os.makedirs(logger_dir)
         self.tb_logger_writer = SummaryWriter(self.cfg.OUTPUT_DIR)
         with open(os.path.join(self.cfg.OUTPUT_DIR, 'cfg.yml'), 'w') as outfile:
             self.cfg.dump(stream=outfile)
@@ -104,7 +101,7 @@ class EpochLoop:
 
         self.evaluator.batch_loop(self.net_wrapper, start_epoch)
 
-        # Log epoch stats. For the moment, valid and test are the same. For multi-view, multi-crops, check out slowfast
+        # Log epoch stats. For the moment, valid and test are the same. For multi-view, multi-crops, modify it later.
         self.evaluator.meters.log_epoch_stats(start_epoch)
 
         self.tb_logger_update(start_epoch, self.evaluator)
@@ -135,10 +132,10 @@ class EpochLoop:
             self.trainer_epoch_loop(start_epoch)
         elif self.cfg.VALID.ENABLE:
             self.evaluator_epoch_loop(0)
-        # elif self.cfg.TESTING:  # Test mode is only different from valid once data is loaded
-        #     raise NotImplementedError('TESTING mode is not implemented yet')
+        elif self.cfg.TESTING:  # Test mode is only different from valid once data is loaded
+            raise NotImplementedError('TESTING mode is not implemented yet')
         else:
-            raise NotImplementedError('One of {TRAINING, VALIDATING} must be set to True')
+            raise NotImplementedError('One of {TRAINING, VALIDATING, TESTING} must be set to True')
 
         self.tb_logger_writer.close()
 
