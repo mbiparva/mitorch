@@ -34,7 +34,7 @@ If you find "miTorch: Medical Imaging in PyTorch" useful in your research, pleas
 ## Introduction
 The primary goal is to have a solid, readable, modular, reliable, extendable 
 PyTorch package for medical imaging application in deep learning. 
-The input is 3D volumes of various modalities. 
+The input is 3D volumes of various modalities and the task could be segmentation, classification, and transfer learning. 
 
 To name a few, the learning tasks are:
   * Segmentation:
