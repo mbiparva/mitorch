@@ -2,14 +2,9 @@
 
 """Wrapper to train and test a neural network model."""
 
-import _init_lib_path  # or use export PYTHONPATH=/path/to/lib:$PYTHONPATH
+import _init_lib_path
 import argparse
-import sys
-import torch
-
-import utils.checkpoint as cu
 from config.defaults import get_cfg
-
 from test_net import test
 from train_net import train
 
@@ -18,15 +13,8 @@ def parse_args():
     """
     Parse the following arguments for the video training and testing pipeline.
     Args:
-        shard_id (int): shard id for the current machine. Starts from 0 to
-            num_shards - 1. If single machine is used, then set shard id to 0.
-        num_shards (int): number of shards using by the job.
-        init_method (str): initialization method to launch the job with multiple
-            devices. Options includes TCP or shared file-system for
-            initialization. details can be find in
-            https://pytorch.org/docs/stable/distributed.html#tcp-initialization
         cfg (str): path to the config file.
-        opts (argument): provide addtional options from the command line, it
+        opts (argument): provide additional options from the command line, it
             overwrites the config loaded from file.
         """
     parser = argparse.ArgumentParser(
