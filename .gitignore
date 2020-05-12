@@ -133,3 +133,4 @@ __pycache__
 notebook
 dataset
 experiments
+/tools/_local_spare_files/*
