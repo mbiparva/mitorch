@@ -90,8 +90,8 @@ def jaccard_index_metric(p, a, ignore_index, threshold=0.5):
 
 def hausdorff_distance_metric(p, a, ignore_index, threshold=0.5):
     return -hausdorff_distance(
-        p,
-        a,
+        p.cpu(),  # must be cpu since we get into numpy/scipy scopes
+        a.cpu(),
         ignore_index=ignore_index,
         reduction='mean'
     ).item()

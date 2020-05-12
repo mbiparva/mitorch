@@ -89,6 +89,6 @@ class BatchBase(ABC):
 
             self.batch_main(netwrapper, image, annotation)
 
-            self.meters.log_iter_stats(cur_epoch, cur_iter)
+            self.meters.log_iter_stats(cur_epoch, cur_iter, self.mode)
 
             self.meters.iter_tic()

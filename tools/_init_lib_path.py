@@ -11,5 +11,5 @@ def add_path(path):
 
 
 this_dir = os.path.dirname(__file__)
-lib_path = os.path.join(this_dir, '..', 'lib')
+lib_path = os.path.join(this_dir, '..', 'mitorch')
 add_path(os.path.normpath(lib_path))

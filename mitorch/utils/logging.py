@@ -8,6 +8,7 @@ import decimal
 import logging
 import sys
 import simplejson
+import os
 
 
 def _suppress_print():
@@ -21,7 +22,7 @@ def _suppress_print():
     builtins.print = print_pass
 
 
-def setup_logging():
+def setup_logging(filepath=None):
     """
     Sets up the logging for multiple processes. Only enable the logging for the
     master process, and suppress logging for the non-master processes.
@@ -31,9 +32,17 @@ def setup_logging():
 
     # Enable logging for the master process.
     logging.root.handlers = []
-    logging.basicConfig(
-        level=logging.INFO, format=_FORMAT, stream=sys.stdout
-    )
+    if filepath is not None:
+        logging.basicConfig(
+            filename=os.path.join(filepath, 'stdout.log'),
+            filemode='w',
+            level=logging.INFO, format=_FORMAT,
+        )
+    else:
+        logging.basicConfig(
+            level=logging.INFO, format=_FORMAT,
+            stream=sys.stdout
+        )
 
 
 def get_logger(name):

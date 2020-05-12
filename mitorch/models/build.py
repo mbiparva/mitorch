@@ -24,7 +24,7 @@ def build_model(cfg, cur_device):
     """
     assert (
         cfg.NUM_GPUS <= torch.cuda.device_count()
-    ), "Cannot use more GPU devices than available"
+    ), "Cannot use more GPU devices than available {} | {}".format(cfg.NUM_GPUS, torch.cuda.device_count())
     # Construct the model
     name = cfg.MODEL.MODEL_NAME
     model = MODEL_REGISTRY.get(name)(cfg)

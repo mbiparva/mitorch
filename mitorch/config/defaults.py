@@ -399,7 +399,7 @@ _C.DIST_BACKEND = "nccl"
 _C.DATA_LOADER = CfgNode()
 
 # Number of data loader workers per training process.
-_C.DATA_LOADER.NUM_WORKERS = 16
+_C.DATA_LOADER.NUM_WORKERS = 8
 
 # Load data to pinned host memory.
 _C.DATA_LOADER.PIN_MEMORY = True

@@ -2,6 +2,7 @@
 
 import os
 import time
+import socket
 import pprint
 import numpy as np
 
@@ -110,7 +111,10 @@ class EpochLoop:
         np.random.seed(self.cfg.RNG_SEED)
         torch.manual_seed(self.cfg.RNG_SEED)
 
-        logging.setup_logging()
+        socket_name = socket.gethostname()
+        logging.setup_logging(
+            filepath=self.cfg.OUTPUT_DIR if 'scinet' in socket_name or 'computecanada' in socket_name else None
+        )
 
         logger.info("Train with config:")
         logger.info(pprint.pformat(self.cfg))

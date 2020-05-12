@@ -165,12 +165,13 @@ class TVTMeter(object):
         self.loss_total.update(loss, n=mb_size)
         self.num_samples += mb_size
 
-    def log_iter_stats(self, cur_epoch, cur_iter):
+    def log_iter_stats(self, cur_epoch, cur_iter, mode):
         """
         log the stats of the current iteration.
         Args:
             cur_epoch (int): the number of current epoch.
             cur_iter (int): the number of current iteration.
+            mode (str): the mode currently in it.
         """
         if (cur_iter + 1) % self._cfg.LOG_PERIOD != 0:
             return
@@ -180,7 +181,7 @@ class TVTMeter(object):
         eta = str(datetime.timedelta(seconds=int(eta_sec)))
         mem_usage = misc.gpu_mem_usage()
         stats = {
-            "_type": "train_iter",
+            "_type": mode,
             "epoch": "{}/{}".format(cur_epoch + 1, self._cfg.SOLVER.MAX_EPOCH),
             "iter": "{}/{}".format(cur_iter + 1, self.epoch_iters),
             "time_diff": self.iter_timer.seconds(),

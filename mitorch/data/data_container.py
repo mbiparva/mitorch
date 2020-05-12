@@ -80,8 +80,8 @@ class DataContainer:
                 tf.ResizeImageVolume(MAX_SIDE, min_side=False),
                 tf.PadToSizeVolume(MAX_SIDE, padding_mode=('mean', 'median', 'min', 'max')[0]),
                 # tf.CenterCropImageVolume(CROP_SIZE),
-                # tf.RandomCropImageVolume(224),
-                tf.RandomResizedCropImageVolume(CROP_SIZE, scale=CROP_SCALE),
+                tf.RandomCropImageVolume(224),
+                # tf.RandomResizedCropImageVolume(CROP_SIZE, scale=CROP_SCALE),
                 tf.RandomFlipImageVolume(dim=-1),
             ]
         elif self.mode in ('valid', 'test'):

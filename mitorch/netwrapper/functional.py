@@ -82,7 +82,7 @@ def jaccard_index(input, target, ignore_index=-100, reduction='mean', epsilon=1e
     }[reduction]
 
 
-def _hausdorff_distance_func(e_1, e_2):
+def _hausdorff_distance_func(e_1, e_2, maximum=True, percentile=95):
     """This is based on the scipy.ndimage.morphology package. Check scikit-video for the reference implementation.
     https://github.com/scikit-video/scikit-video/blob/master/skvideo/motion/gme.py
     """
@@ -96,8 +96,15 @@ def _hausdorff_distance_func(e_1, e_2):
     e_2_per = e_2 ^ scipy.ndimage.morphology.binary_erosion(e_2, structure=diamond)
 
     # Max of euclidean distance transform
-    one_from_two = scipy.ndimage.morphology.distance_transform_edt(~e_2_per)[e_1_per].max()
-    two_from_one = scipy.ndimage.morphology.distance_transform_edt(~e_1_per)[e_2_per].max()
+    one_from_two = scipy.ndimage.morphology.distance_transform_edt(~e_2_per)[e_1_per]
+    two_from_one = scipy.ndimage.morphology.distance_transform_edt(~e_1_per)[e_2_per]
+
+    if maximum:
+        one_from_two = one_from_two.max()
+        two_from_one = two_from_one.max()
+    else:
+        one_from_two = np.percentile(one_from_two, percentile)
+        two_from_one = np.percentile(two_from_one, percentile)
 
     return np.max((one_from_two, two_from_one))
 
@@ -109,7 +116,8 @@ def _hausdorff_distance_prep(input, target):
     hausdorff_distance_output = np.zeros((N, C))
     for i in range(N):
         for j in range(C):
-            hausdorff_distance_output[i, j] = _hausdorff_distance_func(input_np[i, j], target_np[i, j])
+            hausdorff_distance_output[i, j] = _hausdorff_distance_func(input_np[i, j], target_np[i, j],
+                                                                       maximum=False, percentile=90)
     hausdorff_distance_output = torch.from_numpy(hausdorff_distance_output)
 
     return hausdorff_distance_output
