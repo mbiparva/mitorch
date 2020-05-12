@@ -40,6 +40,8 @@ class EpochLoop:
         # if not os.path.exists(logger_dir):
         #     os.makedirs(logger_dir)
         self.tb_logger_writer = SummaryWriter(self.cfg.OUTPUT_DIR)
+        with open(os.path.join(self.cfg.OUTPUT_DIR, 'cfg.yml'), 'w') as outfile:
+            self.cfg.dump(stream=outfile)
 
     def tb_logger_update(self, e, worker):
         if e == 0 and self.tb_logger_writer is None:
