@@ -1,3 +1,9 @@
+#  Copyright (c) 2020.
+#  miTorch Deep Learning Package
+#  Deep Learning Package for 3D medical imaging in PyTorch
+#  Implemented by Mahdi Biparva, May 2020
+#  Brain Imaging Lab, Sunnybrook Research Institure (SRI)
+
 import _init_lib_path  # or use export PYTHONPATH=/path/to/lib:$PYTHONPATH
 import torch
 from torch.utils.data import DataLoader
