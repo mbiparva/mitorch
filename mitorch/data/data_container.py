@@ -60,8 +60,6 @@ class DataContainer:
         }
 
     def create_transform(self):
-        MAX_SIDE = 192
-        CROP_SIZE, CROP_SCALE = 160, (0.7, 1.0)
         transformations_head = [
             tf.ToTensorImageVolume(),
             tf.OrientationToRAI(),
@@ -70,24 +68,24 @@ class DataContainer:
         transformations_tail = [
             tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
             tf.NormalizeMeanStdVolume(
-                mean=[0.18278566002845764, 0.1672040820121765],
-                std=[0.018310515210032463, 0.017989424988627434],
+                mean=self.cfg.Data.MEAN,
+                std=self.cfg.Data.STD,
                 inplace=True
             ),
         ]
         if self.mode == 'train':
             transformations_body = [
-                tf.ResizeImageVolume(MAX_SIDE, min_side=False),
-                tf.PadToSizeVolume(MAX_SIDE, padding_mode=('mean', 'median', 'min', 'max')[0]),
-                # tf.CenterCropImageVolume(CROP_SIZE),
-                # tf.RandomCropImageVolume(CROP_SIZE),
-                tf.RandomResizedCropImageVolume(CROP_SIZE, scale=CROP_SCALE),
+                tf.ResizeImageVolume(self.cfg.DATA.MAX_SIDE_SIZE, min_side=False),
+                tf.PadToSizeVolume(self.cfg.DATA.MAX_SIDE_SIZE, padding_mode=self.cfg.DATA.PADDING_MODE),
+                # tf.CenterCropImageVolume(self.cfg.Data.CROP_SIZE),
+                # tf.RandomCropImageVolume(self.cfg.Data.CROP_SIZE),
+                tf.RandomResizedCropImageVolume(self.cfg.Data.CROP_SIZE, scale=self.cfg.Data.CROP_SCALE),
                 tf.RandomFlipImageVolume(dim=-1),
             ]
         elif self.mode in ('valid', 'test'):
             transformations_body = [
-                tf.ResizeImageVolume(MAX_SIDE, min_side=False),
-                tf.PadToSizeVolume(MAX_SIDE, padding_mode=('mean', 'median', 'min', 'max')[0]),
+                tf.ResizeImageVolume(self.cfg.DATA.MAX_SIDE_SIZE, min_side=False),
+                tf.PadToSizeVolume(self.cfg.DATA.MAX_SIDE_SIZE, padding_mode=self.cfg.DATA.PADDING_MODE),
             ]
         else:
             raise NotImplementedError
