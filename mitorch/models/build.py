@@ -38,5 +38,5 @@ def build_model(cfg, cur_device):
         model = torch.nn.parallel.DistributedDataParallel(
             module=model, device_ids=[cur_device], output_device=cur_device
         )
-        raise NotImplementedError
+        raise NotImplementedError('Check it before use it')
     return model
