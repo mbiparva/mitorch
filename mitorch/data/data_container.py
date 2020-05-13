@@ -74,8 +74,8 @@ class DataContainer:
         transformations_tail = [
             tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
             tf.NormalizeMeanStdVolume(
-                mean=self.cfg.Data.MEAN,
-                std=self.cfg.Data.STD,
+                mean=self.cfg.DATA.MEAN,
+                std=self.cfg.DATA.STD,
                 inplace=True
             ),
         ]
@@ -83,9 +83,9 @@ class DataContainer:
             transformations_body = [
                 tf.ResizeImageVolume(self.cfg.DATA.MAX_SIDE_SIZE, min_side=False),
                 tf.PadToSizeVolume(self.cfg.DATA.MAX_SIDE_SIZE, padding_mode=self.cfg.DATA.PADDING_MODE),
-                # tf.CenterCropImageVolume(self.cfg.Data.CROP_SIZE),
-                # tf.RandomCropImageVolume(self.cfg.Data.CROP_SIZE),
-                tf.RandomResizedCropImageVolume(self.cfg.Data.CROP_SIZE, scale=self.cfg.Data.CROP_SCALE),
+                # tf.CenterCropImageVolume(self.cfg.DATA.CROP_SIZE),
+                # tf.RandomCropImageVolume(self.cfg.DATA.CROP_SIZE),
+                tf.RandomResizedCropImageVolume(self.cfg.DATA.CROP_SIZE, scale=self.cfg.DATA.CROP_SCALE),
                 tf.RandomFlipImageVolume(dim=-1),
             ]
         elif self.mode in ('valid', 'test'):

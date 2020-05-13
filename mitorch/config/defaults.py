@@ -57,7 +57,7 @@ if socket.gethostname() == 'cerveau.sri.utoronto.ca':
     _C.PROJECT.DATASET_DIR = '/data2/projects/dataset_hfb'
 
 # Total mini-batch size.
-_C.TRAIN.BATCH_SIZE = 1
+_C.TRAIN.BATCH_SIZE = 4
 
 # Shuffle the training data, valid / test are never shuffled
 _C.TRAIN.SHUFFLE = True
