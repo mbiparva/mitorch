@@ -24,7 +24,12 @@ class WMHSegmentationChallenge(VolSetABC):
 
     def _init_dataset(self):
         self.dataset_path = os.path.join(self.dataset_root, 'uncompressed')
-        self.t1_file_name, self.fl_file_name, self.annot_file_name = ('T1.nii.gz', 'FLAIR.nii.gz', 'wmh.nii.gz')
+        self.in_modalities = {  # TODO this could be passed as an input argument or config attribute based on users need
+            't1': 'T1.nii.gz',
+            'fl': 'FLAIR.nii.gz',
+            'annot': 'wmh.nii.gz',
+            # 't2': None,  # Add anymore modalities you want HERE
+        }
         self.sample_path_list = self.index_samples()
 
     def index_samples(self):
@@ -39,11 +44,11 @@ class WMHSegmentationChallenge(VolSetABC):
         ]
 
     def find_data_files_path(self, sample_path):
-        return (
-            os.path.join(sample_path, 'pre', self.t1_file_name),
-            os.path.join(sample_path, 'pre', self.fl_file_name),
-            os.path.join(sample_path, self.annot_file_name),
-        )
+        return {
+            u: os.path.join(sample_path, 'pre', v)
+            if u not in ('annot', ) else os.path.join(sample_path, v)
+            for u, v in self.in_modalities.items()
+        }
 
     @staticmethod
     def curate_annotation(annot_tensor, ignore_index):
@@ -56,23 +61,3 @@ class WMHSegmentationChallenge(VolSetABC):
         if 2 in cat_labels:
             annot_tensor[annot_tensor == 2] = ignore_index  # TODO check this with Unet3D to see what is done there.
         return annot_tensor
-
-    def __getitem__(self, index):
-        sample_path = self.sample_path_list[index]
-
-        t1_path, fl_path, annot_path = self.find_data_files_path(sample_path)
-        t1_nii, fl_nii, annot_nii = self.load_data(t1_path, fl_path, annot_path)
-        meta_data = self.extract_data_meta(t1_nii, fl_nii, annot_nii)
-
-        meta_data = self.run_sanity_checks(*meta_data)
-        meta_data['sample_path'] = sample_path
-
-        t1_tensor, fl_tensor, annot_tensor = self.get_data_tensor(t1_nii, fl_nii, annot_nii)
-
-        image_tensor = torch.stack((t1_tensor, fl_tensor), dim=-1)  # D x H x W x C
-        annot_tensor = annot_tensor.unsqueeze(dim=0)
-
-        if self.transform is not None:
-            image_tensor, annot_tensor, meta_data = self.transform((image_tensor, annot_tensor, meta_data))
-
-        return image_tensor, annot_tensor, meta_data

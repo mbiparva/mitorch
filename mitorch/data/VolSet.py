@@ -85,90 +85,94 @@ class VolSetABC(ABC, data.Dataset):
         raise NotImplementedError
 
     @staticmethod
-    def load_data(t1_path, fl_path, annot_path):
-        return (
-            read_nii_file(t1_path),
-            read_nii_file(fl_path),
-            read_nii_file(annot_path),
-        )
+    def load_data(in_pipe):
+        return {
+            u: read_nii_file(v)
+            for u, v in in_pipe.items()
+        }
 
     @staticmethod
-    def extract_data_meta(t1_nii, fl_nii, annot_nii):
-        return (
-            extract_meta(t1_nii),
-            extract_meta(fl_nii),
-            extract_meta(annot_nii),
-        )
+    def extract_data_meta(in_pipe):
+        return {
+            u: extract_meta(v)
+            for u, v in in_pipe.items()
+        }
 
     @staticmethod
-    def run_sanity_checks(t1_meta, fl_meta, annot_meta):
-        for k in t1_meta.keys():
-            t1_meta_k, fl_meta_k, annot_meta_k = t1_meta[k], fl_meta[k], annot_meta[k]
+    def run_sanity_checks(in_pipe_meta):
+        first_value = in_pipe_meta[list(in_pipe_meta.keys())[0]]
+        for k in first_value.keys():
             if k in ('bitpixel', ):
                 continue
-            try:
-                match = t1_meta_k == fl_meta_k == annot_meta_k
-                assert match, '{} does not match in all three: \n{}\n{}\n{}\nrounding is going to be started'.format(
-                    k,
-                    t1_meta_k,
-                    fl_meta_k,
-                    annot_meta_k
-                )
-            except AssertionError:
-                ndigits = 8 - 2
-                while ndigits >= 2:
-                    t1_meta_k = [round(i, ndigits) for i in t1_meta_k]
-                    fl_meta_k = [round(i, ndigits) for i in fl_meta_k]
-                    annot_meta_k = [round(i, ndigits) for i in annot_meta_k]
-                    if t1_meta_k == fl_meta_k == annot_meta_k:
-                        break
-                    ndigits -= 2
-                if ndigits == 0:
-                    raise Exception(
-                        '{} does not match in all three: \n{}\n{}\n{}'.format(
-                            k,
-                            t1_meta_k,
-                            fl_meta_k,
-                            annot_meta_k
-                        )
+            in_pipe_meta_value = [v[k] for v in in_pipe_meta.values()]
+            ndigits = 8
+            while ndigits >= 2:
+                in_pipe_meta_value_rounded = [
+                    [
+                        round(j, ndigits)
+                        for j in i
+                    ]
+                    for i in in_pipe_meta_value
+                ]
+                first_pipe = in_pipe_meta_value_rounded[0]
+                all_equal = True
+                for i in in_pipe_meta_value_rounded[1:]:
+                    all_equal = all_equal and (first_pipe == i)
+                if all_equal:
+                    break
+                ndigits -= 2
+            if ndigits == 0:
+                raise Exception(
+                    '{} does not match in all pipe elements ({})'.format(
+                        k,
+                        in_pipe_meta_value
                     )
+                )
 
-        return t1_meta  # we keep only one of them
+        return in_pipe_meta[first_value]  # Send out the first one
 
     @staticmethod
     @abstractmethod
     def curate_annotation(annot_tensor, ignore_index):
         raise NotImplementedError
 
-    def get_data_tensor(self, t1_nii, fl_nii, annot_nii):
-        t1_tensor, fl_tensor, annot_tensor = (
-            torch.tensor(
-                data=sitk.GetArrayFromImage(t1_nii).astype(np.float32),
-                dtype=torch.float,
-                device='cpu',
-                requires_grad=False
-            ),
-            torch.tensor(
-                data=sitk.GetArrayFromImage(fl_nii).astype(np.float32),
-                dtype=torch.float,
-                device='cpu',
-                requires_grad=False
-            ),
-            torch.tensor(
-                data=sitk.GetArrayFromImage(annot_nii).astype(np.float32),
+    def get_data_tensor(self, in_pipe_data):
+        in_pipe_data = {
+            u: torch.tensor(
+                data=sitk.GetArrayFromImage(v).astype(np.float32),
                 dtype=torch.float,
                 device='cpu',
                 requires_grad=False
             )
-        )
+            for u, v in in_pipe_data.items()
+        }
+
+        annot_tensor = in_pipe_data.pop('annot')
+        image_tensor = list(in_pipe_data.values())
 
         annot_tensor = self.curate_annotation(annot_tensor, ignore_index=self.cfg.MODEL.IGNORE_INDEX)
 
-        return t1_tensor, fl_tensor, annot_tensor
+        return image_tensor, annot_tensor
 
-    @abstractmethod
     def __getitem__(self, index):
-        raise NotImplementedError
+        sample_path = self.sample_path_list[index]
+
+        in_pipe_data = self.find_data_files_path(sample_path)
+        in_pipe_data = self.load_data(in_pipe_data)
+        in_pipe_meta = self.extract_data_meta(in_pipe_data)
+
+        in_pipe_meta = self.run_sanity_checks(in_pipe_meta)
+        in_pipe_meta['sample_path'] = sample_path
+
+        image_tensor, annot_tensor = self.get_data_tensor(in_pipe_data)
+
+        image_tensor = torch.stack(image_tensor, dim=-1)  # D x H x W x C
+        annot_tensor = annot_tensor.unsqueeze(dim=0)
+
+        if self.transform is not None:
+            image_tensor, annot_tensor, in_pipe_meta = self.transform((image_tensor, annot_tensor, in_pipe_meta))
+
+        return image_tensor, annot_tensor, in_pipe_meta
 
     def __len__(self):
         return len(self.sample_path_list)

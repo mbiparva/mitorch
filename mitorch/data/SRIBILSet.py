@@ -26,8 +26,12 @@ class SRIBIL(VolSetABC):
 
     def _init_dataset(self):
         self.dataset_path = self.dataset_root
-        self.t1_file_name, self.fl_file_name = ('T1_nu.nii.gz', 'T1acq_nu_FL.nii.gz')
-        self.annot_file_name = ('wmh_seg.nii.gz', 'T1acq_nu_HfBd.nii.gz')[self.hfb_annot is True]
+        self.in_modalities = {  # TODO this could be passed as an input argument or config attribute based on users need
+            't1': 'T1_nu.nii.gz',
+            'fl': 'T1acq_nu_FL.nii.gz',
+            'annot': ('wmh_seg.nii.gz', 'T1acq_nu_HfBd.nii.gz')[self.hfb_annot is True],
+            # 't2': None,  # Add anymore modalities you want HERE
+        }
         self.sample_path_list = self.index_samples()
 
     def index_samples(self):
@@ -45,11 +49,10 @@ class SRIBIL(VolSetABC):
         )
 
     def find_data_files_path(self, sample_path):
-        return (
-            os.path.join(sample_path, self.put_fname_template(sample_path, self.t1_file_name)),
-            os.path.join(sample_path, self.put_fname_template(sample_path, self.fl_file_name)),
-            os.path.join(sample_path, self.put_fname_template(sample_path, self.annot_file_name)),
-        )
+        return {
+            u: os.path.join(sample_path, self.put_fname_template(sample_path, v))
+            for u, v in self.in_modalities.items()
+        }
 
     @staticmethod
     def curate_annotation(annot_tensor, ignore_index):
@@ -63,26 +66,6 @@ class SRIBIL(VolSetABC):
         #     annot_tensor[annot_tensor == 2] = ignore_index
         return annot_tensor
 
-    def __getitem__(self, index):
-        sample_path = self.sample_path_list[index]
-
-        t1_path, fl_path, annot_path = self.find_data_files_path(sample_path)
-        t1_nii, fl_nii, annot_nii = self.load_data(t1_path, fl_path, annot_path)
-        meta_data = self.extract_data_meta(t1_nii, fl_nii, annot_nii)
-
-        meta_data = self.run_sanity_checks(*meta_data)
-        meta_data['sample_path'] = sample_path
-
-        t1_tensor, fl_tensor, annot_tensor = self.get_data_tensor(t1_nii, fl_nii, annot_nii)
-
-        image_tensor = torch.stack((t1_tensor, fl_tensor), dim=-1)  # D x H x W x C
-        annot_tensor = annot_tensor.unsqueeze(dim=0)
-
-        if self.transform is not None:
-            image_tensor, annot_tensor, meta_data = self.transform((image_tensor, annot_tensor, meta_data))
-
-        return image_tensor, annot_tensor, meta_data
-
 
 @DATASET_REGISTRY.register()
 class SRIBILhfb(SRIBIL):
@@ -91,16 +74,19 @@ class SRIBILhfb(SRIBIL):
 
     def _init_dataset(self):
         self.dataset_path = self.dataset_root
-        self.t1_file_name, self.fl_file_name = ('t1.nii.gz', 'flair.nii.gz')
-        self.annot_file_name = 'truth.nii.gz'
+        self.in_modalities = {  # TODO this could be passed as an input argument or config attribute based on users need
+            't1': 't1.nii.gz',
+            'fl': 'flair.nii.gz',
+            'annot': 'truth.nii.gz',
+            # 't2': None,  # Add anymore modalities you want HERE
+        }
         self.sample_path_list = self.index_samples()
 
     def find_data_files_path(self, sample_path):
-        return (
-            os.path.join(sample_path, self.t1_file_name),
-            os.path.join(sample_path, self.fl_file_name),
-            os.path.join(sample_path, self.annot_file_name),
-        )
+        return {
+            u: os.path.join(sample_path, v)
+            for u, v in self.in_modalities.items()
+        }
 
     @staticmethod
     def curate_annotation(annot_tensor, ignore_index):
