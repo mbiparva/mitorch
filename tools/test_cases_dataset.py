@@ -61,7 +61,7 @@ def main():
         dataset,
         batch_size=1,
         shuffle=False,
-        num_workers=16,
+        num_workers=0,
         pin_memory=False,
         drop_last=True,
         collate_fn=collate_fn,

@@ -100,8 +100,8 @@ class VolSetABC(ABC, data.Dataset):
 
     @staticmethod
     def run_sanity_checks(in_pipe_meta):
-        first_value = in_pipe_meta[list(in_pipe_meta.keys())[0]]
-        for k in first_value.keys():
+        first_item = in_pipe_meta[list(in_pipe_meta.keys())[0]]
+        for k in first_item.keys():
             if k in ('bitpixel', ):
                 continue
             in_pipe_meta_value = [v[k] for v in in_pipe_meta.values()]
@@ -112,6 +112,7 @@ class VolSetABC(ABC, data.Dataset):
                         round(j, ndigits)
                         for j in i
                     ]
+                    if isinstance(i, (list, tuple)) else round(i, ndigits)
                     for i in in_pipe_meta_value
                 ]
                 first_pipe = in_pipe_meta_value_rounded[0]
@@ -129,7 +130,7 @@ class VolSetABC(ABC, data.Dataset):
                     )
                 )
 
-        return in_pipe_meta[first_value]  # Send out the first one
+        return first_item  # Send out the first one
 
     @staticmethod
     @abstractmethod
