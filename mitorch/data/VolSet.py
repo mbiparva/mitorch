@@ -11,18 +11,27 @@ from .build import DATASET_REGISTRY
 import torch
 import numpy as np
 import torch.utils.data as data
-import SimpleITK as sitk
+# import SimpleITK as sitk
+import nibabel as nib
 import re
 from torch._six import container_abcs
 from abc import ABC, abstractmethod
+import data.utils_ext as utils_ext
+
 
 np_str_obj_array_pattern = re.compile(r'[SaUO]')
+# RAI codes
+# c3d's default: (('R', 'L'), ('A', 'P'), ('I', 'S'))
+# nib's default: (('L', 'R'), ('P', 'A'), ('I', 'S'))
+c3d_labels = (('R', 'L'), ('A', 'P'), ('S', 'I'))
+
 
 default_collate_err_msg_format = (
     "default_collate: batch must contain tensors, numpy arrays, numbers, "
     "dicts or lists; found {}")
 
 
+# noinspection PyUnresolvedReferences
 def collate_fn(batch):
     elem = batch[0]
     elem_type = type(elem)
@@ -44,19 +53,66 @@ def collate_fn(batch):
     raise TypeError(default_collate_err_msg_format.format(elem_type))
 
 
-def read_nii_file(file_path):
-    return sitk.ReadImage(file_path)
+def read_nii_file(file_path, **kwargs):
+    return nib_loader(file_path, **kwargs)
 
 
-def extract_meta(data_nii):
-    return {
-        'origin': data_nii.GetOrigin(),
-        'size': data_nii.GetSize(),
-        'spacing': data_nii.GetSpacing(),
-        'direction': data_nii.GetDirection(),
-        'dimension': data_nii.GetDimension(),
-        'bitpixel': data_nii.GetMetaData('bitpix'),
-    }
+# ----------- START RENAMING ---------------------
+
+def nib_loader(filename, enforce_nib_canonical=False, enforce_diag=False, dtype=np.float32):
+    vol = nib.load(filename)
+    vol = utils_ext.correct_nifti_header_if_necessary(vol)
+    header = dict(vol.header)
+    header["filename"] = filename
+    header["affine"] = vol.affine
+    header["original_affine"] = vol.affine.copy()
+    header["enforce_nib_canonical"] = enforce_nib_canonical
+
+    header["origin"] = vol.shape
+    header["size"] = vol.shape
+    header["spacing"] = vol.header.get_zooms()
+    header["direction"] = vol.shape
+    header["dimension"] = vol.header["dim"][0]
+    header["bitpixel"] = vol.shape
+
+    if enforce_nib_canonical:
+        vol = nib.as_closest_canonical(vol, enforce_diag=enforce_diag)
+        header["affine"] = vol.affine
+
+    img_array = np.array(vol.get_fdata(dtype=dtype))
+    vol.uncache()
+
+
+
+    return img_array, header
+
+# ----------- END RENAMING ---------------------
+
+
+# def extract_meta(in_meta):
+#     """
+#     ['sizeof_hdr', 'data_type', 'db_name', 'extents', 'session_error', 'regular', 'dim_info', 'dim', 'intent_p1',
+#     'intent_p2', 'intent_p3', 'intent_code', 'datatype', 'bitpix', 'slice_start', 'pixdim', 'vox_offset',
+#     'scl_slope', 'scl_inter', 'slice_end', 'slice_code', 'xyzt_units', 'cal_max', 'cal_min', 'slice_duration',
+#     'toffset', 'glmax', 'glmin', 'descrip', 'aux_file', 'qform_code', 'sform_code', 'quatern_b', 'quatern_c',
+#     'quatern_d', 'qoffset_x', 'qoffset_y', 'qoffset_z', 'srow_x', 'srow_y', 'srow_z', 'intent_name', 'magic',
+#     'filename', 'affine', 'original_affine', 'enforce_nib_canonical', 'spatial_shape']
+#
+#     Args:
+#         in_meta: input meta argument
+#
+#     Returns:
+#         output filtered meta
+#
+#     """
+#     return {
+#         'origin': in_meta['origin'],
+#         'size': in_meta['size'],
+#         'spacing': in_meta['spacing'],
+#         'direction': in_meta['direction'],
+#         'dimension': in_meta['dimension'],
+#         'bitpixel': in_meta['bitpixel'],
+#     }
 
 
 class VolSetABC(ABC, data.Dataset):
@@ -87,16 +143,21 @@ class VolSetABC(ABC, data.Dataset):
     @staticmethod
     def load_data(in_pipe):
         return {
-            u: read_nii_file(v)
+            u: read_nii_file(v, enforce_nib_canonical=True, enforce_diag=False, dtype=np.float32)
             for u, v in in_pipe.items()
         }
 
     @staticmethod
     def extract_data_meta(in_pipe):
-        return {
-            u: extract_meta(v)
-            for u, v in in_pipe.items()
-        }
+        in_pipe_data, in_pipe_meta = dict(), dict()
+        for u, (d, m) in in_pipe.items():
+            in_pipe_data[u] = d
+            in_pipe_meta[u] = m
+
+        return (
+            in_pipe_data,
+            in_pipe_meta
+        )
 
     @staticmethod
     def run_sanity_checks(in_pipe_meta):
