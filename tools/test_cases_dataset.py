@@ -41,7 +41,7 @@ def main():
     crop_size, crop_scale = 224, (0.70, 0.90)
     transformations = ComposePrintSize([
         tf.ToTensorImageVolume(),
-        tf.OrientationToRAI(),
+        tf.OrientationTo('ARI'),
         tf.ResampleTo1mm(),
         tf.ResizeImageVolume(max_side, min_side=False),
         tf.PadToSizeVolume(max_side, padding_mode=('mean', 'median', 'min', 'max')[0]),

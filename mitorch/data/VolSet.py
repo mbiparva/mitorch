@@ -68,12 +68,17 @@ def nib_loader(filename, enforce_nib_canonical=False, enforce_diag=False, dtype=
     header["original_affine"] = vol.affine.copy()
     header["enforce_nib_canonical"] = enforce_nib_canonical
 
-    header["origin"] = vol.shape
+    header["origin"] = vol.affine[:, -1][:3]
     header["size"] = vol.shape
     header["spacing"] = vol.header.get_zooms()
-    header["direction"] = vol.shape
     header["dimension"] = vol.header["dim"][0]
-    header["bitpixel"] = vol.shape
+    header["bitpix"] = int(header["bitpix"])
+
+    dim = header["dimension"]
+    RZS = vol.affine[:dim, :dim]
+    zooms = np.sqrt(np.sum(RZS * RZS, axis=0))
+    zooms[zooms == 0] = 1
+    header["direction"] = RZS / zooms
 
     if enforce_nib_canonical:
         vol = nib.as_closest_canonical(vol, enforce_diag=enforce_diag)
@@ -82,37 +87,25 @@ def nib_loader(filename, enforce_nib_canonical=False, enforce_diag=False, dtype=
     img_array = np.array(vol.get_fdata(dtype=dtype))
     vol.uncache()
 
-
-
     return img_array, header
 
 # ----------- END RENAMING ---------------------
 
 
-# def extract_meta(in_meta):
-#     """
-#     ['sizeof_hdr', 'data_type', 'db_name', 'extents', 'session_error', 'regular', 'dim_info', 'dim', 'intent_p1',
-#     'intent_p2', 'intent_p3', 'intent_code', 'datatype', 'bitpix', 'slice_start', 'pixdim', 'vox_offset',
-#     'scl_slope', 'scl_inter', 'slice_end', 'slice_code', 'xyzt_units', 'cal_max', 'cal_min', 'slice_duration',
-#     'toffset', 'glmax', 'glmin', 'descrip', 'aux_file', 'qform_code', 'sform_code', 'quatern_b', 'quatern_c',
-#     'quatern_d', 'qoffset_x', 'qoffset_y', 'qoffset_z', 'srow_x', 'srow_y', 'srow_z', 'intent_name', 'magic',
-#     'filename', 'affine', 'original_affine', 'enforce_nib_canonical', 'spatial_shape']
-#
-#     Args:
-#         in_meta: input meta argument
-#
-#     Returns:
-#         output filtered meta
-#
-#     """
-#     return {
-#         'origin': in_meta['origin'],
-#         'size': in_meta['size'],
-#         'spacing': in_meta['spacing'],
-#         'direction': in_meta['direction'],
-#         'dimension': in_meta['dimension'],
-#         'bitpixel': in_meta['bitpixel'],
-#     }
+def np2tuple(in_array):
+    return tuple(in_array.flatten()) if isinstance(in_array, np.ndarray) else in_array
+
+
+def extract_meta(in_meta):
+    return {
+        'origin': np2tuple(in_meta['origin']),
+        'size': np2tuple(in_meta['size']),
+        'spacing': np2tuple(in_meta['spacing']),
+        'direction': np2tuple(in_meta['direction']),
+        'dimension': np2tuple(in_meta['dimension']),
+        'bitpixel': np2tuple(in_meta['bitpix']),
+        'affine': np2tuple(in_meta['affine'])
+    }
 
 
 class VolSetABC(ABC, data.Dataset):
@@ -141,9 +134,9 @@ class VolSetABC(ABC, data.Dataset):
         raise NotImplementedError
 
     @staticmethod
-    def load_data(in_pipe):
+    def load_data(in_pipe, **kwargs):
         return {
-            u: read_nii_file(v, enforce_nib_canonical=True, enforce_diag=False, dtype=np.float32)
+            u: read_nii_file(v, **kwargs)
             for u, v in in_pipe.items()
         }
 
@@ -152,7 +145,7 @@ class VolSetABC(ABC, data.Dataset):
         in_pipe_data, in_pipe_meta = dict(), dict()
         for u, (d, m) in in_pipe.items():
             in_pipe_data[u] = d
-            in_pipe_meta[u] = m
+            in_pipe_meta[u] = extract_meta(m)
 
         return (
             in_pipe_data,
@@ -201,7 +194,7 @@ class VolSetABC(ABC, data.Dataset):
     def get_data_tensor(self, in_pipe_data):
         in_pipe_data = {
             u: torch.tensor(
-                data=sitk.GetArrayFromImage(v).astype(np.float32),
+                data=v,
                 dtype=torch.float,
                 device='cpu',
                 requires_grad=False
@@ -220,8 +213,8 @@ class VolSetABC(ABC, data.Dataset):
         sample_path = self.sample_path_list[index]
 
         in_pipe_data = self.find_data_files_path(sample_path)
-        in_pipe_data = self.load_data(in_pipe_data)
-        in_pipe_meta = self.extract_data_meta(in_pipe_data)
+        in_pipe_data = self.load_data(in_pipe_data, enforce_nib_canonical=False, enforce_diag=False, dtype=np.float32)
+        in_pipe_data, in_pipe_meta = self.extract_data_meta(in_pipe_data)
 
         in_pipe_meta = self.run_sanity_checks(in_pipe_meta)
         in_pipe_meta['sample_path'] = sample_path

@@ -156,7 +156,7 @@ def to_tensor(volume):
     _is_tensor_image_volume(volume)
     if not volume.dtype == torch.float32:
         raise TypeError("volume tensor should have data type torch.float32. Got %s" % str(volume.dtype))
-    return volume.permute(3, 0, 1, 2) / 1  # TODO: decide whether division is needed
+    return volume.permute(3, 0, 1, 2)
 
 
 def normalize(volume, mean, std, inplace=False):

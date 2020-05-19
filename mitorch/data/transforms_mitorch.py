@@ -11,6 +11,9 @@ import random
 from . import functional_mitorch as F
 import collections
 import sys
+import nibabel as nib
+from data.VolSet import c3d_labels
+import numpy as np
 
 if sys.version_info < (3, 3):
     Sequence = collections.Sequence
@@ -21,7 +24,7 @@ else:
 
 
 __all__ = [
-    'OrientationToRAI',
+    'OrientationTo',
     'ResampleTo1mm',
     'RandomCropImageVolume',
     'RandomResizedCropImageVolume',
@@ -35,30 +38,47 @@ __all__ = [
     'PadToSizeVolume',
 ]
 
+# TODO Add randomized transforms ABC class and add them to the current ones
 
-class OrientationToRAI(object):
-    def __init__(self, correcting=False):
-        self.correcting = correcting
+
+class OrientationTo(object):
+    def __init__(self, target_orient):
+        c3d_labels_str = ''.join([''.join(i) for i in c3d_labels])
+        assert isinstance(target_orient, str), 'target_orient must be string'
+        assert all([i in c3d_labels_str for i in target_orient]), 'letters in target_orient must be in {}'.format(
+            c3d_labels_str
+        )
+        self.target_orient = target_orient.upper()
+
+    @staticmethod
+    def apply_orient(tensor, orient_trans):
+        return torch.from_numpy(
+            np.ascontiguousarray(
+                nib.apply_orientation(tensor, orient_trans)
+            )
+        )
 
     def __call__(self, volume):
         image, annot, meta = volume
-        direction = torch.tensor(meta['direction'], dtype=torch.float)
-        direction_mat = direction.reshape(3, 3)
+        affine = torch.tensor(meta['affine'], dtype=torch.float)
+        affine = affine.reshape(4, 4)
 
-        direction_off_diag = direction_mat.clone().fill_diagonal_(0)
-        assert direction_off_diag.sum() == 0, 'there are off diagonal values'
+        orient_source = nib.io_orientation(affine)
+        orient_final = nib.orientations.axcodes2ornt(self.target_orient, labels=c3d_labels)
+        orient_trans = nib.orientations.ornt_transform(orient_source, orient_final)
 
-        direction_diagonal = direction_mat.diagonal()
-        direction_sign = direction_diagonal.sign()
-        assert (direction_sign.abs() == 1).all().item()
-        if self.correcting:
-            for i, d in enumerate(direction_sign):
-                if d > 0:
-                    continue
-                image = F.flip(image, i)
-                annot = F.flip(annot, i)
-                direction_diagonal[i] *= -1
-            meta['direction'] = tuple(direction.tolist())
+        orient_trans_3d = orient_trans.copy()
+        orient_trans[:, 0] += 1  # we skip the channel dimension
+        orient_trans = np.concatenate([np.array([[0, 1]]), orient_trans])
+
+        image = self.apply_orient(image, orient_trans)
+        annot = self.apply_orient(annot, orient_trans)
+
+        image_shape = image.shape[1:]
+        inv_affine_trans = nib.orientations.inv_ornt_aff(orient_trans_3d, image_shape)
+        affine = affine.mm(torch.from_numpy(inv_affine_trans).float())
+        meta['affine'] = affine.flatten().tolist()
+
         return (
             image,
             annot,

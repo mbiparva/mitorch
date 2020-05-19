@@ -68,7 +68,7 @@ class DataContainer:
     def create_transform(self):
         transformations_head = [
             tf.ToTensorImageVolume(),
-            tf.OrientationToRAI(),
+            # tf.OrientationTo('ARI'),
             tf.ResampleTo1mm(),
         ]
         transformations_tail = [
