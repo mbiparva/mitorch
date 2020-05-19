@@ -13,6 +13,7 @@ import data.transforms_mitorch as tf
 from torchvision.transforms import Compose
 from data.build import build_dataset
 from data.VolSet import collate_fn
+from torchvision.transforms import RandomApply
 
 
 class ComposePrintSize(Compose):
@@ -41,15 +42,15 @@ def main():
     crop_size, crop_scale = 224, (0.70, 0.90)
     transformations = ComposePrintSize([
         tf.ToTensorImageVolume(),
-        tf.OrientationTo('ARI'),
-        tf.ResampleTo1mm(),
+        tf.RandomOrientationTo('ARI', prand=True),
+        tf.RandomResampleTomm(target_spacing=(0.9, 0.5, 1.0), target_spacing_scale=((), ())),
         tf.ResizeImageVolume(max_side, min_side=False),
         tf.PadToSizeVolume(max_side, padding_mode=('mean', 'median', 'min', 'max')[0]),
         tf.CenterCropImageVolume(crop_size),
         # tf.RandomCropImageVolume(224),
         # tf.RandomResizedCropImageVolume(crop_size, scale=crop_scale),
         tf.RandomFlipImageVolume(dim=-1),
-        tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
+        RandomApply([tf.NormalizeMinMaxVolume(max_div=True, inplace=True)], p=0.75),
         tf.NormalizeMeanStdVolume(
             mean=[0.18278566002845764, 0.1672040820121765],
             std=[0.018310515210032463, 0.017989424988627434],

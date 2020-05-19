@@ -69,7 +69,7 @@ class DataContainer:
         transformations_head = [
             tf.ToTensorImageVolume(),
             # tf.OrientationTo('ARI'),
-            tf.ResampleTo1mm(),
+            tf.RandomResampleTomm(),
         ]
         transformations_tail = [
             tf.NormalizeMinMaxVolume(max_div=True, inplace=True),

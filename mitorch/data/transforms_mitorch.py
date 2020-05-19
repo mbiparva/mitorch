@@ -14,6 +14,8 @@ import sys
 import nibabel as nib
 from data.VolSet import c3d_labels
 import numpy as np
+from data.ABC_utils import Transformable, Randomizable
+import itertools
 
 if sys.version_info < (3, 3):
     Sequence = collections.Sequence
@@ -24,8 +26,8 @@ else:
 
 
 __all__ = [
-    'OrientationTo',
-    'ResampleTo1mm',
+    'RandomOrientationTo',
+    'RandomResampleTomm',
     'RandomCropImageVolume',
     'RandomResizedCropImageVolume',
     'ResizeImageVolume',
@@ -38,17 +40,39 @@ __all__ = [
     'PadToSizeVolume',
 ]
 
-# TODO Add randomized transforms ABC class and add them to the current ones
+
+def generate_all_possible_orients(labels_set):
+    return list(map(
+        lambda x: ''.join(x),
+        itertools.chain(*map(
+            lambda x: itertools.product(*x),
+            itertools.permutations(c3d_labels)
+        ))
+    ))
 
 
-class OrientationTo(object):
-    def __init__(self, target_orient):
+# noinspection PyTypeChecker
+class RandomOrientationTo(Randomizable):
+    def __init__(self, target_orient, orientation_set=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         c3d_labels_str = ''.join([''.join(i) for i in c3d_labels])
         assert isinstance(target_orient, str), 'target_orient must be string'
         assert all([i in c3d_labels_str for i in target_orient]), 'letters in target_orient must be in {}'.format(
             c3d_labels_str
         )
+        if orientation_set:
+            assert isinstance(orientation_set, Iterable)
         self.target_orient = target_orient.upper()
+        if orientation_set is None:
+            self.orientation_set = generate_all_possible_orients(c3d_labels)
+
+    def randomize_params(self):
+        self.target_orient = self.orientation_set[
+            torch.randint(
+                len(self.orientation_set),
+                (1,)
+            )
+        ]
 
     @staticmethod
     def apply_orient(tensor, orient_trans):
@@ -58,7 +82,7 @@ class OrientationTo(object):
             )
         )
 
-    def __call__(self, volume):
+    def apply(self, volume):
         image, annot, meta = volume
         affine = torch.tensor(meta['affine'], dtype=torch.float)
         affine = affine.reshape(4, 4)
@@ -86,15 +110,26 @@ class OrientationTo(object):
         )
 
 
-class ResampleTo1mm(object):
-    def __init__(self, interpolation='trilinear'):
+class RandomResampleTomm(Randomizable):
+    def __init__(self, target_spacing=(1, 1, 1), target_spacing_scale=None, interpolation='trilinear', *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.interpolation = interpolation
+        assert isinstance(target_spacing, (tuple, list)) and len(target_spacing) == 3
+        if self.prand:
+            assert target_spacing_scale is not None, 'if prand is set, spacing rand range must be set too'
+            assert isinstance(target_spacing_scale, (tuple, list)), len(target_spacing_scale) == 3
+        self.target_spacing = self.target_spacing_constant = torch.tensor(target_spacing, dtype=torch.float32)
+        self.target_spacing_scale = torch.tensor(target_spacing_scale, dtype=torch.float32)
 
-    def __call__(self, volume):
+    def randomize_params(self):
+        self.target_spacing = (torch.rand(3) - 1/2) * 2 * self.target_spacing_scale + self.target_spacing_constant
+
+    def apply(self, volume):
         image, annot, meta = volume
         size = torch.tensor(meta['size'], dtype=torch.float)
         spacing = torch.tensor(meta['spacing'], dtype=torch.float)
-        iso1mm = torch.tensor([1]*3, dtype=torch.float)
+        spacing *= self.target_spacing
+        iso1mm = torch.tensor((1, 1, 1), dtype=torch.float32)
         if (spacing == iso1mm).all().item() or torch.allclose(spacing, iso1mm, rtol=1e-3, atol=0):
             return volume
         size = (size * spacing).floor().int().tolist()[::-1]  # reverse size since F.resize works in DxHxW space
@@ -103,31 +138,38 @@ class ResampleTo1mm(object):
             F.resize(annot, size, 'nearest'),
         )
         meta['size'] = size[::-1]
-        meta['spacing'] = (1, 1, 1)
+        meta['spacing'] = self.target_spacing.tolist()
 
         return image, annot, meta
 
 
 # noinspection PyMissingConstructor,PyTypeChecker
-class RandomCropImageVolume(object):
-    def __init__(self, size):
+class RandomCropImageVolume(Randomizable):
+    def __init__(self, size, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         if isinstance(size, numbers.Number):
             self.size = (int(size), int(size), int(size))
         else:
             self.size = size
+        assert self.prand, 'If you want to turn prand off, use CenterCropImageVolume instead.' \
+                           'This one does crop location randomization by default'
+        self.rloc, self.image_shape = None, None
+
+    def randomize_params(self):
+        self.rloc = self.get_params(self.image_shape, self.size)
 
     @staticmethod
-    def get_params(volume, output_size):
+    def get_params(volume_shape, output_size):
         """Get parameters for ``crop`` for a random crop.
 
         Args:
-            volume (Torch Tensor): Volume to be cropped.
+            volume_shape (Torch Tensor): Shape of the volume to be cropped.
             output_size (tuple): Expected output size of the crop.
 
         Returns:
             tuple: params (i, j, h, w) to be passed to ``crop`` for random crop.
         """
-        d, h, w = volume.shape[1:]
+        d, h, w = volume_shape[1:]
         td, th, tw = output_size
         if d == td and h == th and w == tw:
             return 0, 0, 0, d, h, w
@@ -137,7 +179,7 @@ class RandomCropImageVolume(object):
         j = random.randint(0, w - tw)
         return k, i, j, td, th, tw
 
-    def __call__(self, volume):
+    def apply(self, volume):
         """
         Args:
             volume (tuple(torch.tensor, torch.tensor, dict)): Image, mask volumes to be cropped. Size is (C, T, H, W)
@@ -146,7 +188,8 @@ class RandomCropImageVolume(object):
                 size is (C, T, OH, OW)
         """
         image, annot, meta = volume
-        k, i, j, d, h, w = self.get_params(image, self.size)
+        self.image_shape = image.shape
+        k, i, j, d, h, w = self.rloc
         return (
             F.crop(image, k, i, j, d, h, w),
             F.crop(annot, k, i, j, d, h, w),
@@ -158,8 +201,9 @@ class RandomCropImageVolume(object):
 
 
 # noinspection PyMissingConstructor
-class RandomResizedCropImageVolume(object):
-    def __init__(self, size, scale=(0.80, 1.0), interpolation='trilinear', uni_scale=True):
+class RandomResizedCropImageVolume(Randomizable):
+    def __init__(self, size, scale=(0.80, 1.0), interpolation='trilinear', uni_scale=True, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         assert isinstance(scale, tuple) and len(scale) == 2, 'scale is not defined right'
         assert 0 < scale[0] < scale[1] <= 1, 'scale must fall in (lower_range, upper_range)'
         assert isinstance(uni_scale, bool), 'iso_crop is bool'
@@ -169,30 +213,36 @@ class RandomResizedCropImageVolume(object):
         else:
             self.size = tuple([int(size)]*3)
 
+        assert self.prand, 'If you want to turn prand off, use CenterCropImageVolume instead.' \
+                           'This one does crop location randomization by default'
         self.interpolation = interpolation
         self.scale = scale
         self.uni_scale = uni_scale
+        self.rloc, self.image_shape = None, None
+
+    def randomize_params(self):
+        self.rloc = self.get_params(self.image_shape, self.scale, self.uni_scale)
 
     @staticmethod
-    def get_params(volume, scale, uni_scale):
+    def get_params(volume_shape, scale, uni_scale):
         """Get parameters for ``crop`` for a random crop.
 
         Args:
-            volume (Torch Tensor): Volume to be cropped.
+            volume_shape (Torch Tensor): Shape of the volume to be cropped.
             scale (tuple): Expected output size of the crop.
             uni_scale: uniformly scale all three sides
 
         Returns:
             tuple: params (i, j, h, w) to be passed to ``crop`` for random crop.
         """
-        d, h, w = volume.shape[1:]
+        d, h, w = volume_shape[1:]
 
         if uni_scale:
             scale_rnd = random.uniform(*scale)
-            td, th, tw = (torch.tensor(volume.shape[1:]) * scale_rnd).round().int().tolist()
+            td, th, tw = (torch.tensor(volume_shape[1:]) * scale_rnd).round().int().tolist()
         else:
-            td_l, th_l, tw_l = (torch.tensor(volume.shape[1:]) * scale[0]).round().int().tolist()
-            td_u, th_u, tw_u = (torch.tensor(volume.shape[1:]) * scale[1]).round().int().tolist()
+            td_l, th_l, tw_l = (torch.tensor(volume_shape[1:]) * scale[0]).round().int().tolist()
+            td_u, th_u, tw_u = (torch.tensor(volume_shape[1:]) * scale[1]).round().int().tolist()
             td = random.randint(td_l, td_u)
             th = random.randint(th_l, th_u)
             tw = random.randint(tw_l, tw_u)
@@ -203,7 +253,7 @@ class RandomResizedCropImageVolume(object):
 
         return k, i, j, td, th, tw
 
-    def __call__(self, volume):
+    def apply(self, volume):
         """
         Args:
             volume (tuple(torch.tensor, torch.tensor, dict)): Image and mask volumes to be cropped. Size is (C, T, H, W)
@@ -212,7 +262,8 @@ class RandomResizedCropImageVolume(object):
                 size is (C, T, H, W)
         """
         image, annot, meta = volume
-        k, i, j, d, h, w = self.get_params(image, self.scale, self.uni_scale)
+        self.image_shape = image.shape
+        k, i, j, d, h, w = self.rloc
         return (
             F.resized_crop(image, k, i, j, d, h, w, self.size, self.interpolation),
             F.resized_crop(annot, k, i, j, d, h, w, self.size, 'nearest'),
@@ -227,7 +278,7 @@ class RandomResizedCropImageVolume(object):
 
 
 # noinspection PyTypeChecker
-class ResizeImageVolume(object):
+class ResizeImageVolume(Transformable):
     """Resize the input image volume to the given size.
 
     Args:
@@ -255,7 +306,7 @@ class ResizeImageVolume(object):
         self.min_side = min_side
         self.ignore_depth = ignore_depth
 
-    def __call__(self, volume):
+    def apply(self, volume):
         """
         Args:
             volume (tuple(torch.tensor, torch.tensor, dict)): Image and mask volumes to be resized. Size is (C, T, H, W)
@@ -281,14 +332,14 @@ class ResizeImageVolume(object):
 
 
 # noinspection PyTypeChecker
-class CenterCropImageVolume(object):
+class CenterCropImageVolume(Transformable):
     def __init__(self, crop_size):
         if isinstance(crop_size, numbers.Number):
             self.crop_size = tuple([int(crop_size)]*3)
         else:
             self.crop_size = crop_size
 
-    def __call__(self, volume):
+    def apply(self, volume):
         """
         Args:
             volume (tuple(torch.tensor, torch.tensor, dict)): Image and mask volumes to be cropped. Size is (C, T, H, W)
@@ -307,7 +358,7 @@ class CenterCropImageVolume(object):
         return self.__class__.__name__ + '(crop_size={0})'.format(self.crop_size)
 
 
-class NormalizeMeanStdVolume(object):
+class NormalizeMeanStdVolume(Transformable):
     """
     Normalize the image volume by mean subtraction and division by standard deviation
     Args:
@@ -321,7 +372,7 @@ class NormalizeMeanStdVolume(object):
         self.std = std
         self.inplace = inplace
 
-    def __call__(self, volume):
+    def apply(self, volume):
         """
         Args:
             volume (tuple(torch.tensor, torch.tensor, dict)): Image and mask volumes to be cropped. Size is (C, T, H, W)
@@ -338,7 +389,7 @@ class NormalizeMeanStdVolume(object):
             self.mean, self.std, self.inplace)
 
 
-class NormalizeMinMaxVolume(object):
+class NormalizeMinMaxVolume(Transformable):
     """
     Normalize the image volume by minimum subtraction and division by maximum
     Args:
@@ -350,7 +401,7 @@ class NormalizeMinMaxVolume(object):
         self.max_div = max_div
         self.inplace = inplace
 
-    def __call__(self, volume):
+    def apply(self, volume):
         """
         Args:
             volume (tuple(torch.tensor, torch.tensor, dict)): Image and mask volumes to be cropped. Size is (C, T, H, W)
@@ -366,16 +417,13 @@ class NormalizeMinMaxVolume(object):
         return self.__class__.__name__ + '(max_div={0}, inplace={1})'.format(self.max_div, self.inplace)
 
 
-class ToTensorImageVolume(object):
+class ToTensorImageVolume(Transformable):
     """
     Convert tensor data type from uint8 to float, divide value by 255.0 and
     permute the dimenions of volume tensor
     """
 
-    def __init__(self):
-        pass
-
-    def __call__(self, volume):
+    def apply(self, volume):
         """
         Args:
             volume (tuple(torch.tensor, torch.tensor, dict)): Image and mask volumes to be cropped. Size is (C, T, H, W)
@@ -393,7 +441,7 @@ class ToTensorImageVolume(object):
         return self.__class__.__name__
 
 
-class RandomFlipImageVolume(object):
+class RandomFlipImageVolume(Transformable):
     """
     Flip the image volume along the given direction with a given probability
     Args:
@@ -404,7 +452,7 @@ class RandomFlipImageVolume(object):
         self.p = p
         self.dim = dim
 
-    def __call__(self, volume):
+    def apply(self, volume):
         """
         Args:
             volume (tuple(torch.tensor, torch.tensor, dict)): Image and mask volumes to be cropped. Size is (C, T, H, W)
@@ -428,7 +476,7 @@ class RandomFlipImageVolume(object):
         return self.__class__.__name__ + "(p={0})".format(self.p)
 
 
-class PadVolume(object):
+class PadVolume(Transformable):
     """Pad the given Torch Tensor Volume on all sides with the given "pad" value.
 
     Args:
@@ -454,7 +502,7 @@ class PadVolume(object):
         self.fill = fill
         self.padding_mode = padding_mode
 
-    def __call__(self, volume):
+    def apply(self, volume):
         """
         Args:
             volume (Torch Tensor): Volume to be padded.
@@ -474,7 +522,7 @@ class PadVolume(object):
             format(self.padding, self.fill, self.padding_mode)
 
 
-class PadToSizeVolume(object):
+class PadToSizeVolume(Transformable):
     """Pad the given Torch Tensor Volume on all sides to have the given size.
 
     Args:
@@ -509,7 +557,7 @@ class PadToSizeVolume(object):
         self.fill = fill
         self.padding_mode = padding_mode
 
-    def __call__(self, volume):
+    def apply(self, volume):
         """
         Args:
             volume (Torch Tensor): Volume to be padded.

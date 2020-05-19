@@ -13,42 +13,46 @@ from abc import ABC, abstractmethod
 
 
 class Transformable(ABC):
+    def __call__(self, volume):
+        self.apply(volume)
 
     @abstractmethod
-    def __call__(self, volume, *args, **kwargs):
+    def apply(self, volume):
         raise NotImplementedError
 
 
 class Randomizable(Transformable):
-    def __init__(self):
-        self.srand_thr = 0
-        self.srand_p = 1
+    def __init__(self, prand=False):
+        """
+        Sets the general randomization status of the transformation
+        Args:
+            prand (bool): parameters randomization mode (default False). If it is False,
+                parameters are never randomized so it is like a regular transformation. Otherwise, parameters are
+                automatically randomized every time it is called.
+        """
+        assert isinstance(prand, bool)
+        self.prand = prand
 
     @staticmethod
     def set_random_state(seed=None, state=None):
         if seed is not None:
             torch.random.manual_seed(seed)
-
         if state is not None:
             torch.random.set_rng_state(state)
 
-    def randomize(self, *args, **kwargs):
-        if self.srand_thr > 0:
-            self.srand_p = torch.rand(1).item()
-        self.randomize_params()
+    def randomize(self):
+        if self.prand:
+            self.randomize_params()
 
     @abstractmethod
     def randomize_params(self):
         raise NotImplementedError
 
-    def __call__(self, volume, *args, **kwargs):
+    def __call__(self, volume):
         self.randomize()
 
-        if self.srand_p < self.srand_thr:
-            return volume
-
-        self.apply(volume, *args, **kwargs)
+        self.apply(volume)
 
     @abstractmethod
-    def apply(self, volume, *args, **kwargs):
+    def apply(self, volume):
         raise NotImplementedError
