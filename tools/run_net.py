@@ -12,7 +12,8 @@ import _init_lib_path
 import argparse
 from config.defaults import get_cfg
 from test_net import test
-from train_net import train
+# from train_net import train
+from train_net_man_hps import train
 
 
 def parse_args():

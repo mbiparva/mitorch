@@ -68,8 +68,8 @@ class DataContainer:
     def create_transform(self):
         transformations_head = [
             tf.ToTensorImageVolume(),
-            # tf.OrientationTo('ARI'),
-            tf.RandomResampleTomm(),
+            tf.RandomOrientationTo('RPI'),
+            tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
         ]
         transformations_tail = [
             tf.NormalizeMinMaxVolume(max_div=True, inplace=True),

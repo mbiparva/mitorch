@@ -237,7 +237,7 @@ _C.LOG_PERIOD = 2
 _C.DATA_LOADER = CfgNode()
 
 # Number of data loader workers per training process.
-_C.DATA_LOADER.NUM_WORKERS = 8
+_C.DATA_LOADER.NUM_WORKERS = 0
 
 # Load data to pinned host memory.
 _C.DATA_LOADER.PIN_MEMORY = True
