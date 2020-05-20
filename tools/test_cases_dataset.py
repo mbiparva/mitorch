@@ -43,7 +43,7 @@ def main():
     transformations = ComposePrintSize([
         tf.ToTensorImageVolume(),
         tf.RandomOrientationTo('ARI', prand=True),
-        tf.RandomResampleTomm(target_spacing=(0.9, 0.5, 1.0), target_spacing_scale=((), ())),
+        tf.RandomResampleTomm(target_spacing=(0.9, 0.5, 1.0), target_spacing_scale=(0.2, 0.1, 0.5), prand=True),
         tf.ResizeImageVolume(max_side, min_side=False),
         tf.PadToSizeVolume(max_side, padding_mode=('mean', 'median', 'min', 'max')[0]),
         tf.CenterCropImageVolume(crop_size),
@@ -60,9 +60,9 @@ def main():
     dataset = build_dataset(dataset_name, cfg, mode, transformations)
     dataloader = DataLoader(
         dataset,
-        batch_size=1,
+        batch_size=4,
         shuffle=False,
-        num_workers=0,
+        num_workers=8,
         pin_memory=False,
         drop_last=True,
         collate_fn=collate_fn,

@@ -78,7 +78,7 @@ def nib_loader(filename, enforce_nib_canonical=False, enforce_diag=False, dtype=
     RZS = vol.affine[:dim, :dim]
     zooms = np.sqrt(np.sum(RZS * RZS, axis=0))
     zooms[zooms == 0] = 1
-    header["direction"] = RZS / zooms
+    header["direction"] = list((RZS / zooms).flatten())
 
     if enforce_nib_canonical:
         vol = nib.as_closest_canonical(vol, enforce_diag=enforce_diag)
@@ -86,6 +86,8 @@ def nib_loader(filename, enforce_nib_canonical=False, enforce_diag=False, dtype=
 
     img_array = np.array(vol.get_fdata(dtype=dtype))
     vol.uncache()
+
+    assert img_array.shape == header['size']
 
     return img_array, header
 

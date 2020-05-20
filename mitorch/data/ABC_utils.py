@@ -14,7 +14,7 @@ from abc import ABC, abstractmethod
 
 class Transformable(ABC):
     def __call__(self, volume):
-        self.apply(volume)
+        return self.apply(volume)
 
     @abstractmethod
     def apply(self, volume):
@@ -51,7 +51,7 @@ class Randomizable(Transformable):
     def __call__(self, volume):
         self.randomize()
 
-        self.apply(volume)
+        return self.apply(volume)
 
     @abstractmethod
     def apply(self, volume):

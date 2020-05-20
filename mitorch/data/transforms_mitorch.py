@@ -103,6 +103,15 @@ class RandomOrientationTo(Randomizable):
         affine = affine.mm(torch.from_numpy(inv_affine_trans).float())
         meta['affine'] = affine.flatten().tolist()
 
+        # update size and spacing using affine and shape
+        meta['size'] = tuple(image.shape[1:])
+        dim = meta["dimension"]
+        RZS = affine[:dim, :dim].numpy()
+        zooms = np.sqrt(np.sum(RZS * RZS, axis=0))
+        zooms[zooms == 0] = 1
+        meta['spacing'] = zooms
+        meta["direction"] = list((RZS / zooms).flatten())
+
         return (
             image,
             annot,
@@ -122,23 +131,31 @@ class RandomResampleTomm(Randomizable):
         self.target_spacing_scale = torch.tensor(target_spacing_scale, dtype=torch.float32)
 
     def randomize_params(self):
-        self.target_spacing = (torch.rand(3) - 1/2) * 2 * self.target_spacing_scale + self.target_spacing_constant
+        self.target_spacing = ((torch.rand(3) - 1/2) * 2 * self.target_spacing_scale + 1) * self.target_spacing_constant
 
     def apply(self, volume):
         image, annot, meta = volume
         size = torch.tensor(meta['size'], dtype=torch.float)
         spacing = torch.tensor(meta['spacing'], dtype=torch.float)
-        spacing *= self.target_spacing
+        spacing /= self.target_spacing
         iso1mm = torch.tensor((1, 1, 1), dtype=torch.float32)
         if (spacing == iso1mm).all().item() or torch.allclose(spacing, iso1mm, rtol=1e-3, atol=0):
             return volume
-        size = (size * spacing).floor().int().tolist()[::-1]  # reverse size since F.resize works in DxHxW space
+        # size = (size * spacing).floor().int().tolist()[::-1]  # reverse size since F.resize works in DxHxW space
+        size = (size * spacing).floor().int().tolist()
         image, annot = (
             F.resize(image, size, self.interpolation),
             F.resize(annot, size, 'nearest'),
         )
-        meta['size'] = size[::-1]
+        # meta['size'] = size[::-1]
+        meta['size'] = size
         meta['spacing'] = self.target_spacing.tolist()
+        dim = meta["dimension"]
+        affine_ = torch.tensor(meta['affine'], dtype=torch.float)
+        affine_ = affine_.reshape(4, 4)
+        affine = affine_[:dim, :dim]
+        affine[affine != 0] = torch.tensor(meta['spacing'])  # TODO assume affine has not rotation just scaling
+        meta['affine'] = affine_.flatten().tolist()
 
         return image, annot, meta
 
