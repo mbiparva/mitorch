@@ -119,8 +119,6 @@ _C.BN.WEIGHT_DECAY = 0.0
 # -----------------------------------------------------------------------------
 _C.MODEL = CfgNode()
 
-_C.MODEL.ID = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
-
 # Model architecture.
 _C.MODEL.ARCH = "unet3d"
 
@@ -176,6 +174,10 @@ _C.DATA.STD = [0.018310515210032463, 0.017989424988627434]
 
 _C.DATA.PADDING_MODE = ('mean', 'median', 'min', 'max')[0]
 
+# Dataset enforces canonical orientation and diagonality upon loading nii volumes
+_C.DATA.ENFORCE_NIB_CANONICAL = (False, True)[0]
+_C.DATA.ENFORCE_DIAG = (False, True)[1]
+
 
 # ---------------------------------------------------------------------------- #
 # Optimizer options
@@ -190,6 +192,9 @@ _C.SOLVER.MAX_EPOCH = 200
 
 # Momentum.
 _C.SOLVER.MOMENTUM = 0.9
+
+# Dampening for Momentum
+_C.SOLVER.DAMPENING = 0
 
 # Nesterov momentum.
 _C.SOLVER.NESTEROV = False
@@ -218,11 +223,6 @@ _C.NUM_GPUS = 1
 # Default GPU device id
 _C.GPU_ID = 0
 
-# Output basedir.
-_C.OUTPUT_DIR = os.path.join(_C.PROJECT.EXPERIMENT_DIR, _C.TRAIN.DATASET, _C.MODEL.ID)
-if not os.path.exists(_C.OUTPUT_DIR):
-    os.makedirs(_C.OUTPUT_DIR)
-
 # Note that non-determinism may still be present due to non-deterministic
 # operator implementations in GPU operator libraries.
 _C.RNG_SEED = 110
@@ -237,10 +237,23 @@ _C.LOG_PERIOD = 2
 _C.DATA_LOADER = CfgNode()
 
 # Number of data loader workers per training process.
-_C.DATA_LOADER.NUM_WORKERS = 0
+_C.DATA_LOADER.NUM_WORKERS = 8
 
 # Load data to pinned host memory.
 _C.DATA_LOADER.PIN_MEMORY = True
+
+
+def init_cfg(cfg):
+    """ Initialize those with hierarchical dependencies and conditions, critical for multi-case experimentation"""
+    # Model ID
+    cfg.MODEL.ID = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+
+    # Output basedir.
+    cfg.OUTPUT_DIR = os.path.join(cfg.PROJECT.EXPERIMENT_DIR, cfg.TRAIN.DATASET, cfg.MODEL.ID)
+    if not os.path.exists(cfg.OUTPUT_DIR):
+        os.makedirs(cfg.OUTPUT_DIR)
+
+    return cfg
 
 
 def _assert_and_infer_cfg(cfg):
@@ -252,4 +265,7 @@ def get_cfg():
     """
     Get a copy of the default config.
     """
-    return _assert_and_infer_cfg(_C.clone())
+    cfg = _C.clone()
+    cfg = init_cfg(cfg)
+    cfg = _assert_and_infer_cfg(cfg)
+    return cfg

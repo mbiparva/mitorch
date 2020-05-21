@@ -83,6 +83,9 @@ def nib_loader(filename, enforce_nib_canonical=False, enforce_diag=False, dtype=
     if enforce_nib_canonical:
         vol = nib.as_closest_canonical(vol, enforce_diag=enforce_diag)
         header["affine"] = vol.affine
+    else:
+        if enforce_diag and not utils_ext.aff_is_diag(vol.affine):
+            raise ValueError('Transformed affine is not diagonal')
 
     img_array = np.array(vol.get_fdata(dtype=dtype))
     vol.uncache()
@@ -215,7 +218,10 @@ class VolSetABC(ABC, data.Dataset):
         sample_path = self.sample_path_list[index]
 
         in_pipe_data = self.find_data_files_path(sample_path)
-        in_pipe_data = self.load_data(in_pipe_data, enforce_nib_canonical=False, enforce_diag=False, dtype=np.float32)
+        in_pipe_data = self.load_data(in_pipe_data,
+                                      enforce_nib_canonical=self.cfg.DATA.ENFORCE_NIB_CANONICAL,
+                                      enforce_diag=self.cfg.DATA.ENFORCE_DIAG,
+                                      dtype=np.float32)
         in_pipe_data, in_pipe_meta = self.extract_data_meta(in_pipe_data)
 
         in_pipe_meta = self.run_sanity_checks(in_pipe_meta)

@@ -66,7 +66,7 @@ class RandomOrientationTo(Randomizable):
         if orientation_set is None:
             self.orientation_set = generate_all_possible_orients(c3d_labels)
 
-    def randomize_params(self):
+    def randomize_params(self, volume):
         self.target_orient = self.orientation_set[
             torch.randint(
                 len(self.orientation_set),
@@ -95,22 +95,24 @@ class RandomOrientationTo(Randomizable):
         orient_trans[:, 0] += 1  # we skip the channel dimension
         orient_trans = np.concatenate([np.array([[0, 1]]), orient_trans])
 
-        image = self.apply_orient(image, orient_trans)
-        annot = self.apply_orient(annot, orient_trans)
+        orient_identical = np.array(list(zip(range(4), [1]*4)))
+        if not np.all(orient_trans == orient_identical):  # identical rotation
+            image = self.apply_orient(image, orient_trans)
+            annot = self.apply_orient(annot, orient_trans)
 
-        image_shape = image.shape[1:]
-        inv_affine_trans = nib.orientations.inv_ornt_aff(orient_trans_3d, image_shape)
-        affine = affine.mm(torch.from_numpy(inv_affine_trans).float())
-        meta['affine'] = affine.flatten().tolist()
+            image_shape = image.shape[1:]
+            inv_affine_trans = nib.orientations.inv_ornt_aff(orient_trans_3d, image_shape)
+            affine = affine.mm(torch.from_numpy(inv_affine_trans).float())
+            meta['affine'] = affine.flatten().tolist()
 
-        # update size and spacing using affine and shape
-        meta['size'] = tuple(image.shape[1:])
-        dim = meta["dimension"]
-        RZS = affine[:dim, :dim].numpy()
-        zooms = np.sqrt(np.sum(RZS * RZS, axis=0))
-        zooms[zooms == 0] = 1
-        meta['spacing'] = zooms
-        meta["direction"] = list((RZS / zooms).flatten())
+            # update size and spacing using affine and shape
+            meta['size'] = tuple(image.shape[1:])
+            dim = meta["dimension"]
+            RZS = affine[:dim, :dim].numpy()
+            zooms = np.sqrt(np.sum(RZS * RZS, axis=0))
+            zooms[zooms == 0] = 1
+            meta['spacing'] = zooms
+            meta["direction"] = list((RZS / zooms).flatten())
 
         return (
             image,
@@ -120,17 +122,16 @@ class RandomOrientationTo(Randomizable):
 
 
 class RandomResampleTomm(Randomizable):
-    def __init__(self, target_spacing=(1, 1, 1), target_spacing_scale=None, interpolation='trilinear', *args, **kwargs):
+    def __init__(self, target_spacing=(1, 1, 1), target_spacing_scale=(0.2, 0.2, 0.2),
+                 interpolation='trilinear', *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.interpolation = interpolation
         assert isinstance(target_spacing, (tuple, list)) and len(target_spacing) == 3
-        if self.prand:
-            assert target_spacing_scale is not None, 'if prand is set, spacing rand range must be set too'
-            assert isinstance(target_spacing_scale, (tuple, list)), len(target_spacing_scale) == 3
+        assert isinstance(target_spacing_scale, (tuple, list)), len(target_spacing_scale) == 3
         self.target_spacing = self.target_spacing_constant = torch.tensor(target_spacing, dtype=torch.float32)
         self.target_spacing_scale = torch.tensor(target_spacing_scale, dtype=torch.float32)
 
-    def randomize_params(self):
+    def randomize_params(self, volume):
         self.target_spacing = ((torch.rand(3) - 1/2) * 2 * self.target_spacing_scale + 1) * self.target_spacing_constant
 
     def apply(self, volume):
@@ -163,6 +164,10 @@ class RandomResampleTomm(Randomizable):
 # noinspection PyMissingConstructor,PyTypeChecker
 class RandomCropImageVolume(Randomizable):
     def __init__(self, size, *args, **kwargs):
+        if 'prand' in kwargs and not kwargs['prand']:
+            raise ValueError('If you want to turn prand off, use CenterCropImageVolume instead. '
+                             'This one does crop location randomization by default')
+        kwargs['prand'] = True  # we always set prand to True for ths particular transform
         super().__init__(*args, **kwargs)
         if isinstance(size, numbers.Number):
             self.size = (int(size), int(size), int(size))
@@ -170,10 +175,11 @@ class RandomCropImageVolume(Randomizable):
             self.size = size
         assert self.prand, 'If you want to turn prand off, use CenterCropImageVolume instead.' \
                            'This one does crop location randomization by default'
-        self.rloc, self.image_shape = None, None
+        self.rloc = None
 
-    def randomize_params(self):
-        self.rloc = self.get_params(self.image_shape, self.size)
+    def randomize_params(self, volume):
+        image_shape = volume[0].shape  # image, annot, meta
+        self.rloc = self.get_params(image_shape, self.size)
 
     @staticmethod
     def get_params(volume_shape, output_size):
@@ -205,7 +211,6 @@ class RandomCropImageVolume(Randomizable):
                 size is (C, T, OH, OW)
         """
         image, annot, meta = volume
-        self.image_shape = image.shape
         k, i, j, d, h, w = self.rloc
         return (
             F.crop(image, k, i, j, d, h, w),
@@ -220,6 +225,10 @@ class RandomCropImageVolume(Randomizable):
 # noinspection PyMissingConstructor
 class RandomResizedCropImageVolume(Randomizable):
     def __init__(self, size, scale=(0.80, 1.0), interpolation='trilinear', uni_scale=True, *args, **kwargs):
+        if 'prand' in kwargs and not kwargs['prand']:
+            raise ValueError('If you want to turn prand off, use CenterCropImageVolume instead. '
+                             'This one does crop location randomization by default')
+        kwargs['prand'] = True  # we always set prand to True for ths particular transform
         super().__init__(*args, **kwargs)
         assert isinstance(scale, tuple) and len(scale) == 2, 'scale is not defined right'
         assert 0 < scale[0] < scale[1] <= 1, 'scale must fall in (lower_range, upper_range)'
@@ -230,15 +239,14 @@ class RandomResizedCropImageVolume(Randomizable):
         else:
             self.size = tuple([int(size)]*3)
 
-        assert self.prand, 'If you want to turn prand off, use CenterCropImageVolume instead.' \
-                           'This one does crop location randomization by default'
         self.interpolation = interpolation
         self.scale = scale
         self.uni_scale = uni_scale
-        self.rloc, self.image_shape = None, None
+        self.rloc = None
 
-    def randomize_params(self):
-        self.rloc = self.get_params(self.image_shape, self.scale, self.uni_scale)
+    def randomize_params(self, volume):
+        image_shape = volume[0].shape  # image, annot, meta
+        self.rloc = self.get_params(image_shape, self.scale, self.uni_scale)
 
     @staticmethod
     def get_params(volume_shape, scale, uni_scale):
@@ -279,7 +287,6 @@ class RandomResizedCropImageVolume(Randomizable):
                 size is (C, T, H, W)
         """
         image, annot, meta = volume
-        self.image_shape = image.shape
         k, i, j, d, h, w = self.rloc
         return (
             F.resized_crop(image, k, i, j, d, h, w, self.size, self.interpolation),

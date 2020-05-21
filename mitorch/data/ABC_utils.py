@@ -40,16 +40,16 @@ class Randomizable(Transformable):
         if state is not None:
             torch.random.set_rng_state(state)
 
-    def randomize(self):
+    def randomize(self, volume):
         if self.prand:
-            self.randomize_params()
+            self.randomize_params(volume)
 
     @abstractmethod
-    def randomize_params(self):
+    def randomize_params(self, volume):
         raise NotImplementedError
 
     def __call__(self, volume):
-        self.randomize()
+        self.randomize(volume)
 
         return self.apply(volume)
 

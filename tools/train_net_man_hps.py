@@ -10,25 +10,26 @@ import os
 from epoch_loop import EpochLoop
 from itertools import product
 from torch.utils.tensorboard import SummaryWriter
+from config.defaults import init_cfg
 
+SOLVER_MAX_EPOCH = 5
 hp_set = {
-    'solver_base_lr': (
+    'SOLVER.BASE_LR': (
         1e-2,
         1e-3,
         1e-4,
     ),
-    'solver_optimizing_method': (
+    'SOLVER.OPTIMIZING_METHOD': (
         'sgd',
         'adam',
     ),
-    'data_padding_mode': (
+    'DATA.PADDING_MODE': (
         'mean',
         'median',
         'min',
         'max'
     ),
 }
-SOLVER_MAX_EPOCH = 2
 
 
 def train_hp(cfg):
@@ -49,25 +50,24 @@ def train_hp(cfg):
 
 
 def set_hp_cfg(cfg, in_item):
-    assert isinstance(in_item, str) and len(in_item)
     key, value = in_item
+    assert isinstance(key, str) and len(key)
     key_list = key.split('.')
-    if len(key_list) == 1:
-        setattr(cfg, key_list[0], value)
-    elif len(key_list) == 1:
-        key_par = cfg.get(key_list[0], None)
-        assert key_par is not None, 'key parent {} not found'.format(key_par)
-        setattr(key_par, key_list[1], value)
-        setattr(cfg, key_list[0], key_par)
-    else:
-        raise ValueError('only accept one- or two-level attribute hierarchy but got {}'.format(key))
+    key_par = cfg
+    for i, k in enumerate(key_list):
+        if i == len(key_list) - 1:
+            break
+        key_par = cfg.get(k, None)
+    setattr(key_par, key_list[1], value)
+
+    return cfg
 
 
 def hp_gen(cfg):
-    for hps in product(hp_set.values()):
+    for hps in product(*hp_set.values()):
         hps_dict = dict()
         for k, v in zip(hp_set.keys(), hps):
-            set_hp_cfg(cfg, (k, v))
+            cfg = set_hp_cfg(cfg, (k, v))
             hps_dict[k] = v
 
         yield hps_dict, cfg
@@ -76,10 +76,12 @@ def hp_gen(cfg):
 def train(cfg):
     cfg.SOLVER.MAX_EPOCH = SOLVER_MAX_EPOCH
 
-    tb_logger_dir = os.path.join(cfg.PROJECT.EXPERIMENT_DIR, cfg.TRAIN.DATASET, cfg.MODEL.ID, 'man_hps')
+    tb_logger_dir = os.path.join(cfg.PROJECT.EXPERIMENT_DIR, cfg.TRAIN.DATASET, cfg.MODEL.ID+'_man_hps')
     tb_hps_sw = SummaryWriter(tb_logger_dir)
 
-    for hps_dict, cfg in hp_gen(cfg):
+    for i, (hps_dict, cfg) in enumerate(hp_gen(cfg)):
+        print('manual hps iter {:02} started: {}'.format(i, hps_dict))
+        cfg = init_cfg(cfg)
         eval_met_dict = train_hp(cfg)
 
         tb_hps_sw.add_hparams(hps_dict, eval_met_dict)

@@ -67,3 +67,12 @@ def rectify_header_sform_qform(img_nii):
 
     img_nii.header.set_zooms(norm)
     return img_nii
+
+
+def aff_is_diag(aff):
+    """
+    Taken out from nibabel since it was a private function.
+    Utility function returning True if affine is nearly diagonal.
+    """
+    rzs_aff = aff[:3, :3]
+    return np.allclose(rzs_aff, np.diag(np.diag(rzs_aff)))

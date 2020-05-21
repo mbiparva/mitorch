@@ -74,7 +74,7 @@ class EpochLoop:
     def check_if_validating(self, cur_epoch):
         if misc.is_eval_epoch(self.cfg, cur_epoch):
             self.evaluator_epoch_loop(cur_epoch)
-            logger.info('Done validating at epoch {}, results are ...'.format(cur_epoch))
+            logger.info('*** Done validating at epoch {}'.format(cur_epoch))
             return self.evaluator.meters.get_epoch_loss()
 
         return None
