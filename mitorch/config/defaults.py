@@ -35,6 +35,9 @@ _C.PROJECT.MODELS_DIR = os.path.abspath(os.path.join(_C.PROJECT.ROOT_DIR, 'lib',
 # Experiment directory
 _C.PROJECT.EXPERIMENT_DIR = os.path.abspath(os.path.join(_C.PROJECT.ROOT_DIR, 'experiments'))
 
+# Set meters to use for experimental evaluation
+_C.PROJECT.METERS = ['loss', 'dice_coeff', 'jaccard_ind', 'hausdorff_dist']
+
 # Training, Validation, and Test Split Ratio
 _C.PROJECT.TVSR = 0.80
 _C.PROJECT.TSR = 0.0

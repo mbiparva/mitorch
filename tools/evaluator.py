@@ -19,14 +19,16 @@ class Evaluator(BatchBase):
 
     @torch.no_grad()
     def batch_main(self, netwrapper, x, annotation):
+        meters = dict()
+
         p = netwrapper.forward(x)
 
         a = self.generate_gt(annotation)
 
-        loss = netwrapper.loss_update(p, a, step=False)
+        meters['loss'] = netwrapper.loss_update(p, a, step=False)
 
-        dice, jaccard, hausdorff = self.evaluate(p, a)
+        self.evaluate(p, a, meters)
 
         self.meters.iter_toc()
 
-        self.meters.update_stats(dice, jaccard, hausdorff, loss, self._get_lr(netwrapper), self.cfg.TRAIN.BATCH_SIZE)
+        self.meters.update_stats(self._get_lr(netwrapper), self.cfg.TRAIN.BATCH_SIZE, **meters)

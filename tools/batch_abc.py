@@ -73,16 +73,14 @@ class BatchBase(ABC):
 
         return p
 
-    def evaluate(self, p, a):
+    def evaluate(self, p, a, meters):
         BINARIZE_THRESHOLD = 0.5
         if self.cfg.MODEL.LOSS_FUNC == 'CrossEntropyLoss':
             p, a = self.cel_prep(p, a)
         p = self.binarize(p, binarize_threshold=BINARIZE_THRESHOLD)
-        return (
-            dice_coefficient_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX),
-            jaccard_index_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX),
-            hausdorff_distance_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX),
-        )
+        meters['dice_coeff'] = dice_coefficient_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX)
+        meters['jaccard_ind'] = jaccard_index_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX)
+        meters['hausdorff_dist'] = hausdorff_distance_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX)
 
     @abstractmethod
     def batch_main(self, net, x, annotation):
