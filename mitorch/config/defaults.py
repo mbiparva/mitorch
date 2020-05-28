@@ -256,13 +256,19 @@ _C.DATA_LOADER.PIN_MEMORY = True
 # ---------------------------------------------------------------------------- #
 _C.HPO = CfgNode()
 
+_C.HPO.MODE = ('MAN', 'BOAX')[1]
+
+_C.HPO.MAX_EPOCH = 200
+
 # Starting element of the HPO range --- MUST BE SET
 _C.HPO.RANGE_START = 0
 
 # length of the HPO range --- MUST BE SET
 _C.HPO.RANGE_LEN = 0
 
-_C.HPO.EVAL_METRIC = 'hausdorff'  # _C.PROJECT.METERS[1]  # ['loss', 'r2', 'mse', 'mae'] # TODO add it later
+_C.HPO.EVAL_METRIC = _C.PROJECT.METERS[2]  # ['loss', 'r2', 'mse', 'mae']  # TODO Update Meters modules
+
+_C.HPO.TOTAL_TRIALS = 100
 
 
 def init_cfg(cfg):

@@ -12,8 +12,8 @@ import _init_lib_path
 import argparse
 from config.defaults import get_cfg
 from test_net import test
-# from train_net import train
-from train_net_man_hps import train
+from train_net import train as train_single
+from train_net_hpo import hpo_main as train_hpo
 
 
 def parse_args():
@@ -75,7 +75,10 @@ def main():
 
     # Perform training.
     if cfg.TRAIN.ENABLE:
-        train(cfg=cfg)
+        if cfg.TRAIN.HPO:
+            train_hpo(cfg=cfg)
+        else:
+            train_single(cfg=cfg)
 
     # Perform multi-clip testing.
     if cfg.TEST.ENABLE:

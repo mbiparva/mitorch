@@ -11,6 +11,7 @@ import torch
 import torch.optim as optim
 
 
+# noinspection PyUnresolvedReferences
 def construct_optimizer(model, cfg):
     """
     Construct a stochastic gradient descent or ADAM optimizer with momentum.
@@ -58,6 +59,33 @@ def construct_optimizer(model, cfg):
             weight_decay=cfg.SOLVER.WEIGHT_DECAY,
             dampening=cfg.SOLVER.DAMPENING,
             nesterov=cfg.SOLVER.NESTEROV,
+        )
+    elif cfg.SOLVER.OPTIMIZING_METHOD == "adadelta":
+        return torch.optim.Adadelta(
+            optim_params,
+            lr=cfg.SOLVER.BASE_LR,
+            rho=0.9,
+            weight_decay=cfg.SOLVER.WEIGHT_DECAY,
+            eps=1e-8,
+        )
+    elif cfg.SOLVER.OPTIMIZING_METHOD == "adagrad":
+        return torch.optim.Adagrad(
+            optim_params,
+            lr=cfg.SOLVER.BASE_LR,
+            lr_decay=0,
+            initial_accumulator_value=0,
+            weight_decay=cfg.SOLVER.WEIGHT_DECAY,
+            eps=1e-8,
+        )
+    elif cfg.SOLVER.OPTIMIZING_METHOD == "rmsprop":
+        return torch.optim.RMSprop(
+            optim_params,
+            lr=cfg.SOLVER.BASE_LR,
+            alpha=0.99,
+            eps=1e-8,
+            weight_decay=cfg.SOLVER.WEIGHT_DECAY,
+            momentum=cfg.SOLVER.MOMENTUM,
+            centered=False
         )
     elif cfg.SOLVER.OPTIMIZING_METHOD == "adam":
         return torch.optim.Adam(
