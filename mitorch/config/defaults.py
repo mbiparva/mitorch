@@ -178,6 +178,14 @@ _C.DATA.PADDING_MODE = ('mean', 'median', 'min', 'max')[0]
 _C.DATA.ENFORCE_NIB_CANONICAL = (False, True)[0]
 _C.DATA.ENFORCE_DIAG = (False, True)[1]
 
+# Data transformation pipeline experimentation
+_C.DATA.EXP = CfgNode()
+
+_C.DATA.EXP.HEAD_ORI = (0, 1)[0]
+_C.DATA.EXP.HEAD_RES = (0, 1)[1]
+_C.DATA.EXP.TAIL = (0, 1)[0]
+_C.DATA.EXP.BODY_CRO = (0, 1, 2)[2]
+_C.DATA.EXP.BODY_FLI = (0, 1)[0]
 
 # ---------------------------------------------------------------------------- #
 # Optimizer options
@@ -185,7 +193,7 @@ _C.DATA.ENFORCE_DIAG = (False, True)[1]
 _C.SOLVER = CfgNode()
 
 # Base learning rate.
-_C.SOLVER.BASE_LR = 5e-3
+_C.SOLVER.BASE_LR = 1e-3
 
 # Maximal number of epochs.
 _C.SOLVER.MAX_EPOCH = 200
@@ -205,7 +213,7 @@ _C.SOLVER.WEIGHT_DECAY = 1e-4
 # TODO add warup and scheduler hypers here
 
 # Optimization method.
-_C.SOLVER.OPTIMIZING_METHOD = ('sgd', 'adam')[1]
+_C.SOLVER.OPTIMIZING_METHOD = ('sgd', 'adam')[0]
 
 # Enable Scheduler
 _C.SOLVER.SCHEDULER_MODE = False
@@ -241,6 +249,20 @@ _C.DATA_LOADER.NUM_WORKERS = 8
 
 # Load data to pinned host memory.
 _C.DATA_LOADER.PIN_MEMORY = True
+
+
+# ---------------------------------------------------------------------------- #
+# Hyper-Parameter Optimization
+# ---------------------------------------------------------------------------- #
+_C.HPO = CfgNode()
+
+# Starting element of the HPO range --- MUST BE SET
+_C.HPO.RANGE_START = 0
+
+# length of the HPO range --- MUST BE SET
+_C.HPO.RANGE_LEN = 0
+
+_C.HPO.EVAL_METRIC = 'hausdorff'  # _C.PROJECT.METERS[1]  # ['loss', 'r2', 'mse', 'mae'] # TODO add it later
 
 
 def init_cfg(cfg):

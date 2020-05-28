@@ -25,7 +25,7 @@ def parse_args():
             overwrites the config loaded from file.
         """
     parser = argparse.ArgumentParser(
-        description="Provide generic neural network training and testing pipeline."
+        description="Provide medical imaging neural network training and testing pipeline."
     )
     parser.add_argument(
         "--cfg",

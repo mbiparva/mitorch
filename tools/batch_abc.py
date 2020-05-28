@@ -47,6 +47,9 @@ class BatchBase(ABC):
     def set_net_mode(self, net):
         raise NotImplementedError
 
+    def _get_lr(self, netwrapper):
+        return netwrapper.scheduler.get_last_lr() if self.cfg.SOLVER.SCHEDULER_MODE else self.cfg.SOLVER.BASE_LR
+
     def generate_gt(self, annotation):
         assert annotation.size(1) == 1
         if self.cfg.MODEL.LOSS_FUNC == 'CrossEntropyLoss':

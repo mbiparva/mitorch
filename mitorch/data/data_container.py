@@ -65,29 +65,85 @@ class DataContainer:
             'drop_last': drop_last,
         }
 
+    # def create_transform(self):
+    #     transformations_head = [
+    #         tf.ToTensorImageVolume(),
+    #         tf.RandomOrientationTo('RPI'),
+    #         tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
+    #     ]
+    #     transformations_tail = [
+    #         tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
+    #         tf.NormalizeMeanStdVolume(
+    #             mean=self.cfg.DATA.MEAN,
+    #             std=self.cfg.DATA.STD,
+    #             inplace=True
+    #         ),
+    #     ]
+    #     if self.mode == 'train':
+    #         transformations_body = [
+    #             tf.ResizeImageVolume(self.cfg.DATA.MAX_SIDE_SIZE, min_side=False),
+    #             tf.PadToSizeVolume(self.cfg.DATA.MAX_SIDE_SIZE, padding_mode=self.cfg.DATA.PADDING_MODE),
+    #             # tf.CenterCropImageVolume(self.cfg.DATA.CROP_SIZE),
+    #             # tf.RandomCropImageVolume(self.cfg.DATA.CROP_SIZE),
+    #             tf.RandomResizedCropImageVolume(self.cfg.DATA.CROP_SIZE, scale=self.cfg.DATA.CROP_SCALE),
+    #             tf.RandomFlipImageVolume(dim=-1),
+    #         ]
+    #     elif self.mode in ('valid', 'test'):
+    #         transformations_body = [
+    #             tf.ResizeImageVolume(self.cfg.DATA.MAX_SIDE_SIZE, min_side=False),
+    #             tf.PadToSizeVolume(self.cfg.DATA.MAX_SIDE_SIZE, padding_mode=self.cfg.DATA.PADDING_MODE),
+    #         ]
+    #     else:
+    #         raise NotImplementedError
+    #
+    #     return torch_tf.Compose(
+    #         transformations_head + transformations_body + transformations_tail
+    #     )
+
+    # TODO: Used for experimentation, stick with the commented one once done
     def create_transform(self):
         transformations_head = [
             tf.ToTensorImageVolume(),
-            tf.RandomOrientationTo('RPI'),
-            tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
+            (
+                tf.RandomOrientationTo('RPI'),
+                tf.RandomOrientationTo('RPI', prand=True)
+            )[self.cfg.DATA.EXP.HEAD_ORI],
+            (
+                tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
+                tf.RandomResampleTomm(target_spacing=(1, 1, 1), target_spacing_scale=(0.2, 0.2, 0.2), prand=True),
+            )[self.cfg.DATA.EXP.HEAD_RES],
         ]
-        transformations_tail = [
-            tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
-            tf.NormalizeMeanStdVolume(
-                mean=self.cfg.DATA.MEAN,
-                std=self.cfg.DATA.STD,
-                inplace=True
-            ),
-        ]
+        transformations_tail = (
+            [
+                tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
+                tf.NormalizeMeanStdVolume(
+                    mean=self.cfg.DATA.MEAN,
+                    std=self.cfg.DATA.STD,
+                    inplace=True
+                ),
+            ],
+            [
+                tf.NormalizeMeanStdVolume(
+                    mean=[-0.06902332603931427, -0.0901104062795639],
+                    std=[0.07958264648914337, 0.07952401041984558],
+                    inplace=True
+                ),
+            ]
+        )[self.cfg.DATA.EXP.TAIL]
+
         if self.mode == 'train':
             transformations_body = [
                 tf.ResizeImageVolume(self.cfg.DATA.MAX_SIDE_SIZE, min_side=False),
                 tf.PadToSizeVolume(self.cfg.DATA.MAX_SIDE_SIZE, padding_mode=self.cfg.DATA.PADDING_MODE),
-                # tf.CenterCropImageVolume(self.cfg.DATA.CROP_SIZE),
-                # tf.RandomCropImageVolume(self.cfg.DATA.CROP_SIZE),
-                tf.RandomResizedCropImageVolume(self.cfg.DATA.CROP_SIZE, scale=self.cfg.DATA.CROP_SCALE),
-                tf.RandomFlipImageVolume(dim=-1),
-            ]
+                (
+                    tf.CenterCropImageVolume(self.cfg.DATA.CROP_SIZE),
+                    tf.RandomCropImageVolume(self.cfg.DATA.CROP_SIZE),
+                    tf.RandomResizedCropImageVolume(self.cfg.DATA.CROP_SIZE, scale=self.cfg.DATA.CROP_SCALE),
+                )[self.cfg.DATA.EXP.BODY_CRO],
+            ] + (
+                [tf.RandomFlipImageVolume(dim=-1)],
+                []
+            )[self.cfg.DATA.EXP.BODY_FLI]
         elif self.mode in ('valid', 'test'):
             transformations_body = [
                 tf.ResizeImageVolume(self.cfg.DATA.MAX_SIDE_SIZE, min_side=False),

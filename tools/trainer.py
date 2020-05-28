@@ -16,9 +16,6 @@ class Trainer(BatchBase):
     def set_net_mode(self, net):
         net.train()
 
-    def _get_lr(self, netwrapper):
-        return netwrapper.scheduler.get_last_lr() if self.cfg.SOLVER.SCHEDULER_MODE else self.cfg.SOLVER.BASE_LR
-
     def batch_main(self, netwrapper, x, annotation):
         p = netwrapper.forward(x)
 

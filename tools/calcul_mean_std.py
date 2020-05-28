@@ -43,7 +43,7 @@ def round_tensor(x):
 if __name__ == '__main__':
     transforms = Compose([
             tf.ToTensorImageVolume(),
-            tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
+            # tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
     ])
     dataset = build_dataset(
         cfg.TRAIN.DATASET,
@@ -85,8 +85,14 @@ if __name__ == '__main__':
 # minimum:  : [0.0, -66.0]
 # maximum:  : [32767.0, 7272.0]
 
-# SRIBILhfb
+# SRIBILhfb - NORM ON
 # mean      : [0.18278566002845764, 0.1672040820121765]
 # std:      : [0.018310515210032463, 0.017989424988627434]
 # minimum:  : [0.0, 0.0]
 # maximum:  : [1.0, 1.0]
+
+# SRIBILhfb - NORM OFF
+# mean      : [-0.06902332603931427, -0.0901104062795639]
+# std:      : [0.07958264648914337, 0.07952401041984558]
+# minimum:  : [-6.7181878089904785, -4.716844081878662]
+# maximum:  : [35.84070587158203, 32.10132598876953]
