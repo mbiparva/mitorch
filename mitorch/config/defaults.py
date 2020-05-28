@@ -50,6 +50,9 @@ _C.TRAIN = CfgNode()
 # If True Train the model, else skip training.
 _C.TRAIN.ENABLE = True
 
+# Train a single experiment or batch of hyper-parameter optimization experiments
+_C.TRAIN.HPO = (False, True)[0]
+
 # Dataset.
 _C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb')[2]
 
