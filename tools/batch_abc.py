@@ -33,7 +33,8 @@ class BatchBase(ABC):
         meters = TVTMeter
         return meters(
             len(self.data_container.dataloader),
-            self.cfg
+            self.cfg,
+            self.cfg.PROJECT.METERS,
         )
 
     def create_dataset(self):

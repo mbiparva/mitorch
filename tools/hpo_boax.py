@@ -71,12 +71,103 @@ hp_set = [
             ],
         },
         {
-            'name': 'MODEL.LOSS_FUNC',
+            'name': 'MODEL.DROPOUT_RATE',
             'type': 'choice',
             'values': [
-                'L1Loss',
-                'MSELoss',
-                'SmoothL1Loss'
+                0.25,
+                0.50,
+                0.75,
+            ],
+        },
+    ],
+    [
+        {
+            'name': 'DATA.EXP.HEAD_ORI',
+            'type': 'choice',
+            'values': [
+                0, 1,
+            ],
+        },
+        {
+            'name': 'DATA.EXP.HEAD_RES',
+            'type': 'choice',
+            'values': [
+                0, 1,
+            ],
+        },
+        {
+            'name': 'DATA.EXP.TAIL',
+            'type': 'choice',
+            'values': [
+                0, 1,
+            ],
+        },
+        {
+            'name': 'DATA.EXP.BODY_CRO',
+            'type': 'choice',
+            'values': [
+                0, 1, 2
+            ],
+        },
+        {
+            'name': 'DATA.EXP.BODY_FLI',
+            'type': 'choice',
+            'values': [
+                0, 1
+            ],
+        },
+    ],
+    [
+        {
+            'name': 'SOLVER.BASE_LR',
+            'type': 'choice',
+            'values': [
+                1e-1,
+                1e-2,
+                1e-3,
+                1e-4,
+                1e-5
+            ],
+        },
+        {
+            'name': 'SOLVER.OPTIMIZING_METHOD',
+            'type': 'choice',
+            'values': [
+                'sgd',
+                'adadelta',
+                'adagrad',
+                'rmsprop',
+                'adam',
+            ],
+        },
+        {
+            'name': 'SOLVER.MOMENTUM',
+            'type': 'choice',
+            'values': [
+                0.5,
+                0.6,
+                0.7,
+                0.8,
+                0.9,
+                0.95
+            ],
+        },
+        {
+            'name': 'SOLVER.WEIGHT_DECAY',
+            'type': 'choice',
+            'values': [
+                1e-2,
+                1e-3,
+                1e-4,
+                1e-5,
+            ],
+        },
+        {
+            'name': 'SOLVER.NESTEROV',
+            'type': 'choice',
+            'values': [
+                False,
+                True,
             ],
         },
         {
@@ -88,8 +179,6 @@ hp_set = [
                 0.75,
             ],
         },
-    ],
-    [
         {
             'name': 'DATA.EXP.HEAD_ORI',
             'type': 'choice',

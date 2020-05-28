@@ -22,12 +22,28 @@ hp_set = [
         ),
         'SOLVER.OPTIMIZING_METHOD': (
             'sgd',
+            'adadelta',
+            'adagrad',
+            'rmsprop',
             'adam',
         ),
-        'MODEL.LOSS_FUNC': (
-            'L1Loss',
-            'MSELoss',
-            'SmoothL1Loss',
+        'SOLVER.MOMENTUM': (
+            0.5,
+            0.6,
+            0.7,
+            0.8,
+            0.9,
+            0.95
+        ),
+        'SOLVER.WEIGHT_DECAY': (
+            1e-2,
+            1e-3,
+            1e-4,
+            1e-5,
+        ),
+        'SOLVER.NESTEROV': (
+            False,
+            True,
         )
     },
     {
