@@ -205,7 +205,7 @@ _C.SOLVER.BASE_LR = 1e-3
 _C.SOLVER.MAX_EPOCH = 200
 
 # Momentum.
-_C.SOLVER.MOMENTUM = 0.9
+_C.SOLVER.MOMENTUM = 0.8
 
 # Dampening for Momentum
 _C.SOLVER.DAMPENING = 0
@@ -214,12 +214,12 @@ _C.SOLVER.DAMPENING = 0
 _C.SOLVER.NESTEROV = False
 
 # L2 regularization.
-_C.SOLVER.WEIGHT_DECAY = 1e-4
+_C.SOLVER.WEIGHT_DECAY = 1e-5
 
 # TODO add warup and scheduler hypers here
 
 # Optimization method.
-_C.SOLVER.OPTIMIZING_METHOD = ('sgd', 'adam')[0]
+_C.SOLVER.OPTIMIZING_METHOD = ('sgd', 'adadelta', 'adagrad', 'rmsprop', 'adam')[2]
 
 # Enable Scheduler
 _C.SOLVER.SCHEDULER_MODE = False

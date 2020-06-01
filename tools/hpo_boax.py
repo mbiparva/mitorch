@@ -13,7 +13,7 @@ from utils.hpo import *
 import train_net_hpo
 
 pp = PrettyPrinter(indent=4)
-EXP_SEL = (0, 1, 2)[0]
+EXP_SEL = (0, 1, 2, 3)[3]
 
 # Experiment #1
 hp_set = [
@@ -215,6 +215,25 @@ hp_set = [
             ],
         },
     ],
+    [
+        {
+            'name': 'DATA.MAX_SIDE_SIZE',
+            'type': 'choice',
+            'values': [
+                192
+            ],
+        },
+        {
+            'name': 'DATA.CROP_SIZE',
+            'type': 'choice',
+            'values': [
+                144,
+                160,
+                176,
+                192
+            ],
+        }
+    ]
 ][EXP_SEL]
 
 

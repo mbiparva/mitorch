@@ -124,7 +124,7 @@ class Encoder(nn.Module):
         super().__init__()
         self.cfg = cfg
         self.stride = self.dilation = (2, 2, 2)
-        self.p = 0.3
+        self.p = self.cfg.MODEL.DROPOUT_RATE
 
         self._create_net()
 

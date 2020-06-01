@@ -12,8 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 from pprint import PrettyPrinter
 from utils.hpo import *
 import hpo_manual
-# import hpo_boax  # moved down into the if condition
-import socket
+import hpo_boax
 
 pp = PrettyPrinter(indent=4)
 
@@ -44,12 +43,8 @@ def hpo_main(cfg):
             len_exps = len_hp_set(hpo_manual.hp_set)
             hpo_manual.run(cfg, tb_hps_sw, len_exps)
         elif cfg.HPO.MODE == 'BOAX':
-            if 'mist' in socket.gethostname():  # temporally solution till mist has BO AX packages
-                print('BOAX not supported yet on MIST instances :(')
-            else:
-                import hpo_boax
-                len_exps = len_hp_param(hpo_boax.hp_set)
-                hpo_boax.run(cfg, tb_hps_sw, len_exps)
+            len_exps = len_hp_param(hpo_boax.hp_set)
+            hpo_boax.run(cfg, tb_hps_sw, len_exps)
         else:
             raise NotImplementedError
     except KeyboardInterrupt:
