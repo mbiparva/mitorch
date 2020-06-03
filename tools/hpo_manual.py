@@ -11,7 +11,7 @@ from config.defaults import init_cfg
 from utils.hpo import *
 import train_net_hpo
 
-EXP_SEL = (0, 1)[0]
+EXP_SEL = (0, 1, 2)[0]
 
 hp_set = [
     {
@@ -62,18 +62,24 @@ hp_set = [
         'DATA.EXP.BODY_FLI': (
             0, 1
         ),
+    },
+    {
+        'TRAIN.BATCH_SIZE': (
+            1, 2, 4
+        ),
     }
 ][EXP_SEL]
 
 
-def run(cfg, tb_hps_sw, len_exps):
+def run(cfg, tb_hps_sw, len_exps, hpo_parent_dir):
+    cfg.hp_set = list(hp_set.items())
     r_s, r_e = exp_range_finder(cfg, len_exps)
 
     for i, (hps_dict, cfg) in enumerate(hp_gen(cfg, hp_set)):
         if not (r_s <= i < r_e):
             continue
         print('manual hps iter {:02}|{} started: {}'.format(i, len_exps-1, hps_dict))
-        cfg = init_cfg(cfg)
+        cfg = init_cfg(cfg, parent_dir=hpo_parent_dir)
         eval_met_dict = train_net_hpo.hpo_train_eval_instance(cfg)
 
         tb_hps_sw.add_hparams(hps_dict, eval_met_dict)

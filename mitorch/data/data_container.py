@@ -81,7 +81,7 @@ class DataContainer:
     #     ]
     #     if self.mode == 'train':
     #         transformations_body = [
-    #             tf.ResizeImageVolume(self.cfg.DATA.MAX_SIDE_SIZE, min_side=False),
+    #             tf.ResizeImageVolume(self.cfg.DATA.MAX_SIDE_SIZE, min_side=False),  # TODO try min_side=True
     #             tf.PadToSizeVolume(self.cfg.DATA.MAX_SIDE_SIZE, padding_mode=self.cfg.DATA.PADDING_MODE),
     #             # tf.CenterCropImageVolume(self.cfg.DATA.CROP_SIZE),
     #             # tf.RandomCropImageVolume(self.cfg.DATA.CROP_SIZE),

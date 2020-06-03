@@ -277,13 +277,13 @@ _C.HPO.EVAL_METRIC = _C.PROJECT.METERS[2]  # ['loss', 'r2', 'mse', 'mae']  # TOD
 _C.HPO.TOTAL_TRIALS = 100
 
 
-def init_cfg(cfg):
+def init_cfg(cfg, parent_dir=''):
     """ Initialize those with hierarchical dependencies and conditions, critical for multi-case experimentation"""
     # Model ID
     cfg.MODEL.ID = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
 
     # Output basedir.
-    cfg.OUTPUT_DIR = os.path.join(cfg.PROJECT.EXPERIMENT_DIR, cfg.TRAIN.DATASET, cfg.MODEL.ID)
+    cfg.OUTPUT_DIR = os.path.join(cfg.PROJECT.EXPERIMENT_DIR, cfg.TRAIN.DATASET, parent_dir, cfg.MODEL.ID)
     if not os.path.exists(cfg.OUTPUT_DIR):
         os.makedirs(cfg.OUTPUT_DIR)
 

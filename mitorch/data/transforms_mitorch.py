@@ -617,5 +617,37 @@ class PadToSizeVolume(Transformable):
             format(self.target_size, self.fill, self.padding_mode)
 
 
+class RandomGamma(Randomizable):
+    def __init__(self, gamma, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.target_spacing = self.target_spacing_constant = torch.tensor(target_spacing, dtype=torch.float32)
+        self.target_spacing_scale = torch.tensor(target_spacing_scale, dtype=torch.float32)
+
+    def randomize_params(self, volume):
+        self.target_spacing = ((torch.rand(3) - 1/2) * 2 * self.target_spacing_scale + 1) * self.target_spacing_constant
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        return image, annot, meta
+
+
+class RandomBrightness(Randomizable):
+    def __init__(self, gamma, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.target_spacing = self.target_spacing_constant = torch.tensor(target_spacing, dtype=torch.float32)
+        self.target_spacing_scale = torch.tensor(target_spacing_scale, dtype=torch.float32)
+
+    def randomize_params(self, volume):
+        self.target_spacing = ((torch.rand(3) - 1/2) * 2 * self.target_spacing_scale + 1) * self.target_spacing_constant
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        return image, annot, meta
+
+
+
 # TODO Implement CropTightVolume based off of
 #  https://github.com/nilearn/nilearn/blob/c10248e43769f37eaea804f64d44a7816e3c6e03/nilearn/image/image.py
+

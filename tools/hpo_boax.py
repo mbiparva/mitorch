@@ -13,7 +13,7 @@ from utils.hpo import *
 import train_net_hpo
 
 pp = PrettyPrinter(indent=4)
-EXP_SEL = (0, 1, 2, 3)[3]
+EXP_SEL = (0, 1, 2, 3)[0]
 
 # Experiment #1
 hp_set = [
@@ -220,7 +220,8 @@ hp_set = [
             'name': 'DATA.MAX_SIDE_SIZE',
             'type': 'choice',
             'values': [
-                192
+                192,
+                208,
             ],
         },
         {
@@ -239,17 +240,15 @@ hp_set = [
 
 # TODO find a better consistent solution later
 # used only by BOAX since we cannot pass them directly
-cfg_g, tb_hps_sw_g, len_exps_g = None, None, None
+cfg_g, tb_hps_sw_g, len_exps_g, hpo_parent_dir_g = None, None, None, None
 
 
 def boax_train_evaluate(parameterization):
-    # global cfg_g, tb_hps_sw_g, len_exps_g
-
     hps_dict, cfg = hp_gen_set_cfg(tuple(parameterization.items()), cfg_g)
 
     print('BoAx experimentation; len of experiments {}; parameters {}'.format(len_exps_g, hps_dict))
 
-    cfg = init_cfg(cfg)
+    cfg = init_cfg(cfg, parent_dir=hpo_parent_dir_g)
     eval_met_dict = train_net_hpo.hpo_train_eval_instance(cfg)
 
     tb_hps_sw_g.add_hparams(hps_dict, eval_met_dict)
@@ -257,13 +256,14 @@ def boax_train_evaluate(parameterization):
     return eval_met_dict['hparam/{}_ep'.format(cfg.HPO.EVAL_METRIC)]
 
 
-def set_global_vars(cfg, tb_hps_sw, len_exps):
-    global cfg_g, tb_hps_sw_g, len_exps_g
-    cfg_g, tb_hps_sw_g, len_exps_g = cfg, tb_hps_sw, len_exps
+def set_global_vars(cfg, tb_hps_sw, len_exps, hpo_parent_dir):
+    global cfg_g, tb_hps_sw_g, len_exps_g, hpo_parent_dir_g
+    cfg_g, tb_hps_sw_g, len_exps_g, hpo_parent_dir_g = cfg, tb_hps_sw, len_exps, hpo_parent_dir
 
 
-def run(cfg, tb_hps_sw, len_exps):
-    set_global_vars(cfg, tb_hps_sw, len_exps)
+def run(cfg, tb_hps_sw, len_exps, hpo_parent_dir):
+    set_global_vars(cfg, tb_hps_sw, len_exps, hpo_parent_dir)
+    cfg.hp_set = hp_set
 
     best_parameters, values, experiment, model = optimize(
         parameters=hp_set,

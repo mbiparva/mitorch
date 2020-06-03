@@ -35,16 +35,18 @@ def hpo_main(cfg):
     len_exps = -1
     cfg.SOLVER.MAX_EPOCH = cfg.HPO.MAX_EPOCH
 
-    tb_logger_dir = os.path.join(cfg.PROJECT.EXPERIMENT_DIR, cfg.TRAIN.DATASET, cfg.MODEL.ID+'_man_hps')
-    tb_hps_sw = SummaryWriter(tb_logger_dir)
+    hpo_parent_dir = '{}_hpo_{}'.format(cfg.MODEL.ID, cfg.HPO.MODE)
+    hpo_output_dir = os.path.join(cfg.PROJECT.EXPERIMENT_DIR, cfg.TRAIN.DATASET, hpo_parent_dir)
+    tb_hps_sw = SummaryWriter(hpo_output_dir)
+    os.rmdir(cfg.OUTPUT_DIR)  # it is useless, we use hpo_output_dir instead
 
     try:
         if cfg.HPO.MODE == 'MAN':
             len_exps = len_hp_set(hpo_manual.hp_set)
-            hpo_manual.run(cfg, tb_hps_sw, len_exps)
+            hpo_manual.run(cfg, tb_hps_sw, len_exps, hpo_parent_dir)
         elif cfg.HPO.MODE == 'BOAX':
             len_exps = len_hp_param(hpo_boax.hp_set)
-            hpo_boax.run(cfg, tb_hps_sw, len_exps)
+            hpo_boax.run(cfg, tb_hps_sw, len_exps, hpo_parent_dir)
         else:
             raise NotImplementedError
     except KeyboardInterrupt:
