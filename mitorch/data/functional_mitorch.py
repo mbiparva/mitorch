@@ -53,7 +53,7 @@ def resize(volume, target_size, interpolation_mode, min_side=True, ignore_depth=
     Args:
         volume (torch.tensor): the image volume
         target_size (Tuple[int, int, int]): the target size
-        min_side (int): does it use minimum or maximum side if target_size is int
+        min_side (int): does it use minimum or maximum side if target_size
         interpolation_mode (str): algorithm used for upsampling:
         ``'nearest'`` | ``'linear'`` | ``'bilinear'`` | ``'bicubic'`` |
         ``'trilinear'`` | ``'area'``. Default: ``'nearest'``
