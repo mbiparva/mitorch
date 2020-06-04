@@ -252,6 +252,7 @@ def pad(volume, padding, fill=0, padding_mode='constant'):
     return torch.nn.functional.pad(volume, padding, mode=padding_mode, value=fill)
 
 
+# For more information check: https://github.com/scikit-image/scikit-image/blob/master/skimage/exposure/exposure.py
 def scale_tensor_intensity(volume, input_range, output_range):
     assert isinstance(volume, torch.Tensor), 'only accept torch tensors'
     assert isinstance(input_range, (tuple, list)), 'input_range must be either tuple or list'
@@ -291,11 +292,21 @@ def cumulative_distribution(volume, num_bins=256):
 
 
 def equalize_hist(volume, num_bins=256):
-    """Check this for further information
-    https://github.com/scikit-image/scikit-image/blob/master/skimage/exposure/exposure.py
-    """
     cdf, bin_centers = cumulative_distribution(volume, num_bins)
     output = np.interp(volume.numpy().flatten(), bin_centers, cdf)
     output = output.reshape(volume.shape)
     return torch.from_numpy(output)
 
+
+# For more information check: https://github.com/dipy/dipy/blob/master/dipy/sims/voxel.py
+def additive_noise(signal, sigma, noise_type='rician'):
+    noise_function = {
+        'gaussian': lambda x, n1, n2: x + n1,
+        'rician': lambda x, n1, n2: np.sqrt((x + n1) ** 2 + n2 ** 2),
+        'rayleigh': lambda x, n1, n2: x + np.sqrt(n1 ** 2 + n2 ** 2),
+    }
+
+    noise1 = np.random.normal(0, sigma, size=signal.shape)
+    noise2 = np.random.normal(0, sigma, size=signal.shape)
+
+    return noise_function[noise_type](signal, noise1, noise2)

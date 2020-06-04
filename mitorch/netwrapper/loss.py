@@ -34,3 +34,19 @@ class DiceLoss(_WeightedLoss):
             reduction=self.reduction,
             standard=True
         )
+
+
+# https://arxiv.org/pdf/1806.07564.pdf
+# https://github.com/HaipengXiong/weighted-hausdorff-loss/blob/60debd891f1fb9a5fbab5fe0e14d428bbbb80993/object-locator/losses.py
+# noinspection PyArgumentList
+@LOSS_REGISTRY.register()
+class WeightedHausdorffLoss(_WeightedLoss):
+    __constants__ = ['weight', 'ignore_index', 'reduction']
+
+    def __init__(self, weight=None, size_average=None, reduce=None, reduction='mean', ignore_index=-100):
+        super().__init__(weight, size_average, reduce, reduction)
+        self.ignore_index = ignore_index
+
+    def forward(self, input, target):
+        # TODO update it with the implementation
+        pass
