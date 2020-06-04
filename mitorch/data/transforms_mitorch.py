@@ -617,35 +617,139 @@ class PadToSizeVolume(Transformable):
             format(self.target_size, self.fill, self.padding_mode)
 
 
-class RandomGamma(Randomizable):
-    def __init__(self, gamma, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.target_spacing = self.target_spacing_constant = torch.tensor(target_spacing, dtype=torch.float32)
-        self.target_spacing_scale = torch.tensor(target_spacing_scale, dtype=torch.float32)
-
-    def randomize_params(self, volume):
-        self.target_spacing = ((torch.rand(3) - 1/2) * 2 * self.target_spacing_scale + 1) * self.target_spacing_constant
-
-    def apply(self, volume):
-        image, annot, meta = volume
-
-        return image, annot, meta
-
-
 class RandomBrightness(Randomizable):
-    def __init__(self, gamma, *args, **kwargs):
+    def __init__(self, value, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.target_spacing = self.target_spacing_constant = torch.tensor(target_spacing, dtype=torch.float32)
-        self.target_spacing_scale = torch.tensor(target_spacing_scale, dtype=torch.float32)
+        assert isinstance(value, float), 'value must be float'
+        assert -0.5 <= value <= +0.5, 'value must be between [-0.5, +0.5]'
+        self.value = value
 
     def randomize_params(self, volume):
-        self.target_spacing = ((torch.rand(3) - 1/2) * 2 * self.target_spacing_scale + 1) * self.target_spacing_constant
+        self.value = torch.rand().item() - 1/2
 
     def apply(self, volume):
         image, annot, meta = volume
 
+        self.update_value(image)
+
+        if self.value == 0:
+            return image, annot, meta
+
+        input_range, output_range = self.find_ranges(image)
+        image = F.scale_tensor_intensity(image, input_range, output_range)
+
         return image, annot, meta
 
+    def update_value(self, image):
+        img_min, img_max = image.min(), image.max()
+        img_range = img_max - img_min
+        self.value = img_range * self.value
+
+    def find_ranges(self, image):
+        img_min, img_max = image.min(), image.max()
+        if self.value > 0:
+            input_range, output_range = (img_min, img_max), (img_min + self.value, img_max)
+        else:
+            input_range, output_range = (img_min, img_max), (img_min, img_max - self.value)
+
+        return input_range, output_range
+
+
+class RandomContrast(RandomBrightness):
+    def __init__(self, value, *args, **kwargs):
+        super().__init__(value, *args, **kwargs)
+
+    def find_ranges(self, image):
+        img_min, img_max = image.min(), image.max()
+        if self.value < 0:
+            self.value *= -1
+            input_range, output_range = (img_min, img_max), (img_min + self.value, img_max - self.value)
+        else:
+            input_range, output_range = (img_min + self.value, img_max - self.value), (img_min, img_max)
+
+        return input_range, output_range
+
+
+class RandomGamma(Randomizable):
+    POWER_MAX = 6
+
+    def __init__(self, value, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        assert isinstance(value, float), 'value must be float'
+        assert 0 < value, 'value must be greater than zero'
+        assert value < self.POWER_MAX, 'large value greater than 6 are not recommended for numerical stability'
+        self.value = value
+
+    def randomize_params(self, volume):
+        # to be equal we pick randomly under or over contrast
+        value_under = torch.rand(1).item()
+        value_over = torch.rand(1).item() * self.POWER_MAX
+        self.value = random.choice((value_under, value_over))
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        img_min, img_max = image.min(), image.max()
+        img_range = img_max - img_min
+
+        image = ((image / img_range) ** self.value) * img_range
+
+        return image, annot, meta
+
+
+class LogCorrection(Transformable):
+    def __init__(self, inverse=False):
+        assert isinstance(inverse, bool), 'inverse must be bool'
+        self.inverse = inverse
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        img_min, img_max = image.min(), image.max()
+        img_range = img_max - img_min
+
+        if self.inverse:
+            image = (2 ** (image / img_range) - 1) * img_range
+        else:
+            image = np.log2(1 + image / img_range) * img_range
+
+        return image, annot, meta
+
+
+class SigmoidCorrection(Transformable):
+    def __init__(self, inverse=False, gain=10, cutoff=0.5):
+        assert isinstance(inverse, bool), 'inverse must be bool'
+        assert 0 < cutoff <= 1, 'cutoff is between [0, 1]'
+        self.inverse = inverse
+        self.gain = gain
+        self.cutoff = cutoff
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        img_min, img_max = image.min(), image.max()
+        img_range = img_max - img_min
+
+        if self.inverse:
+            image = (1 - 1 / (1 + np.exp(self.gain * (self.cutoff - image / img_range)))) * img_range
+        else:
+            image = (1 / (1 + np.exp(self.gain * (self.cutoff - image / img_range)))) * img_range
+
+        return image, annot, meta
+
+
+class HistEqual(Transformable):
+    def __init__(self, num_bins=256):
+        assert isinstance(num_bins, int), 'num_bins must be int'
+        assert 0 < num_bins
+        self.num_bins = num_bins
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        image = F.equalize_hist(image, self.num_bins)
+
+        return image, annot, meta
 
 
 # TODO Implement CropTightVolume based off of

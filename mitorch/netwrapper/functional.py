@@ -88,10 +88,12 @@ def jaccard_index(input, target, ignore_index=-100, reduction='mean', epsilon=1e
     }[reduction]
 
 
+# noinspection PyBroadException
 def _hausdorff_distance_func(e_1, e_2, maximum=True, percentile=95):
     """This is based on the scipy.ndimage.morphology package. Check scikit-video for the reference implementation.
     https://github.com/scikit-video/scikit-video/blob/master/skvideo/motion/gme.py
     """
+    LARGE_NUMBER = 1000
     assert isinstance(e_1, np.ndarray) and isinstance(e_2, np.ndarray), 'expect np.ndarray ' \
                                                                         'but got {}'.format(type(e_1), type(e_2))
     # binary structure
@@ -109,8 +111,14 @@ def _hausdorff_distance_func(e_1, e_2, maximum=True, percentile=95):
         one_from_two = one_from_two.max()
         two_from_one = two_from_one.max()
     else:
-        one_from_two = np.percentile(one_from_two, percentile)
-        two_from_one = np.percentile(two_from_one, percentile)
+        try:  # IndexError is raised at BOAX with "cannot do a non-empty take from an empty axes"
+            one_from_two = np.percentile(one_from_two, percentile)
+            two_from_one = np.percentile(two_from_one, percentile)
+        except Exception as e:
+            print('CAUGHT:', e)
+            print('LARGE_NUMBER assigned instead')
+            one_from_two = LARGE_NUMBER
+            two_from_one = LARGE_NUMBER
 
     return np.max((one_from_two, two_from_one))
 

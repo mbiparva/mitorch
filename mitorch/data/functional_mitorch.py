@@ -250,3 +250,52 @@ def pad(volume, padding, fill=0, padding_mode='constant'):
         padding = [padding]*6
 
     return torch.nn.functional.pad(volume, padding, mode=padding_mode, value=fill)
+
+
+def scale_tensor_intensity(volume, input_range, output_range):
+    assert isinstance(volume, torch.Tensor), 'only accept torch tensors'
+    assert isinstance(input_range, (tuple, list)), 'input_range must be either tuple or list'
+    assert isinstance(output_range, (tuple, list)), 'output_range must be either tuple or list'
+    assert len(input_range) == 2, 'len of input_range must be two'
+    assert len(output_range) == 2, 'len of output_range must be two'
+    assert all(map(lambda x: 0 <= x <= 1, input_range)), 'input_range values must be in [0, 1]'
+    assert all(map(lambda x: 0 <= x <= 1, output_range)), 'output_range values must be in [0, 1]'
+    in_lower, in_upper = tuple(map(float, input_range))
+    out_lower, out_upper = tuple(map(float, output_range))
+
+    volume = volume.clamp(in_lower, in_upper)
+
+    if in_lower == in_upper:
+        return volume.clamp(out_lower, out_upper)
+    else:
+        volume = (volume - in_lower) / (in_upper - in_lower)
+        return volume * (out_upper - out_lower) + out_lower
+
+
+def histogram(volume, num_bins=256, is_normalized=False):
+    vol_min, vol_max = volume.min(), volume.max()
+    vol_range = vol_max - vol_min
+    hist, bin_edges = np.histogram(volume.numpy().flatten(), bins=num_bins, range=vol_range)
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+
+    if is_normalized:
+        hist = hist / np.sum(hist)
+    return hist, bin_centers
+
+
+def cumulative_distribution(volume, num_bins=256):
+    hist, bin_centers = histogram(volume, num_bins)
+    img_cdf = hist.cumsum()
+    img_cdf = img_cdf / float(img_cdf[-1])
+    return img_cdf, bin_centers
+
+
+def equalize_hist(volume, num_bins=256):
+    """Check this for further information
+    https://github.com/scikit-image/scikit-image/blob/master/skimage/exposure/exposure.py
+    """
+    cdf, bin_centers = cumulative_distribution(volume, num_bins)
+    output = np.interp(volume.numpy().flatten(), bin_centers, cdf)
+    output = output.reshape(volume.shape)
+    return torch.from_numpy(output)
+
