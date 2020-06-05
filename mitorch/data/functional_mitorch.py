@@ -350,16 +350,35 @@ def equalize_hist(volume, num_bins=256):
     return volume * vol_range + in_lower
 
 
-
 # For more information check: https://github.com/dipy/dipy/blob/master/dipy/sims/voxel.py
-def additive_noise(signal, sigma, noise_type='rician'):
+def additive_noise(volume, sigma, noise_type='rician', out_of_bound_mode='normalize'):
+    assert out_of_bound_mode in ('normalize', 'clamp',), 'undefined out_of_bound_mode'
     noise_function = {
         'gaussian': lambda x, n1, n2: x + n1,
         'rician': lambda x, n1, n2: np.sqrt((x + n1) ** 2 + n2 ** 2),
         'rayleigh': lambda x, n1, n2: x + np.sqrt(n1 ** 2 + n2 ** 2),
     }
 
-    noise1 = np.random.normal(0, sigma, size=signal.shape)
-    noise2 = np.random.normal(0, sigma, size=signal.shape)
+    in_lower, in_upper = volume.min().item(), volume.max().item()
+    vol_range = in_upper - in_lower
 
-    return noise_function[noise_type](signal, noise1, noise2)
+    volume = (volume - in_lower) / vol_range
+
+    sigma = volume.std() * sigma
+    noise_one = np.random.normal(0, sigma, size=volume.shape)
+    noise_two = np.random.normal(0, sigma, size=volume.shape)
+
+    volume = noise_function[noise_type](volume, noise_one, noise_two)
+
+    if out_of_bound_mode == 'normalize':
+        noise_in_lower, noise_in_upper = volume.min().item(), volume.max().item()
+        noise_vol_range = noise_in_upper - noise_in_lower
+        volume = (volume - noise_in_lower) / noise_vol_range
+    elif out_of_bound_mode == 'clamp':
+        volume = volume.clamp(0, 1)
+    else:
+        raise NotImplementedError
+
+    volume = volume * vol_range + in_lower
+
+    return volume

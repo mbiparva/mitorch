@@ -738,6 +738,35 @@ class HistEqual(Transformable):
         return image, annot, meta
 
 
+class AdditiveNoise(Randomizable):
+    NOISE_TYPE = ('gaussian', 'rician', 'rayleigh',)
+    MAX_SIGMA = 3
+
+    def __init__(self, sigma, noise_type='gaussian', randomize_type=False, out_of_bound_mode='normalize',
+                 *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        assert isinstance(sigma, float), 'sigma must be float'
+        assert 0 < sigma, 'sigma must be greater than zero'
+        assert noise_type in self.NOISE_TYPE, 'unknown noise type'
+        assert out_of_bound_mode in ('normalize', 'clamp',), 'undefined out_of_bound_mode'
+
+        self.sigma = sigma
+        self.noise_type = noise_type
+        self.randomize_type = randomize_type
+        self.out_of_bound_mode = out_of_bound_mode
+
+    def randomize_params(self, volume):
+        self.sigma = torch.rand(1).item() * self.MAX_SIGMA
+        if self.randomize_type:
+            self.noise_type = random.choice(self.NOISE_TYPE)
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        image = F.additive_noise(image, self.sigma, self.noise_type, self.out_of_bound_mode)
+
+        return image, annot, meta
+
 # TODO Implement CropTightVolume based off of
 #  https://github.com/nilearn/nilearn/blob/c10248e43769f37eaea804f64d44a7816e3c6e03/nilearn/image/image.py
 
