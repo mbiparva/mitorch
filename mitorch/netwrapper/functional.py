@@ -10,7 +10,7 @@ import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances
 
 
-def _apply_ignore_index(input, target, ignore_index, fill_value=0):
+def apply_ignore_index(input, target, ignore_index, fill_value=0):
     if ignore_index > 0:
         ignore_mask = target.eq(ignore_index)
         if ignore_mask.any():
@@ -25,7 +25,7 @@ def dice_coeff(input, target, weight=None, ignore_index=-100, reduction='mean', 
     assert input.size() == target.size(), "'input' and 'target' must have the same shape"
     assert input.dtype == target.dtype, 'dtype does not match'
 
-    _apply_ignore_index(input, target, ignore_index, fill_value=0)
+    apply_ignore_index(input, target, ignore_index, fill_value=0)
 
     assert (input.is_contiguous() and target.is_contiguous())
 
@@ -63,7 +63,7 @@ def jaccard_index(input, target, ignore_index=-100, reduction='mean', epsilon=1e
     assert input.size() == target.size(), "'input' and 'target' must have the same shape"
     assert input.dtype == target.dtype, 'dtype does not match'
 
-    _apply_ignore_index(input, target, ignore_index, fill_value=0)
+    apply_ignore_index(input, target, ignore_index, fill_value=0)
 
     assert (input.is_contiguous() and target.is_contiguous())
 
@@ -166,7 +166,7 @@ def hausdorff_distance(input, target, ignore_index=-100, reduction='mean'):
     assert input.size() == target.size(), "'input' and 'target' must have the same shape"
     assert input.dtype == target.dtype, 'dtype does not match'
 
-    _apply_ignore_index(input, target, ignore_index, fill_value=0)
+    apply_ignore_index(input, target, ignore_index, fill_value=0)
 
     assert (input.is_contiguous() and target.is_contiguous())
 

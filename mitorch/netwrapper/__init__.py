@@ -7,4 +7,4 @@
 #  Brain Imaging Lab, Sunnybrook Research Institure (SRI)
 
 from .build import LOSS_REGISTRY, build_loss
-from .loss import CrossEntropyLoss, DiceLoss, AveragedHausdorffLoss
+from .loss import CrossEntropyLoss, DiceLoss, WeightedHausdorffLoss, AveragedHausdorffLoss

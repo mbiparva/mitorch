@@ -69,8 +69,8 @@ def main():
         # tf.LogCorrection(inverse=(False, True)[0]),
         # tf.SigmoidCorrection(inverse=(False, True)[0]),
         # tf.HistEqual(num_bins=256),
-        tf.AdditiveNoise(sigma=0.5, noise_type='gaussian', randomize_type=True,
-                         out_of_bound_mode=('normalize', 'clamp')[1], prand=False),
+        # tf.AdditiveNoise(sigma=0.5, noise_type='gaussian', randomize_type=True,
+        #                  out_of_bound_mode=('normalize', 'clamp')[1], prand=False),
         # ---------------------------------------------------
         tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
         tf.NormalizeMeanStdVolume(

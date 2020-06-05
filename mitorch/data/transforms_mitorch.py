@@ -767,6 +767,6 @@ class AdditiveNoise(Randomizable):
 
         return image, annot, meta
 
+
 # TODO Implement CropTightVolume based off of
 #  https://github.com/nilearn/nilearn/blob/c10248e43769f37eaea804f64d44a7816e3c6e03/nilearn/image/image.py
-
