@@ -650,6 +650,7 @@ class RandomBrightness(Randomizable):
             return image, annot, meta
 
         input_range, output_range = self.find_ranges(image)
+
         image = F.scale_tensor_intensity(image, input_range, output_range)
 
         return image, annot, meta
@@ -662,10 +663,9 @@ class RandomContrast(RandomBrightness):
     def find_ranges(self, image):
         img_min, img_max = image.min().item(), image.max().item()
         if self.value < 0:
-            self.value *= -1
-            input_range, output_range = (img_min, img_max), (img_min + self.value, img_max - self.value)
+            input_range, output_range = (img_min, img_max), (img_min - self.value, img_max + self.value)
         else:
-            input_range, output_range = (img_min - self.value, img_max + self.value), (img_min, img_max)
+            input_range, output_range = (img_min + self.value, img_max - self.value), (img_min, img_max)
 
         return input_range, output_range
 

@@ -63,8 +63,8 @@ def main():
         tf.RandomResizedCropImageVolume(crop_size, scale=crop_scale),
         tf.RandomFlipImageVolume(dim=-1),
         # ------------- Intensity Pipeline ------------------
-        tf.RandomBrightness(value=(-0.25, +0.25)[1], prand=True),
-        tf.RandomContrast(value=(-0.25, +0.25)[0]),
+        # tf.RandomBrightness(value=(-0.25, +0.25)[1], prand=True),
+        # tf.RandomContrast(value=(-0.25, +0.25)[1]),
         tf.RandomGamma(value=(0.25, 2.0)[0]),
         tf.LogCorrection(inverse=(False, True)[0]),
         tf.SigmoidCorrection(inverse=(False, True)[0]),
