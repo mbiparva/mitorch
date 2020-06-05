@@ -275,6 +275,18 @@ def scale_tensor_intensity(volume, input_range, output_range):
         return volume * (out_upper - out_lower) + out_lower
 
 
+def gamma_correction(volume, gamma):
+    assert isinstance(gamma, float), 'gamma must be float'
+    assert 0 < gamma, 'gamma must be greater than zero'
+
+    in_lower, in_upper = volume.min().item(), volume.max().item()
+    vol_range = in_upper - in_lower
+
+    volume = (volume - in_lower) / vol_range
+
+    return (volume ** gamma) * vol_range + in_lower
+
+
 def histogram(volume, num_bins=256, is_normalized=False):
     vol_min, vol_max = volume.min(), volume.max()
     vol_range = vol_max - vol_min

@@ -689,10 +689,7 @@ class RandomGamma(Randomizable):
     def apply(self, volume):
         image, annot, meta = volume
 
-        img_min, img_max = image.min().item(), image.max().item()
-        img_range = img_max - img_min
-
-        image = ((image / img_range) ** self.value) * img_range
+        image = F.gamma_correction(image, self.value)
 
         return image, annot, meta
 
