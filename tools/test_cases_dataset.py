@@ -22,11 +22,8 @@ class ComposePrintSize(Compose):
 
     def __call__(self, volume):
         for t in self.transforms:
-            # if t.__class__.__name__ == 'PadToSizeVolume':
-            # if t.__class__.__name__ == 'RandomCropImageVolume':
-            # if t.__class__.__name__ == 'RandomResizedCropImageVolume':
-            # if t.__class__.__name__ == 'CenterCropImageVolume':
-            #     print('we are in ...')
+            if t.__class__.__name__ == 'RandomBrightness':
+                print('transform is reached ...')
             volume = t(volume)
             # image, annot, meta = volume
             # print("image: {image}, annot: {annot}".format(
@@ -38,19 +35,42 @@ class ComposePrintSize(Compose):
 def main():
     dataset_name = cfg.TRAIN.DATASET
     mode = 'training'
-    max_side = 256
-    crop_size, crop_scale = 224, (0.70, 0.90)
+    max_side = 192
+    crop_size, crop_scale = 176, (0.80, 1.0)
+    # transformations = ComposePrintSize([
+    #     tf.ToTensorImageVolume(),
+    #     tf.RandomOrientationTo('ARI', prand=True),
+    #     tf.RandomResampleTomm(target_spacing=(0.9, 0.5, 1.0), target_spacing_scale=(0.2, 0.1, 0.5), prand=True),
+    #     tf.ResizeImageVolume(max_side, min_side=False),
+    #     tf.PadToSizeVolume(max_side, padding_mode=('mean', 'median', 'min', 'max')[0]),
+    #     tf.CenterCropImageVolume(crop_size),
+    #     # tf.RandomCropImageVolume(224),
+    #     # tf.RandomResizedCropImageVolume(crop_size, scale=crop_scale),
+    #     tf.RandomFlipImageVolume(dim=-1),
+    #     RandomApply([tf.NormalizeMinMaxVolume(max_div=True, inplace=True)], p=0.75),
+    #     tf.NormalizeMeanStdVolume(
+    #         mean=[0.18278566002845764, 0.1672040820121765],
+    #         std=[0.018310515210032463, 0.017989424988627434],
+    #         inplace=True
+    #     ),
+    #     ])
     transformations = ComposePrintSize([
         tf.ToTensorImageVolume(),
-        tf.RandomOrientationTo('ARI', prand=True),
-        tf.RandomResampleTomm(target_spacing=(0.9, 0.5, 1.0), target_spacing_scale=(0.2, 0.1, 0.5), prand=True),
+        tf.RandomOrientationTo('ARI'),
+        tf.RandomResampleTomm(target_spacing=(1.0, 1.0, 1.0)),
         tf.ResizeImageVolume(max_side, min_side=False),
-        tf.PadToSizeVolume(max_side, padding_mode=('mean', 'median', 'min', 'max')[0]),
-        tf.CenterCropImageVolume(crop_size),
-        # tf.RandomCropImageVolume(224),
-        # tf.RandomResizedCropImageVolume(crop_size, scale=crop_scale),
+        tf.PadToSizeVolume(max_side, padding_mode='mean'),
+        tf.RandomResizedCropImageVolume(crop_size, scale=crop_scale),
         tf.RandomFlipImageVolume(dim=-1),
-        RandomApply([tf.NormalizeMinMaxVolume(max_div=True, inplace=True)], p=0.75),
+        # ------------- Intensity Pipeline ------------------
+        tf.RandomBrightness(value=(-0.25, +0.25)[0]),
+        tf.RandomContrast(value=(-0.25, +0.25)[0]),
+        tf.RandomGamma(value=(0.25, 2.0)[0]),
+        tf.LogCorrection(inverse=(False, True)[0]),
+        tf.SigmoidCorrection(inverse=(False, True)[0]),
+        tf.HistEqual(num_bins=256),
+        # ---------------------------------------------------
+        tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
         tf.NormalizeMeanStdVolume(
             mean=[0.18278566002845764, 0.1672040820121765],
             std=[0.018310515210032463, 0.017989424988627434],
@@ -60,9 +80,9 @@ def main():
     dataset = build_dataset(dataset_name, cfg, mode, transformations)
     dataloader = DataLoader(
         dataset,
-        batch_size=4,
+        batch_size=2,
         shuffle=False,
-        num_workers=8,
+        num_workers=0,
         pin_memory=False,
         drop_last=True,
         collate_fn=collate_fn,

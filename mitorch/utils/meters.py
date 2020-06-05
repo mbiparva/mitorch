@@ -207,11 +207,12 @@ class TVTMeter(object):
 
         logging.log_json_stats(stats)
 
-    def log_epoch_stats(self, cur_epoch):
+    def log_epoch_stats(self, cur_epoch, mode):
         """
         Log the stats of the current epoch.
         Args:
             cur_epoch (int): the number of current epoch.
+            mode (str): the mode currently in it.
         """
         eta_sec = self.iter_timer.seconds() * (
             self.MAX_EPOCH - (cur_epoch + 1) * self.epoch_iters
@@ -219,7 +220,7 @@ class TVTMeter(object):
         eta = str(datetime.timedelta(seconds=int(eta_sec)))
         mem_usage = misc.gpu_mem_usage()
         stats = {
-            "_type": "train_epoch",
+            "_type": "{}_epoch".format(mode),
             "epoch": "{}/{}".format(cur_epoch + 1, self._cfg.SOLVER.MAX_EPOCH),
             "time_diff": self.iter_timer.seconds(),
             "eta": eta,

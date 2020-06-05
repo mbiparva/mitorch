@@ -101,6 +101,7 @@ def run(cfg, tb_hps_sw, len_exps, hpo_parent_dir):
         cfg.DATA.CROP_SIZE = cfg.DATA.MAX_SIDE_SIZE - 16 * cfg.DATA.CROP_SIZE
         eval_met_dict = train_net_hpo.hpo_train_eval_instance(cfg)
 
+        hps_dict = {u: ', '.join(list(map(str, v))) if isinstance(v, (tuple, list)) else v for u, v in hps_dict.items()}
         tb_hps_sw.add_hparams(hps_dict, eval_met_dict)
 
     tb_hps_sw.close()

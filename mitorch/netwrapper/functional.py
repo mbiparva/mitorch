@@ -7,6 +7,7 @@
 import torch
 import scipy.ndimage
 import numpy as np
+from sklearn.metrics.pairwise import pairwise_distances
 
 
 def _apply_ignore_index(input, target, ignore_index, fill_value=0):
@@ -86,6 +87,27 @@ def jaccard_index(input, target, ignore_index=-100, reduction='mean', epsilon=1e
         'sum': jaccard_index_metric.sum(),
         'none': jaccard_index_metric
     }[reduction]
+
+
+# https://github.com/HaipengXiong/weighted-hausdorff-loss/blob/60debd891f1fb9a5fbab5fe0e14d428bbbb80993/object-locator/losses.py
+# TODO check this in comparison to the custom in-use one
+def averaged_hausdorff_distance(set_x, set_y, max_ahd=np.inf):
+    set_x = np.array(set_x)
+    set_y = np.array(set_y)
+
+    assert len(set_x) and len(set_y)
+    assert set_x.ndim == set_y.ndim == 2, 'ndim must be 2'
+    assert set_x.shape[1] == set_y.shape[1], 'The points in both sets must have the same number of dimensions.'
+
+    d2_matrix = pairwise_distances(set_x, set_y, metric='euclidean')
+
+    dis_to_edges_x = np.min(d2_matrix, axis=0)
+    dis_to_edges_y = np.min(d2_matrix, axis=1)
+
+    dis_x = np.average(dis_to_edges_x)
+    dis_y = np.average(dis_to_edges_y)
+
+    return dis_x + dis_y
 
 
 # noinspection PyBroadException

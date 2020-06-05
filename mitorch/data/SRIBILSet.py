@@ -30,7 +30,7 @@ class SRIBIL(VolSetABC):
             't1': 'T1_nu.nii.gz',
             'fl': 'T1acq_nu_FL.nii.gz',
             'annot': ('wmh_seg.nii.gz', 'T1acq_nu_HfBd.nii.gz')[self.hfb_annot is True],
-            # 't2': None,  # Add anymore modalities you want HERE
+            # 't2': None,  # Add any more modalities you want HERE
         }
         self.sample_path_list = self.index_samples()
 

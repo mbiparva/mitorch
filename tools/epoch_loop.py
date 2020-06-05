@@ -90,7 +90,7 @@ class EpochLoop:
 
             self.trainer.batch_loop(self.net_wrapper, cur_epoch)
 
-            self.trainer.meters.log_epoch_stats(cur_epoch)
+            self.trainer.meters.log_epoch_stats(cur_epoch, 'train')
 
             self.save_checkpoint(cur_epoch)
 
@@ -108,7 +108,7 @@ class EpochLoop:
         self.evaluator.batch_loop(self.net_wrapper, start_epoch)
 
         # Log epoch stats. For the moment, valid and test are the same. For multi-view, multi-crops, modify it later.
-        self.evaluator.meters.log_epoch_stats(start_epoch)
+        self.evaluator.meters.log_epoch_stats(start_epoch, 'valid')
 
         self.tb_logger_update(start_epoch, self.evaluator)
 

@@ -251,6 +251,7 @@ def boax_train_evaluate(parameterization):
     cfg = init_cfg(cfg, parent_dir=hpo_parent_dir_g)
     eval_met_dict = train_net_hpo.hpo_train_eval_instance(cfg)
 
+    hps_dict = {u: ', '.join(list(map(str, v))) if isinstance(v, (tuple, list)) else v for u, v in hps_dict.items()}
     tb_hps_sw_g.add_hparams(hps_dict, eval_met_dict)
 
     return eval_met_dict['hparam/{}_ep'.format(cfg.HPO.EVAL_METRIC)]
