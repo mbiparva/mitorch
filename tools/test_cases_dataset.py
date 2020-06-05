@@ -65,10 +65,10 @@ def main():
         # ------------- Intensity Pipeline ------------------
         # tf.RandomBrightness(value=(-0.25, +0.25)[1], prand=True),
         # tf.RandomContrast(value=(-0.25, +0.25)[1]),
-        tf.RandomGamma(value=(0.25, 2.0)[0], prand=True),
-        tf.LogCorrection(inverse=(False, True)[0]),
-        tf.SigmoidCorrection(inverse=(False, True)[0]),
-        tf.HistEqual(num_bins=256),
+        # tf.RandomGamma(value=(0.25, 2.0)[0], prand=True),
+        # tf.LogCorrection(inverse=(False, True)[0]),
+        # tf.SigmoidCorrection(inverse=(False, True)[0]),
+        # tf.HistEqual(num_bins=256),
         # ---------------------------------------------------
         tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
         tf.NormalizeMeanStdVolume(

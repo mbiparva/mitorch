@@ -284,13 +284,46 @@ def gamma_correction(volume, gamma):
 
     volume = (volume - in_lower) / vol_range
 
-    return (volume ** gamma) * vol_range + in_lower
+    volume = volume ** gamma
+
+    return volume * vol_range + in_lower
+
+
+def log_correction(volume, inverse):
+    assert isinstance(inverse, bool), 'inverse must be bool'
+
+    in_lower, in_upper = volume.min().item(), volume.max().item()
+    vol_range = in_upper - in_lower
+
+    volume = (volume - in_lower) / vol_range
+
+    if inverse:
+        volume = (2 ** volume - 1)
+    else:
+        volume = np.log2(1 + volume)
+
+    return volume * vol_range + in_lower
+
+
+def sigmoid_correction(volume, inverse, gain, cutoff):
+    assert isinstance(inverse, bool), 'inverse must be bool'
+
+    in_lower, in_upper = volume.min().item(), volume.max().item()
+    vol_range = in_upper - in_lower
+
+    volume = (volume - in_lower) / vol_range
+
+    if inverse:
+        volume = 1 - 1 / (1 + np.exp(gain * (cutoff - volume)))
+    else:
+        volume = 1 / (1 + np.exp(gain * (cutoff - volume)))
+
+    return volume * vol_range + in_lower
 
 
 def histogram(volume, num_bins=256, is_normalized=False):
-    vol_min, vol_max = volume.min(), volume.max()
-    vol_range = vol_max - vol_min
-    hist, bin_edges = np.histogram(volume.numpy().flatten(), bins=num_bins, range=vol_range)
+    hist, bin_edges = np.histogram(volume.numpy().flatten(), bins=num_bins)
+
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 
     if is_normalized:
@@ -301,15 +334,21 @@ def histogram(volume, num_bins=256, is_normalized=False):
 def cumulative_distribution(volume, num_bins=256):
     hist, bin_centers = histogram(volume, num_bins)
     img_cdf = hist.cumsum()
-    img_cdf = img_cdf / float(img_cdf[-1])
+    img_cdf = img_cdf / img_cdf[-1]
     return img_cdf, bin_centers
 
 
 def equalize_hist(volume, num_bins=256):
+    in_lower, in_upper = volume.min().item(), volume.max().item()
+    vol_range = in_upper - in_lower
+
     cdf, bin_centers = cumulative_distribution(volume, num_bins)
-    output = np.interp(volume.numpy().flatten(), bin_centers, cdf)
-    output = output.reshape(volume.shape)
-    return torch.from_numpy(output)
+    volume = np.interp(volume.numpy().flatten(), bin_centers, cdf)
+    volume = volume.reshape(volume.shape)
+    volume = torch.from_numpy(volume)
+
+    return volume * vol_range + in_lower
+
 
 
 # For more information check: https://github.com/dipy/dipy/blob/master/dipy/sims/voxel.py

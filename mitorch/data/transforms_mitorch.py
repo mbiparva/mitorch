@@ -617,6 +617,7 @@ class PadToSizeVolume(Transformable):
             format(self.target_size, self.fill, self.padding_mode)
 
 
+# TODO apply all the intensity operations on channels separately
 class RandomBrightness(Randomizable):
     def __init__(self, value, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -694,7 +695,7 @@ class RandomGamma(Randomizable):
         return image, annot, meta
 
 
-class LogCorrection(Transformable):
+class LogCorrection(Transformable):  # TODO might be interesting to randomize inverse
     def __init__(self, inverse=False):
         assert isinstance(inverse, bool), 'inverse must be bool'
         self.inverse = inverse
@@ -702,18 +703,12 @@ class LogCorrection(Transformable):
     def apply(self, volume):
         image, annot, meta = volume
 
-        img_min, img_max = image.min().item(), image.max().item()
-        img_range = img_max - img_min
-
-        if self.inverse:
-            image = (2 ** (image / img_range) - 1) * img_range
-        else:
-            image = np.log2(1 + image / img_range) * img_range
+        image = F.log_correction(image, self.inverse)
 
         return image, annot, meta
 
 
-class SigmoidCorrection(Transformable):
+class SigmoidCorrection(Transformable):  # TODO might be interesting to randomize inverse
     def __init__(self, inverse=False, gain=10, cutoff=0.5):
         assert isinstance(inverse, bool), 'inverse must be bool'
         assert 0 < cutoff <= 1, 'cutoff is between [0, 1]'
@@ -724,13 +719,7 @@ class SigmoidCorrection(Transformable):
     def apply(self, volume):
         image, annot, meta = volume
 
-        img_min, img_max = image.min().item(), image.max().item()
-        img_range = img_max - img_min
-
-        if self.inverse:
-            image = (1 - 1 / (1 + np.exp(self.gain * (self.cutoff - image / img_range)))) * img_range
-        else:
-            image = (1 / (1 + np.exp(self.gain * (self.cutoff - image / img_range)))) * img_range
+        image = F.sigmoid_correction(image, self.inverse, self.gain, self.cutoff)
 
         return image, annot, meta
 
