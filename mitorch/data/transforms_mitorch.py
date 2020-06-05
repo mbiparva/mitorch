@@ -625,7 +625,21 @@ class RandomBrightness(Randomizable):
         self.value = value
 
     def randomize_params(self, volume):
-        self.value = torch.rand().item() - 1/2
+        self.value = torch.rand(1).item() - 1/2
+
+    def update_value(self, image):
+        img_min, img_max = image.min().item(), image.max().item()
+        img_range = img_max - img_min
+        self.value = img_range * self.value
+
+    def find_ranges(self, image):
+        img_min, img_max = image.min().item(), image.max().item()
+        if self.value > 0:
+            input_range, output_range = (img_min, img_max), (img_min + self.value, img_max)
+        else:
+            input_range, output_range = (img_min, img_max), (img_min, img_max + self.value)
+
+        return input_range, output_range
 
     def apply(self, volume):
         image, annot, meta = volume
@@ -640,32 +654,18 @@ class RandomBrightness(Randomizable):
 
         return image, annot, meta
 
-    def update_value(self, image):
-        img_min, img_max = image.min(), image.max()
-        img_range = img_max - img_min
-        self.value = img_range * self.value
-
-    def find_ranges(self, image):
-        img_min, img_max = image.min(), image.max()
-        if self.value > 0:
-            input_range, output_range = (img_min, img_max), (img_min + self.value, img_max)
-        else:
-            input_range, output_range = (img_min, img_max), (img_min, img_max - self.value)
-
-        return input_range, output_range
-
 
 class RandomContrast(RandomBrightness):
     def __init__(self, value, *args, **kwargs):
         super().__init__(value, *args, **kwargs)
 
     def find_ranges(self, image):
-        img_min, img_max = image.min(), image.max()
+        img_min, img_max = image.min().item(), image.max().item()
         if self.value < 0:
             self.value *= -1
             input_range, output_range = (img_min, img_max), (img_min + self.value, img_max - self.value)
         else:
-            input_range, output_range = (img_min + self.value, img_max - self.value), (img_min, img_max)
+            input_range, output_range = (img_min - self.value, img_max + self.value), (img_min, img_max)
 
         return input_range, output_range
 
@@ -689,7 +689,7 @@ class RandomGamma(Randomizable):
     def apply(self, volume):
         image, annot, meta = volume
 
-        img_min, img_max = image.min(), image.max()
+        img_min, img_max = image.min().item(), image.max().item()
         img_range = img_max - img_min
 
         image = ((image / img_range) ** self.value) * img_range
@@ -705,7 +705,7 @@ class LogCorrection(Transformable):
     def apply(self, volume):
         image, annot, meta = volume
 
-        img_min, img_max = image.min(), image.max()
+        img_min, img_max = image.min().item(), image.max().item()
         img_range = img_max - img_min
 
         if self.inverse:
@@ -727,7 +727,7 @@ class SigmoidCorrection(Transformable):
     def apply(self, volume):
         image, annot, meta = volume
 
-        img_min, img_max = image.min(), image.max()
+        img_min, img_max = image.min().item(), image.max().item()
         img_range = img_max - img_min
 
         if self.inverse:

@@ -22,8 +22,8 @@ class ComposePrintSize(Compose):
 
     def __call__(self, volume):
         for t in self.transforms:
-            if t.__class__.__name__ == 'RandomBrightness':
-                print('transform is reached ...')
+            # if t.__class__.__name__ == 'RandomBrightness':
+            #     print('transform is reached ...')
             volume = t(volume)
             # image, annot, meta = volume
             # print("image: {image}, annot: {annot}".format(
@@ -63,7 +63,7 @@ def main():
         tf.RandomResizedCropImageVolume(crop_size, scale=crop_scale),
         tf.RandomFlipImageVolume(dim=-1),
         # ------------- Intensity Pipeline ------------------
-        tf.RandomBrightness(value=(-0.25, +0.25)[0]),
+        tf.RandomBrightness(value=(-0.25, +0.25)[1], prand=True),
         tf.RandomContrast(value=(-0.25, +0.25)[0]),
         tf.RandomGamma(value=(0.25, 2.0)[0]),
         tf.LogCorrection(inverse=(False, True)[0]),

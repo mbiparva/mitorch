@@ -254,13 +254,15 @@ def pad(volume, padding, fill=0, padding_mode='constant'):
 
 # For more information check: https://github.com/scikit-image/scikit-image/blob/master/skimage/exposure/exposure.py
 def scale_tensor_intensity(volume, input_range, output_range):
+    def within_range(x):
+        return volume.min().item() <= x <= volume.max().item()
     assert isinstance(volume, torch.Tensor), 'only accept torch tensors'
     assert isinstance(input_range, (tuple, list)), 'input_range must be either tuple or list'
     assert isinstance(output_range, (tuple, list)), 'output_range must be either tuple or list'
     assert len(input_range) == 2, 'len of input_range must be two'
     assert len(output_range) == 2, 'len of output_range must be two'
-    assert all(map(lambda x: 0 <= x <= 1, input_range)), 'input_range values must be in [0, 1]'
-    assert all(map(lambda x: 0 <= x <= 1, output_range)), 'output_range values must be in [0, 1]'
+    assert all(map(within_range, input_range)), 'input_range values must be in [0, 1]'
+    assert all(map(within_range, output_range)), 'output_range values must be in [0, 1]'
     in_lower, in_upper = tuple(map(float, input_range))
     out_lower, out_upper = tuple(map(float, output_range))
 
