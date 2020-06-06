@@ -137,6 +137,8 @@ _C.MODEL.NUM_CLASSES = 1
 # Loss function.
 _C.MODEL.LOSS_FUNC = ('CrossEntropyLoss', 'DiceLoss', 'WeightedHausdorffLoss', 'AveragedHausdorffLoss')[1]
 
+_C.MODEL.LOSS_FUNC_WHL = (False, True)[1]
+
 _C.MODEL.IGNORE_INDEX = 255
 
 # Dropout rate before final projection in the backbone.

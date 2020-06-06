@@ -24,8 +24,9 @@ class NetWrapper(nn.Module):
         self._create_net(device)
 
         self.criterion = self._create_criterion()
-        self.criterion_aux = self._create_criterion('WeightedHausdorffLoss')
-        self.cnt = 0
+        if self.cfg.MODEL.LOSS_FUNC_WHL:
+            self.criterion_aux = self._create_criterion('WeightedHausdorffLoss')
+            self.cnt = 0
 
         self.optimizer = self._create_optimizer()
 
@@ -75,10 +76,12 @@ class NetWrapper(nn.Module):
 
     def loss_update(self, p, a, step=True):
         loss = self.criterion(p, a)
-        if self.cnt > 100:
-            loss += 0.01 * self.criterion_aux(p, a)
-
-        self.cnt += 1
+        if self.cfg.MODEL.LOSS_FUNC_WHL:
+            print(self.cnt)
+            if self.cnt > 2000:
+                loss += 0.1 * self.criterion_aux(p, a)
+                print('WHL passed :)')
+            self.cnt += 1
 
         if step:
             loss.backward()

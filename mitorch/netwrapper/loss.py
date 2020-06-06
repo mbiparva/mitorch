@@ -229,19 +229,3 @@ class WeightedHausdorffLoss(_WeightedLoss):
             'sum': loss.sum(),
             'none': loss,
         }[self.reduction]
-
-
-# noinspection PyArgumentList
-@LOSS_REGISTRY.register()
-class AveragedHausdorffLoss(WeightedHausdorffLoss):
-
-    def __init__(self, weight=None, size_average=None, reduce=None, reduction='mean', ignore_index=-100):
-        super().__init__(weight, size_average, reduce, reduction)
-
-    @staticmethod
-    def calculate_terms(input_b, target_b_nz, distance_matrix, max_distance):
-        # Modified Chamfer Loss
-        input_term_b = torch.mean(torch.min(distance_matrix, 1)[0])
-        target_term_b = torch.mean(torch.min(distance_matrix, 0)[0])
-
-        return input_term_b, target_term_b
