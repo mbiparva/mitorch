@@ -135,7 +135,7 @@ _C.MODEL.MODEL_NAME = ('Unet3D', )[0]
 _C.MODEL.NUM_CLASSES = 1
 
 # Loss function.
-_C.MODEL.LOSS_FUNC = ('CrossEntropyLoss', 'DiceLoss', 'WeightedHausdorffLoss', 'AveragedHausdorffLoss')[2]
+_C.MODEL.LOSS_FUNC = ('CrossEntropyLoss', 'DiceLoss', 'WeightedHausdorffLoss', 'AveragedHausdorffLoss')[1]
 
 _C.MODEL.IGNORE_INDEX = 255
 
@@ -171,7 +171,7 @@ _C.DATA.MIN_SIDE = (False, True)[0]
 _C.DATA.UNI_SCALE = (False, True)[1]
 
 # The spatial crop size of the input volume.
-_C.DATA.CROP_SIZE = (176, 192)[0]
+_C.DATA.CROP_SIZE = (160, 176, 192)[0]
 
 # The spatial crop scale of the input volume.
 _C.DATA.CROP_SCALE = ((0.7, 1.0), (0.8, 1.0))[0]

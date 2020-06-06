@@ -24,6 +24,8 @@ class NetWrapper(nn.Module):
         self._create_net(device)
 
         self.criterion = self._create_criterion()
+        self.criterion_aux = self._create_criterion('WeightedHausdorffLoss')
+        self.cnt = 0
 
         self.optimizer = self._create_optimizer()
 
@@ -32,8 +34,8 @@ class NetWrapper(nn.Module):
     def _create_net(self, device):
         self.net_core = build_model(self.cfg, device)  # this moves to device memory too
 
-    def _create_criterion(self):
-        return build_loss(self.cfg)
+    def _create_criterion(self, name=None):
+        return build_loss(self.cfg, name)
 
     def _create_optimizer(self):
         return construct_optimizer(self.net_core, self.cfg)
@@ -73,6 +75,10 @@ class NetWrapper(nn.Module):
 
     def loss_update(self, p, a, step=True):
         loss = self.criterion(p, a)
+        if self.cnt > 100:
+            loss += 0.01 * self.criterion_aux(p, a)
+
+        self.cnt += 1
 
         if step:
             loss.backward()

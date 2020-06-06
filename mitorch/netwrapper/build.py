@@ -21,14 +21,15 @@ The call should return a `torch.nn.Module` object.
 
 
 # noinspection PyCallingNonCallable
-def build_loss(cfg):
+def build_loss(cfg, name=None):
     """
     Builds the video model.
     Args:
         cfg (configs): configs that contains the hyper-parameters to build the backbone.
+        name (str): name
     """
     # Construct the loss
-    name = cfg.MODEL.LOSS_FUNC
+    name = cfg.MODEL.LOSS_FUNC if name is None else name
     ignore_index = cfg.MODEL.IGNORE_INDEX
     loss = LOSS_REGISTRY.get(name)(ignore_index=ignore_index)
     return loss
