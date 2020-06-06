@@ -51,6 +51,10 @@ class DiceLoss(_WeightedLoss):
 def cdist_custom_euclidean(x, y):
     x = x.unsqueeze(1)
     y = y.unsqueeze(0)
+
+    # x = x.detach().cpu().numpy()
+    # y = y.detach().cpu().numpy()
+
     distance = (x - y) ** 2
     distances = distance.sum(-1).sqrt()
     return distances
@@ -113,18 +117,23 @@ class WeightedHausdorffLoss(_WeightedLoss):
 
     def forward(self, input, target):
         assert not target.requires_grad, 'target does not require grad'
-        assert input.dim() == target.dim() == 4, 'Expect 4D tensor of BxDxHxW'
+        assert input.dim() == target.dim() == 5, 'Expect 4D tensor of BxDxHxW'
         assert input.shape == target.shape, 'Shapes must match'
+        assert input.shape[1] == target.shape[1] == 1, 'it expects binary segmentation in one channel'
         assert 0 <= input.min().item() <= 1 and 0 <= input.max().item() <= 1, 'input values must be probabilities'
+        CUSTOM_DISTANCE = False
+        input, target = input.squeeze(1), target.squeeze(1)
 
         apply_ignore_index(input, target, self.ignore_index, fill_value=self.FILL_VALUE)
 
         batch_size = input.shape[0]
         input_shape = torch.tensor(input.shape[1:])  # DxHxW
-        input_device = input.device()
+        input_device = input.device
 
-        volume_coordinates = self.create_coordinate_list(input_shape, input_device)
-        max_distance = (input_shape ** 2).sum().sqrt().item()
+        # because of out-of-memory, I decided to use range finder for the indices on the either far sides of 0 or 1
+        # unless I use a loop over the depth dimension, which is going to be slow, and sub-optimal
+        # volume_coordinates = self.create_coordinate_list(input_shape)
+        max_distance = (input_shape.float() ** 2).sum().sqrt().item()
 
         input_term = []
         target_term = []
@@ -132,11 +141,37 @@ class WeightedHausdorffLoss(_WeightedLoss):
         for b in range(batch_size):
             input_b, target_b = input[b], target[b]
 
-            # TODO can avoid create_coordinate_list and use input_b.ge(lower_bound)
-            input_b_nz = volume_coordinates.float().to(input_device)
-            target_b_nz = target_b.nonzero().float().to(input_device)
+            NUM_ATTEMPTS = 10
+            ATTEMPT_DIVISOR = 0.5
+            WINDOW_SIZE = 0.3
+            assert 0 < WINDOW_SIZE < 0.5
+            LOWER_QUANTILE, UPPER_QUANTILE = 0.5 - WINDOW_SIZE, 0.5 + WINDOW_SIZE
+            input_b_np = input_b.detach().cpu().numpy().flatten()
+            target_b_nz, distance_matrix = None, None
+            for i in range(NUM_ATTEMPTS):
+                try:
+                    # TODO can avoid create_coordinate_list and use input_b.ge(lower_bound)
+                    # cuda throws out of memory error, use cpu, even that fails
+                    # input_b_nz = volume_coordinates.float().to('cpu')
+                    lower_bound = np.quantile(input_b_np, LOWER_QUANTILE)
+                    upper_bound = np.quantile(input_b_np, UPPER_QUANTILE)
+                    input_b_nz = (input_b.lt(lower_bound) | input_b.ge(upper_bound)).nonzero().float().to('cpu')
+                    target_b_nz = target_b.nonzero().float().to('cpu')
 
-            distance_matrix = cdist_custom_euclidean(input_b_nz, target_b_nz)
+                    if CUSTOM_DISTANCE:
+                        distance_matrix = cdist_custom_euclidean(input_b_nz, target_b_nz)
+                    else:
+                        input_b_nz = input_b_nz.detach().cpu().numpy()
+                        target_b_nz = target_b_nz.detach().cpu().numpy()
+                        distance_matrix = pairwise_distances(input_b_nz, target_b_nz, metric='euclidean', n_jobs=8)
+
+                    break
+                except RuntimeError as e:
+                    print('this error is thrown at the distance matrix calculation', e)
+                    print('try to tighten the lower and upper bounds by halt of the distances to the extremes')
+                    LOWER_QUANTILE = LOWER_QUANTILE * ATTEMPT_DIVISOR
+                    UPPER_QUANTILE = UPPER_QUANTILE + (1.0 - UPPER_QUANTILE) * ATTEMPT_DIVISOR
+            assert distance_matrix is not None, 'attempts failed to fit distance_matrix into memory'
 
             input_term_b, target_term_b = self.calculate_terms(input_b, target_b_nz, distance_matrix, max_distance)
 

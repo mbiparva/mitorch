@@ -95,9 +95,8 @@ def averaged_hausdorff_distance(set_x, set_y, max_ahd=np.inf):
     set_x = np.array(set_x)
     set_y = np.array(set_y)
 
-    assert len(set_x) and len(set_y)
-    assert set_x.ndim == set_y.ndim == 2, 'ndim must be 2'
-    assert set_x.shape[1] == set_y.shape[1], 'The points in both sets must have the same number of dimensions.'
+    assert set_x.ndim == set_y.ndim == 3, 'ndim must be 3'
+    assert set_x.shape == set_y.shape, 'The points in both sets must have the same number of dimensions.'
 
     d2_matrix = pairwise_distances(set_x, set_y, metric='euclidean')
 

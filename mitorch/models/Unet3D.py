@@ -228,7 +228,7 @@ class SegHead(nn.Module):
             if not i == self.num_pred_levels - 1:
                 x = getattr(self, self.get_layer_name(i, 'upsam'))(x)
 
-        if self.cfg.MODEL.LOSS_FUNC == 'DiceLoss':
+        if self.cfg.MODEL.LOSS_FUNC in ('DiceLoss', 'WeightedHausdorffLoss', 'AveragedHausdorffLoss'):
             x = nn.Sigmoid()(x)
 
         return x
