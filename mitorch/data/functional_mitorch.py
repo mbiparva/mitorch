@@ -343,11 +343,11 @@ def equalize_hist(volume, num_bins=256):
     vol_range = in_upper - in_lower
 
     cdf, bin_centers = cumulative_distribution(volume, num_bins)
-    volume = np.interp(volume.numpy().flatten(), bin_centers, cdf)
-    volume = volume.reshape(volume.shape)
-    volume = torch.from_numpy(volume)
+    volume_int = np.interp(volume.numpy().flatten(), bin_centers, cdf)
+    volume_int = volume_int.reshape(volume.shape)
+    volume_int = torch.from_numpy(volume_int)
 
-    return volume * vol_range + in_lower
+    return volume_int * vol_range + in_lower
 
 
 # For more information check: https://github.com/dipy/dipy/blob/master/dipy/sims/voxel.py

@@ -98,7 +98,6 @@ def run(cfg, tb_hps_sw, len_exps, hpo_parent_dir):
             continue
         print('manual hps iter {:02}|{} started: {}'.format(i, len_exps-1, hps_dict))
         cfg = init_cfg(cfg, parent_dir=hpo_parent_dir)
-        cfg.DATA.CROP_SIZE = cfg.DATA.MAX_SIDE_SIZE - 16 * cfg.DATA.CROP_SIZE
         eval_met_dict = train_net_hpo.hpo_train_eval_instance(cfg)
 
         hps_dict = {u: ', '.join(list(map(str, v))) if isinstance(v, (tuple, list)) else v for u, v in hps_dict.items()}

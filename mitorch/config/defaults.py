@@ -135,9 +135,9 @@ _C.MODEL.MODEL_NAME = ('Unet3D', )[0]
 _C.MODEL.NUM_CLASSES = 1
 
 # Loss function.
-_C.MODEL.LOSS_FUNC = ('CrossEntropyLoss', 'DiceLoss', 'WeightedHausdorffLoss', 'AveragedHausdorffLoss')[1]
+_C.MODEL.LOSS_FUNC = ('CrossEntropyLoss', 'DiceLoss', 'WeightedHausdorffLoss')[1]
 
-_C.MODEL.LOSS_FUNC_WHL = (False, True)[1]
+_C.MODEL.LOSS_AUG_WHL = (False, True)[1]
 
 _C.MODEL.IGNORE_INDEX = 255
 
@@ -173,10 +173,10 @@ _C.DATA.MIN_SIDE = (False, True)[0]
 _C.DATA.UNI_SCALE = (False, True)[1]
 
 # The spatial crop size of the input volume.
-_C.DATA.CROP_SIZE = (160, 176, 192)[0]
+_C.DATA.CROP_SIZE = (192-16*2, 192-16*1, 192)[0]
 
 # The spatial crop scale of the input volume.
-_C.DATA.CROP_SCALE = ((0.7, 1.0), (0.8, 1.0))[0]
+_C.DATA.CROP_SCALE = ((0.7, 1.0), (0.8, 1.0), (0.9, 1.0))[1]
 
 # The mean value of the volume raw voxels across the T1 and Flair channels.
 _C.DATA.MEAN = [0.18278566002845764, 0.1672040820121765]  # TODO add it to the init of dataset to automatically fine it.
@@ -208,7 +208,7 @@ _C.SOLVER = CfgNode()
 _C.SOLVER.BASE_LR = 1e-3
 
 # Maximal number of epochs.
-_C.SOLVER.MAX_EPOCH = 20
+_C.SOLVER.MAX_EPOCH = 100
 
 # Momentum.
 _C.SOLVER.MOMENTUM = 0.8

@@ -617,12 +617,13 @@ class PadToSizeVolume(Transformable):
             format(self.target_size, self.fill, self.padding_mode)
 
 
-# TODO apply all the intensity operations on channels separately
 class RandomBrightness(Randomizable):
-    def __init__(self, value, *args, **kwargs):
+    def __init__(self, value, channel_wise=True, *args, **kwargs):
         super().__init__(*args, **kwargs)
         assert isinstance(value, float), 'value must be float'
         assert -0.5 <= value <= +0.5, 'value must be between [-0.5, +0.5]'
+        assert isinstance(channel_wise, bool), 'channel_wise is bool'
+        self.channel_wise = channel_wise
         self.value = value
 
     def randomize_params(self, volume):
@@ -645,21 +646,32 @@ class RandomBrightness(Randomizable):
     def apply(self, volume):
         image, annot, meta = volume
 
-        self.update_value(image)
+        for i in range(len(image)):
+            if self.channel_wise:
+                image_i = image[i]
+            else:
+                image_i = image
 
-        if self.value == 0:
-            return image, annot, meta
+            self.update_value(image_i)
 
-        input_range, output_range = self.find_ranges(image)
+            if not self.value == 0:
+                input_range, output_range = self.find_ranges(image_i)
 
-        image = F.scale_tensor_intensity(image, input_range, output_range)
+                image_i = F.scale_tensor_intensity(image_i, input_range, output_range)
+
+            if self.channel_wise:
+                image[i] = image_i
+                self.randomize(image)
+            else:
+                image = image_i
+                break
 
         return image, annot, meta
 
 
 class RandomContrast(RandomBrightness):
-    def __init__(self, value, *args, **kwargs):
-        super().__init__(value, *args, **kwargs)
+    def __init__(self, value, channel_wise=True, *args, **kwargs):
+        super().__init__(value, channel_wise, *args, **kwargs)
 
     def find_ranges(self, image):
         img_min, img_max = image.min().item(), image.max().item()
@@ -674,11 +686,13 @@ class RandomContrast(RandomBrightness):
 class RandomGamma(Randomizable):
     POWER_MAX = 6
 
-    def __init__(self, value, *args, **kwargs):
+    def __init__(self, value, channel_wise=True, *args, **kwargs):
         super().__init__(*args, **kwargs)
         assert isinstance(value, float), 'value must be float'
         assert 0 < value, 'value must be greater than zero'
         assert value < self.POWER_MAX, 'large value greater than 6 are not recommended for numerical stability'
+        assert isinstance(channel_wise, bool), 'channel_wise is bool'
+        self.channel_wise = channel_wise
         self.value = value
 
     def randomize_params(self, volume):
@@ -690,28 +704,57 @@ class RandomGamma(Randomizable):
     def apply(self, volume):
         image, annot, meta = volume
 
-        image = F.gamma_correction(image, self.value)
+        for i in range(len(image)):
+            if self.channel_wise:
+                image_i = image[i]
+            else:
+                image_i = image
+
+            image_i = F.gamma_correction(image_i, self.value)
+
+            if self.channel_wise:
+                image[i] = image_i
+                self.randomize(image)
+            else:
+                image = image_i
+                break
 
         return image, annot, meta
 
 
 class LogCorrection(Transformable):  # TODO might be interesting to randomize inverse
-    def __init__(self, inverse=False):
+    def __init__(self, inverse=False, channel_wise=True):
         assert isinstance(inverse, bool), 'inverse must be bool'
+        assert isinstance(channel_wise, bool), 'channel_wise is bool'
+        self.channel_wise = channel_wise
         self.inverse = inverse
 
     def apply(self, volume):
         image, annot, meta = volume
 
-        image = F.log_correction(image, self.inverse)
+        for i in range(len(image)):
+            if self.channel_wise:
+                image_i = image[i]
+            else:
+                image_i = image
+
+            image_i = F.log_correction(image_i, self.inverse)
+
+            if self.channel_wise:
+                image[i] = image_i
+            else:
+                image = image_i
+                break
 
         return image, annot, meta
 
 
 class SigmoidCorrection(Transformable):  # TODO might be interesting to randomize inverse
-    def __init__(self, inverse=False, gain=10, cutoff=0.5):
+    def __init__(self, inverse=False, gain=10, cutoff=0.5, channel_wise=True):
         assert isinstance(inverse, bool), 'inverse must be bool'
         assert 0 < cutoff <= 1, 'cutoff is between [0, 1]'
+        assert isinstance(channel_wise, bool), 'channel_wise is bool'
+        self.channel_wise = channel_wise
         self.inverse = inverse
         self.gain = gain
         self.cutoff = cutoff
@@ -719,21 +762,47 @@ class SigmoidCorrection(Transformable):  # TODO might be interesting to randomiz
     def apply(self, volume):
         image, annot, meta = volume
 
-        image = F.sigmoid_correction(image, self.inverse, self.gain, self.cutoff)
+        for i in range(len(image)):
+            if self.channel_wise:
+                image_i = image[i]
+            else:
+                image_i = image
+
+            image_i = F.sigmoid_correction(image_i, self.inverse, self.gain, self.cutoff)
+
+            if self.channel_wise:
+                image[i] = image_i
+            else:
+                image = image_i
+                break
 
         return image, annot, meta
 
 
 class HistEqual(Transformable):
-    def __init__(self, num_bins=256):
+    def __init__(self, num_bins=256, channel_wise=True):
         assert isinstance(num_bins, int), 'num_bins must be int'
         assert 0 < num_bins
+        assert isinstance(channel_wise, bool), 'channel_wise is bool'
+        self.channel_wise = channel_wise
         self.num_bins = num_bins
 
     def apply(self, volume):
         image, annot, meta = volume
 
-        image = F.equalize_hist(image, self.num_bins)
+        for i in range(len(image)):
+            if self.channel_wise:
+                image_i = image[i]
+            else:
+                image_i = image
+
+            image_i = F.equalize_hist(image_i, self.num_bins)
+
+            if self.channel_wise:
+                image[i] = image_i
+            else:
+                image = image_i
+                break
 
         return image, annot, meta
 
@@ -743,12 +812,14 @@ class AdditiveNoise(Randomizable):
     MAX_SIGMA = 3
 
     def __init__(self, sigma, noise_type='gaussian', randomize_type=False, out_of_bound_mode='normalize',
-                 *args, **kwargs):
+                 channel_wise=True, *args, **kwargs):
         super().__init__(*args, **kwargs)
         assert isinstance(sigma, float), 'sigma must be float'
         assert 0 < sigma, 'sigma must be greater than zero'
         assert noise_type in self.NOISE_TYPE, 'unknown noise type'
         assert out_of_bound_mode in ('normalize', 'clamp',), 'undefined out_of_bound_mode'
+        assert isinstance(channel_wise, bool), 'channel_wise is bool'
+        self.channel_wise = channel_wise
 
         self.sigma = sigma
         self.noise_type = noise_type
@@ -763,7 +834,20 @@ class AdditiveNoise(Randomizable):
     def apply(self, volume):
         image, annot, meta = volume
 
-        image = F.additive_noise(image, self.sigma, self.noise_type, self.out_of_bound_mode)
+        for i in range(len(image)):
+            if self.channel_wise:
+                image_i = image[i]
+            else:
+                image_i = image
+
+            image_i = F.additive_noise(image_i, self.sigma, self.noise_type, self.out_of_bound_mode)
+
+            if self.channel_wise:
+                image[i] = image_i
+                self.randomize(image)
+            else:
+                image = image_i
+                break
 
         return image, annot, meta
 

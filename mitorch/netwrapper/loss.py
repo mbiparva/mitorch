@@ -86,8 +86,7 @@ class WeightedHausdorffLoss(_WeightedLoss):
         return volume_coordinates
 
     @staticmethod
-    def _hausdorff_distance_func(x_in, y_in):
-        """Check the functional for the reference"""
+    def _boundary_extraction_approximation(x_in, y_in):
         import scipy.ndimage
 
         x = x_in.detach().cpu().numpy()
@@ -155,15 +154,13 @@ class WeightedHausdorffLoss(_WeightedLoss):
         # volume_coordinates = self.create_coordinate_list(input_shape)
         max_distance = (input_shape.float() ** 2).sum().sqrt().item()
 
-        input_term = []
-        target_term = []
-        # TODO: tensorize the computation ;)
+        input_term, target_term = list(), list()
         for b in range(batch_size):
             input_b, target_b = input[b], target[b]
 
             CUSTOM_DISTANCE = True
-            VERSION_ONE = False
-            if VERSION_ONE:
+            VERSION = (0, 1, 2)[2]
+            if VERSION == 0:
                 NUM_ATTEMPTS = 10
                 ATTEMPT_DIVISOR = 0.5
                 WINDOW_SIZE = 0.3
@@ -195,12 +192,12 @@ class WeightedHausdorffLoss(_WeightedLoss):
                         LOWER_QUANTILE = LOWER_QUANTILE * ATTEMPT_DIVISOR
                         UPPER_QUANTILE = UPPER_QUANTILE + (1.0 - UPPER_QUANTILE) * ATTEMPT_DIVISOR
                 assert distance_matrix is not None, 'attempts failed to fit distance_matrix into memory'
-            else:
+            elif VERSION == 1:
                 # version two crashes too, there are two options:
                 # (1) use for loop over depth
                 # (2) use hausdorff after some epoch once it is stable, as an auxiliary term ---> chose this one ;)
                 input_b_ge, target_b = input_b.ge(0.98), target_b.bool()
-                input_b_boundary, target_b_boundary = self._hausdorff_distance_func(input_b_ge, target_b)
+                input_b_boundary, target_b_boundary = self._boundary_extraction_approximation(input_b_ge, target_b)
                 input_b_nz = input_b_boundary.nonzero().float()
                 target_b_nz = target_b_boundary.nonzero().float()
                 input_b = input_b[input_b_boundary]
@@ -213,8 +210,48 @@ class WeightedHausdorffLoss(_WeightedLoss):
                     target_b_nz_np = target_b_nz.detach().cpu().numpy()
                     distance_matrix = pairwise_distances(input_b_nz_np, target_b_nz_np, metric='euclidean', n_jobs=12)
                     distance_matrix = torch.from_numpy(distance_matrix).to(input_device)
+            elif VERSION == 2:
+                # Use randomly weighted sampled depth sheets and measure loss at them.
+                NUM_DEPTH_SHEETS = 3
+                SEG_THR = 0.5
+                max_distance = (input_shape[1:].float() ** 2).sum().sqrt().item()
+                input_term_b, target_term_b = list(), list()
 
-            input_term_b, target_term_b = self.calculate_terms(input_b, target_b_nz, distance_matrix, max_distance)
+                target_b_r_weights = target_b.sum(-1).sum(-1)
+                depth_sampling_weights = target_b_r_weights / target_b_r_weights.sum()
+                # TODO use some measure of overlap so the sheets with high error would have higher weights
+                depth_r_ind = torch.multinomial(depth_sampling_weights, NUM_DEPTH_SHEETS, replacement=False)
+
+                input_b_ge, target_b = input_b.ge(SEG_THR), target_b.bool()
+
+                for i in depth_r_ind:
+                    input_b_ge_i, target_b_i = input_b_ge[i], target_b[i]
+                    input_b_nz = input_b_ge_i.nonzero().float()
+                    input_b_i = input_b[i, input_b_ge_i]
+                    if len(input_b_i) == 0:
+                        print('**** one depth sheet got zero prediction ove the threshold ****')
+                        continue
+                    target_b_nz = target_b_i.nonzero().float()
+                    # CUSTOM_DISTANCE
+                    input_b_nz = input_b_nz.to(input_device)
+                    target_b_nz = target_b_nz.to(input_device)
+                    distance_matrix = cdist_custom_euclidean(input_b_nz, target_b_nz)
+                    input_term_b_i, target_term_b_i = self.calculate_terms(input_b_i, target_b_nz,
+                                                                           distance_matrix, max_distance)
+                    input_term_b.append(input_term_b_i)
+                    target_term_b.append(target_term_b_i)
+
+                assert len(input_term_b) and len(target_term_b), 'got all depth sheets zero'
+                input_term_b = torch.stack(input_term_b)
+                target_term_b = torch.stack(target_term_b)
+
+                input_term_b = input_term_b.mean()
+                target_term_b = target_term_b.mean()
+            else:
+                raise NotImplementedError
+
+            if not VERSION == 2:
+                input_term_b, target_term_b = self.calculate_terms(input_b, target_b_nz, distance_matrix, max_distance)
 
             input_term.append(input_term_b)
             target_term.append(target_term_b)
