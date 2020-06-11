@@ -1,8 +1,8 @@
-#  Copyright (c) 2020.
+#  Copyright (c) 2020 Mahdi Biparva, mahdi.biparva@sri.utoronto.ca
 #  miTorch Deep Learning Package
 #  Deep Learning Package for 3D medical imaging in PyTorch
 #  Implemented by Mahdi Biparva, May 2020
-#  Brain Imaging Lab, Sunnybrook Research Institure (SRI)
+#  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
 from torch.nn.modules.loss import _WeightedLoss, CrossEntropyLoss
 from netwrapper.functional import dice_coeff, apply_ignore_index
@@ -66,9 +66,11 @@ class WeightedHausdorffLoss(_WeightedLoss):
     __constants__ = ['weight', 'ignore_index', 'reduction']
     FILL_VALUE = 0
 
-    def __init__(self, weight=None, size_average=None, reduce=None, reduction='mean', ignore_index=-100):
+    def __init__(self, weight=None, size_average=None, reduce=None, reduction='mean', ignore_index=-100, **kwargs):
         super().__init__(weight, size_average, reduce, reduction)
         self.ignore_index = ignore_index
+        self.whl_num_depth_sheets = kwargs.get('whl_num_depth_sheets', 2)
+        self.whl_seg_thr = kwargs.get('whl_seg_thr', 0.5)
 
     @staticmethod
     def create_coordinate_list(input_shape):
@@ -117,7 +119,7 @@ class WeightedHausdorffLoss(_WeightedLoss):
         # Weighted Hausdorff Distance
         input_term_b = (1 / (estimate_num_points + eps)) * (input_b_flat * torch.min(distance_matrix, 1)[0]).sum()
 
-        PAPER_IMP = False
+        PAPER_IMP = True
         if not PAPER_IMP:
             target_term_b = torch.min((distance_matrix + eps) / (input_b_repeated ** alpha + eps / max_distance), 0)[0]
             target_term_b = torch.clamp(target_term_b, 0, max_distance)
@@ -128,7 +130,7 @@ class WeightedHausdorffLoss(_WeightedLoss):
                 assert p < 0
                 return torch.mean((tensor + eps) ** p, dim, keepdim=keepdim) ** (1. / p)
 
-            POWER = -9
+            POWER = -3
             weighted_d_matrix = (1 - input_b_repeated) * max_distance + input_b_repeated * distance_matrix
             target_term_b = generaliz_mean(weighted_d_matrix, p=POWER, dim=0, keepdim=False)
             target_term_b = torch.mean(target_term_b)
@@ -140,7 +142,9 @@ class WeightedHausdorffLoss(_WeightedLoss):
         assert input.dim() == target.dim() == 5, 'Expect 4D tensor of BxDxHxW'
         assert input.shape == target.shape, 'Shapes must match'
         assert input.shape[1] == target.shape[1] == 1, 'it expects binary segmentation in one channel'
-        assert 0 <= input.min().item() <= 1 and 0 <= input.max().item() <= 1, 'input values must be probabilities'
+        assert 0 <= input.min().item() <= 1 and 0 <= input.max().item() <= 1, 'input values must be probabilities' \
+                                                                              '{}, {}'.format(input.min().item(),
+                                                                                              input.max().item())
         input, target = input.squeeze(1), target.squeeze(1)
 
         apply_ignore_index(input, target, self.ignore_index, fill_value=self.FILL_VALUE)
@@ -212,17 +216,15 @@ class WeightedHausdorffLoss(_WeightedLoss):
                     distance_matrix = torch.from_numpy(distance_matrix).to(input_device)
             elif VERSION == 2:
                 # Use randomly weighted sampled depth sheets and measure loss at them.
-                NUM_DEPTH_SHEETS = 3
-                SEG_THR = 0.5
                 max_distance = (input_shape[1:].float() ** 2).sum().sqrt().item()
                 input_term_b, target_term_b = list(), list()
 
                 target_b_r_weights = target_b.sum(-1).sum(-1)
                 depth_sampling_weights = target_b_r_weights / target_b_r_weights.sum()
                 # TODO use some measure of overlap so the sheets with high error would have higher weights
-                depth_r_ind = torch.multinomial(depth_sampling_weights, NUM_DEPTH_SHEETS, replacement=False)
+                depth_r_ind = torch.multinomial(depth_sampling_weights, self.whl_num_depth_sheets, replacement=False)
 
-                input_b_ge, target_b = input_b.ge(SEG_THR), target_b.bool()
+                input_b_ge, target_b = input_b.ge(self.whl_seg_thr), target_b.bool()
 
                 for i in depth_r_ind:
                     input_b_ge_i, target_b_i = input_b_ge[i], target_b[i]

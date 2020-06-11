@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 """Configs."""
-#  Copyright (c) 2020.
+#  Copyright (c) 2020 Mahdi Biparva, mahdi.biparva@sri.utoronto.ca
 #  miTorch Deep Learning Package
 #  Deep Learning Package for 3D medical imaging in PyTorch
 #  Implemented by Mahdi Biparva, May 2020
-#  Brain Imaging Lab, Sunnybrook Research Institure (SRI)
+#  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
 import os
 from fvcore.common.config import CfgNode
@@ -138,6 +138,8 @@ _C.MODEL.NUM_CLASSES = 1
 _C.MODEL.LOSS_FUNC = ('CrossEntropyLoss', 'DiceLoss', 'WeightedHausdorffLoss')[1]
 
 _C.MODEL.LOSS_AUG_WHL = (False, True)[1]
+_C.MODEL.WHL_NUM_DEPTH_SHEETS = (2, 4, 8)[0]
+_C.MODEL.WHL_SEG_THR = (0.12, 0.25, 0.5)[-1]
 
 _C.MODEL.IGNORE_INDEX = 255
 

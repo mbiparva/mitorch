@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-#  Copyright (c) 2020.
+#  Copyright (c) 2020 Mahdi Biparva, mahdi.biparva@sri.utoronto.ca
 #  miTorch Deep Learning Package
 #  Deep Learning Package for 3D medical imaging in PyTorch
 #  Implemented by Mahdi Biparva, May 2020
-#  Brain Imaging Lab, Sunnybrook Research Institure (SRI)
+#  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
 import torch
 import torch.nn as nn
@@ -228,7 +228,7 @@ class SegHead(nn.Module):
             if not i == self.num_pred_levels - 1:
                 x = getattr(self, self.get_layer_name(i, 'upsam'))(x)
 
-        if self.cfg.MODEL.LOSS_FUNC in ('DiceLoss', 'WeightedHausdorffLoss', 'AveragedHausdorffLoss'):
+        if self.cfg.MODEL.LOSS_FUNC in ('DiceLoss', 'WeightedHausdorffLoss'):
             x = nn.Sigmoid()(x)
 
         return x

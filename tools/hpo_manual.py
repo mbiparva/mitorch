@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 
-#  Copyright (c) 2020.
+#  Copyright (c) 2020 Mahdi Biparva, mahdi.biparva@sri.utoronto.ca
 #  miTorch Deep Learning Package
 #  Deep Learning Package for 3D medical imaging in PyTorch
 #  Implemented by Mahdi Biparva, May 2020
-#  Brain Imaging Lab, Sunnybrook Research Institure (SRI)
+#  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
 
 from config.defaults import init_cfg
 from utils.hpo import *
 import train_net_hpo
 
-EXP_SEL = (0, 1, 2, 3, 4)[4]
+EXP_SEL = (0, 1, 2, 3, 4, 5)[5]
 
 hp_set = [
     {
@@ -84,6 +84,14 @@ hp_set = [
             (0.8, 1.0),
             (0.8, 0.9),
 
+        )
+    },
+    {
+        'MODEL.WHL_NUM_DEPTH_SHEETS': (
+            2, 4, 8,
+        ),
+        'MODEL.WHL_SEG_THR': (
+            0.12, 0.25, 0.5,
         )
     },
 ][EXP_SEL]

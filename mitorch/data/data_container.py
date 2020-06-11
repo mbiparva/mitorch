@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-#  Copyright (c) 2020.
+#  Copyright (c) 2020 Mahdi Biparva, mahdi.biparva@sri.utoronto.ca
 #  miTorch Deep Learning Package
 #  Deep Learning Package for 3D medical imaging in PyTorch
 #  Implemented by Mahdi Biparva, May 2020
-#  Brain Imaging Lab, Sunnybrook Research Institure (SRI)
+#  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
 import torch
 import numpy as np
@@ -87,15 +87,14 @@ class DataContainer:
                 tf.RandomFlipImageVolume(dim=-1),
             ]
             transformations_body += [
-                tf.RandomBrightness(value=0.25, prand=True, channel_wise=True),
+                # tf.RandomBrightness(value=0.25, prand=True, channel_wise=True),
                 # tf.RandomContrast(value=0.25, prand=True, channel_wise=True),
                 # tf.RandomGamma(value=2.0, prand=True, channel_wise=True),
                 # tf.LogCorrection(inverse=(False, True)[0], channel_wise=True),
                 # tf.SigmoidCorrection(inverse=(False, True)[0], channel_wise=True),
                 # tf.HistEqual(num_bins=256, channel_wise=True),
-                # tf.AdditiveNoise(sigma=0.5, noise_type='gaussian', randomize_type=True,
-                #                  out_of_bound_mode=('normalize', 'clamp')[1], prand=False, channel_wise=True),
-
+                # tf.AdditiveNoise(sigma=0.5, noise_type=('gaussian', 'rician', 'rayleigh')[2], randomize_type=False,
+                #                  out_of_bound_mode=('normalize', 'clamp')[1], prand=True, channel_wise=True),
             ]
         elif self.mode in ('valid', 'test'):
             transformations_body = [

@@ -2,11 +2,11 @@
 
 """Loss construction functions."""
 
-#  Copyright (c) 2020.
+#  Copyright (c) 2020 Mahdi Biparva, mahdi.biparva@sri.utoronto.ca
 #  miTorch Deep Learning Package
 #  Deep Learning Package for 3D medical imaging in PyTorch
 #  Implemented by Mahdi Biparva, May 2020
-#  Brain Imaging Lab, Sunnybrook Research Institure (SRI)
+#  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
 import torch
 from fvcore.common.registry import Registry
@@ -31,5 +31,9 @@ def build_loss(cfg, name=None):
     # Construct the loss
     name = cfg.MODEL.LOSS_FUNC if name is None else name
     ignore_index = cfg.MODEL.IGNORE_INDEX
-    loss = LOSS_REGISTRY.get(name)(ignore_index=ignore_index)
+    loss_params = {
+        'whl_num_depth_sheets': cfg.MODEL.WHL_NUM_DEPTH_SHEETS,
+        'whl_seg_thr': cfg.MODEL.WHL_SEG_THR,
+    } if name == 'WeightedHausdorffLoss' else dict()
+    loss = LOSS_REGISTRY.get(name)(ignore_index=ignore_index, **loss_params)
     return loss
