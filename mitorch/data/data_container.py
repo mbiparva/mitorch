@@ -66,6 +66,61 @@ class DataContainer:
         }
 
     def create_transform(self):
+        # --- BODY ---
+        if self.mode == 'train':
+            transformations_body = [
+                tf.ToTensorImageVolume(),
+                tf.RandomOrientationTo('RPI'),
+                # tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
+                tf.RandomResampleTomm(target_spacing=(1, 1, 1), target_spacing_scale=(0.2, 0.2, 0.2), prand=True),
+
+                tf.ResizeImageVolume(self.cfg.DATA.MAX_SIDE_SIZE, min_side=self.cfg.DATA.MIN_SIDE),
+                tf.PadToSizeVolume(self.cfg.DATA.MAX_SIDE_SIZE, padding_mode=self.cfg.DATA.PADDING_MODE),
+                # tf.CenterCropImageVolume(self.cfg.DATA.CROP_SIZE),
+                # tf.RandomCropImageVolume(self.cfg.DATA.CROP_SIZE),
+                tf.RandomResizedCropImageVolume(self.cfg.DATA.CROP_SIZE,
+                                                scale=self.cfg.DATA.CROP_SCALE,
+                                                uni_scale=self.cfg.DATA.UNI_SCALE),
+                tf.RandomFlipImageVolume(dim=-1),
+
+                # tf.RandomBrightness(value=0.25, prand=True, channel_wise=True),
+                # tf.RandomContrast(value=0.25, prand=True, channel_wise=True),
+                # tf.RandomGamma(value=2.0, prand=True, channel_wise=True),
+                # tf.LogCorrection(inverse=(False, True)[0], channel_wise=True),
+                # tf.SigmoidCorrection(inverse=(False, True)[0], channel_wise=True),
+                # tf.HistEqual(num_bins=256, channel_wise=True),
+                # tf.AdditiveNoise(sigma=0.5, noise_type=('gaussian', 'rician', 'rayleigh')[2], randomize_type=False,
+                #                  out_of_bound_mode=('normalize', 'clamp')[0], prand=True, channel_wise=True),
+            ]
+        elif self.mode in ('valid', 'test'):
+            transformations_body = [
+                tf.ToTensorImageVolume(),
+                tf.RandomOrientationTo('RPI'),
+                tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
+
+                tf.ResizeImageVolume(self.cfg.DATA.MAX_SIDE_SIZE, min_side=self.cfg.DATA.MIN_SIDE),
+                tf.PadToSizeVolume(self.cfg.DATA.MAX_SIDE_SIZE, padding_mode=self.cfg.DATA.PADDING_MODE),
+
+                # tf.HistEqual(num_bins=256, channel_wise=True),
+            ]
+        else:
+            raise NotImplementedError
+
+        # --- TAIL ---
+        transformations_tail = [
+            tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
+            tf.NormalizeMeanStdVolume(
+                mean=self.cfg.DATA.MEAN,
+                std=self.cfg.DATA.STD,
+                inplace=True
+            ),
+        ]
+
+        return torch_tf.Compose(
+            transformations_body + transformations_tail
+        )
+
+    def create_transform_interleaved(self):
         # --- HEAD ---
         transformations_head = [
             tf.ToTensorImageVolume(),

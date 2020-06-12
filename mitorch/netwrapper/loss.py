@@ -119,7 +119,7 @@ class WeightedHausdorffLoss(_WeightedLoss):
         # Weighted Hausdorff Distance
         input_term_b = (1 / (estimate_num_points + eps)) * (input_b_flat * torch.min(distance_matrix, 1)[0]).sum()
 
-        PAPER_IMP = True
+        PAPER_IMP = False
         if not PAPER_IMP:
             target_term_b = torch.min((distance_matrix + eps) / (input_b_repeated ** alpha + eps / max_distance), 0)[0]
             target_term_b = torch.clamp(target_term_b, 0, max_distance)

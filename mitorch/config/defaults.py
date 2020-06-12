@@ -137,9 +137,9 @@ _C.MODEL.NUM_CLASSES = 1
 # Loss function.
 _C.MODEL.LOSS_FUNC = ('CrossEntropyLoss', 'DiceLoss', 'WeightedHausdorffLoss')[1]
 
-_C.MODEL.LOSS_AUG_WHL = (False, True)[1]
-_C.MODEL.WHL_NUM_DEPTH_SHEETS = (2, 4, 8)[0]
-_C.MODEL.WHL_SEG_THR = (0.12, 0.25, 0.5)[-1]
+_C.MODEL.LOSS_AUG_WHL = (False, True)[0]
+_C.MODEL.WHL_NUM_DEPTH_SHEETS = (2, 4, 8)[2]
+_C.MODEL.WHL_SEG_THR = (0.12, 0.25, 0.5)[1]
 
 _C.MODEL.IGNORE_INDEX = 255
 
