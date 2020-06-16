@@ -107,8 +107,14 @@ _C.TEST.DATASET = _C.TRAIN.DATASET
 # Total mini-batch size
 _C.TEST.BATCH_SIZE = 1
 
-# Path to the checkpoint to load the initial weight.
+# Path to the test data
+_C.TEST.DATA_PATH = ""
+
+# Path to the checkpoint to load the network weights.
 _C.TEST.CHECKPOINT_FILE_PATH = ""
+
+# Single or Batch test mode
+_C.TEST.BATCH_MODE = (False, True)[0]
 
 
 # # ---------------------------------------------------------------------------- #
