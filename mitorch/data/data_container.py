@@ -71,17 +71,17 @@ class DataContainer:
             transformations_body = [
                 tf.ToTensorImageVolume(),
                 tf.RandomOrientationTo('RPI'),
-                # tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
-                tf.RandomResampleTomm(target_spacing=(1, 1, 1), target_spacing_scale=(0.2, 0.2, 0.2), prand=True),
+                tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
+                # tf.RandomResampleTomm(target_spacing=(1, 1, 1), target_spacing_scale=(0.2, 0.2, 0.2), prand=True),
 
                 tf.ResizeImageVolume(self.cfg.DATA.MAX_SIDE_SIZE, min_side=self.cfg.DATA.MIN_SIDE),
                 tf.PadToSizeVolume(self.cfg.DATA.MAX_SIDE_SIZE, padding_mode=self.cfg.DATA.PADDING_MODE),
                 # tf.CenterCropImageVolume(self.cfg.DATA.CROP_SIZE),
                 # tf.RandomCropImageVolume(self.cfg.DATA.CROP_SIZE),
-                tf.RandomResizedCropImageVolume(self.cfg.DATA.CROP_SIZE,
-                                                scale=self.cfg.DATA.CROP_SCALE,
-                                                uni_scale=self.cfg.DATA.UNI_SCALE),
-                tf.RandomFlipImageVolume(dim=-1),
+                # tf.RandomResizedCropImageVolume(self.cfg.DATA.CROP_SIZE,
+                #                                 scale=self.cfg.DATA.CROP_SCALE,
+                #                                 uni_scale=self.cfg.DATA.UNI_SCALE),
+                # tf.RandomFlipImageVolume(dim=-1),
 
                 # tf.RandomBrightness(value=0.25, prand=True, channel_wise=True),
                 # tf.RandomContrast(value=0.25, prand=True, channel_wise=True),
