@@ -42,26 +42,3 @@ class TestSet(SRIBIL):
         annot_tensor = self.curate_annotation(annot_tensor, ignore_index=self.cfg.MODEL.IGNORE_INDEX)
 
         return image_tensor, annot_tensor
-
-    def __getitem__(self, index):
-        sample_path = self.sample_path_list[index]
-
-        in_pipe_data = self.find_data_files_path(sample_path)
-        in_pipe_data = self.load_data(in_pipe_data,
-                                      enforce_nib_canonical=self.cfg.DATA.ENFORCE_NIB_CANONICAL,
-                                      enforce_diag=self.cfg.DATA.ENFORCE_DIAG,
-                                      dtype=np.float32)
-        in_pipe_data, in_pipe_meta = self.extract_data_meta(in_pipe_data)
-
-        in_pipe_meta = self.run_sanity_checks(in_pipe_meta)
-        in_pipe_meta['sample_path'] = sample_path
-
-        image_tensor, annot_tensor = self.get_data_tensor(in_pipe_data)
-
-        image_tensor = torch.stack(image_tensor, dim=-1)  # D x H x W x C
-        annot_tensor = annot_tensor.unsqueeze(dim=0)
-
-        if self.transform is not None:
-            image_tensor, _, in_pipe_meta = self.transform((image_tensor, annot_tensor, in_pipe_meta))
-
-        return image_tensor, in_pipe_meta

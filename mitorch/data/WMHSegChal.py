@@ -24,12 +24,8 @@ class WMHSegmentationChallenge(VolSetABC):
 
     def _init_dataset(self):
         self.dataset_path = os.path.join(self.dataset_root, 'uncompressed')
-        self.in_modalities = {  # TODO this could be passed as an input argument or config attribute based on users need
-            't1': 'T1.nii.gz',
-            'fl': 'FLAIR.nii.gz',
-            'annot': 'wmh.nii.gz',
-            # 't2': None,  # Add anymore modalities you want HERE
-        }
+        self.in_modalities = self.cfg.TEST.IN_MOD if self.mode == 'test' else self.cfg.TEST.IN_MOD
+        self.in_modalities = {u: v for u, v in self.in_modalities}
         self.sample_path_list = self.index_samples()
 
     def index_samples(self):

@@ -125,6 +125,7 @@ class VolSetABC(ABC, data.Dataset):
     def _init_dataset(self):
         self.dataset_path = self.dataset_root
         self.in_modalities = self.cfg.TEST.IN_MOD if self.mode == 'test' else self.cfg.TEST.IN_MOD
+        self.in_modalities = {u: v for u, v in self.in_modalities}
         self.sample_path_list = self.index_samples()
 
     @abstractmethod
