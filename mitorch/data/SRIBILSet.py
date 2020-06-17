@@ -21,18 +21,8 @@ from .VolSet import VolSetABC
 @DATASET_REGISTRY.register()
 class SRIBIL(VolSetABC):
     def __init__(self, cfg, mode, transform):
-        self.hfb_annot = cfg.TRAIN.SRIBIL_HFB_ANNOT
         super().__init__(cfg, mode, transform)
-
-    def _init_dataset(self):
-        self.dataset_path = self.dataset_root
-        self.in_modalities = {  # TODO this could be passed as an input argument or config attribute based on users need
-            't1': 'T1_nu.nii.gz',
-            'fl': 'T1acq_nu_FL.nii.gz',
-            'annot': ('wmh_seg.nii.gz', 'T1acq_nu_HfBd.nii.gz')[self.hfb_annot is True],
-            # 't2': None,  # Add any more modalities you want HERE
-        }
-        self.sample_path_list = self.index_samples()
+        self.prefix_name = True
 
     def index_samples(self):
         return [
@@ -40,11 +30,10 @@ class SRIBIL(VolSetABC):
             for i in sorted(os.listdir(self.dataset_path))
         ]
 
-    @staticmethod
-    def put_fname_template(path_name, file_name):
-        par_dir = path_name.rpartition('/')[-1]
-        return '{}_{}'.format(
-            par_dir,
+    def put_fname_template(self, path_name, file_name):
+        prefix = '{}_'.format(path_name.rpartition('/')[-1]) if self.prefix_name else ''
+        return '{}{}'.format(
+            prefix,
             file_name
         )
 
@@ -71,22 +60,7 @@ class SRIBIL(VolSetABC):
 class SRIBILhfb(SRIBIL):
     def __init__(self, cfg, mode, transform):
         super().__init__(cfg, mode, transform)
-
-    def _init_dataset(self):
-        self.dataset_path = self.dataset_root
-        self.in_modalities = {  # TODO this could be passed as an input argument or config attribute based on users need
-            't1': 't1.nii.gz',
-            'fl': 'flair.nii.gz',
-            'annot': 'truth.nii.gz',
-            # 't2': None,  # Add anymore modalities you want HERE
-        }
-        self.sample_path_list = self.index_samples()
-
-    def find_data_files_path(self, sample_path):
-        return {
-            u: os.path.join(sample_path, v)
-            for u, v in self.in_modalities.items()
-        }
+        self.prefix_name = False
 
     @staticmethod
     def curate_annotation(annot_tensor, ignore_index):

@@ -73,16 +73,19 @@ def main():
     args = parse_args()
     cfg = load_config(args)
 
+    # Perform testing.
+    if cfg.TEST.ENABLE:
+        test(cfg=cfg)
+
     # Perform training.
-    if cfg.TRAIN.ENABLE:
+    elif cfg.TRAIN.ENABLE:
         if cfg.TRAIN.HPO:
             train_hpo(cfg=cfg)
         else:
             train_single(cfg=cfg)
 
-    # Perform multi-clip testing.
-    if cfg.TEST.ENABLE:
-        test(cfg=cfg)
+    else:
+        print('no action is performed since both Test and Train are disabled')
 
 
 if __name__ == "__main__":

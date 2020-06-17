@@ -56,11 +56,27 @@ _C.TRAIN.HPO = (False, True)[0]
 # Dataset.
 _C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb')[2]
 
-# Choose to load hfb annotations
-_C.TRAIN.SRIBIL_HFB_ANNOT = True
+# Input Modalities
+_C.TRAIN.IN_MOD = {
+    'WMHSegmentationChallenge': [
+        ('t1', 'T1.nii.gz'),
+        ('fl', 'FLAIR.nii.gz'),
+        ('annot', 'wmh.nii.gz'),
+    ],
+    'SRIBIL': [
+        ('t1', 'T1_nu.nii.gz'),
+        ('fl', 'T1acq_nu_FL.nii.gz'),
+        ('annot', 'wmh_seg.nii.gz'),
+    ],
+    'SRIBILhfb': [
+        ('t1', 't1.nii.gz'),
+        ('fl', 'flair.nii.gz'),
+        ('annot', 'truth.nii.gz'),
+        ]
+}[_C.TRAIN.DATASET]
 
 if socket.gethostname() == 'cerveau.sri.utoronto.ca':
-    _C.PROJECT.DATASET_DIR = '/data2/projects/dataset_hfb'
+    _C.PROJECT.DATASET_DIR = '/data2/projects/mitorch_datasets'
 
 # Total mini-batch size.
 _C.TRAIN.BATCH_SIZE = 1
@@ -102,7 +118,26 @@ _C.TEST = CfgNode()
 _C.TEST.ENABLE = False
 
 # Dataset for testing.
-_C.TEST.DATASET = _C.TRAIN.DATASET
+_C.TEST.DATASET = ('SRIBILhfbTest', 'LEDUCQTest', 'PPMITest')[1]
+
+# Input Modalities
+_C.TRAIN.IN_MOD = {  # TODO UPDATE THE NAME FROM PARISA
+    'SRIBILhfbTest': [
+        ('t1', 'T1.nii.gz'),
+        ('fl', 'FLAIR.nii.gz'),
+        ('annot', 'wmh.nii.gz'),
+    ],
+    'LEDUCQTest': [
+        ('t1', 'T1_nu.nii.gz'),
+        ('fl', 'T1acq_nu_FL.nii.gz'),
+        ('annot', 'wmh_seg.nii.gz'),
+    ],
+    'PPMITest': [
+        ('t1', 't1.nii.gz'),
+        ('fl', 'flair.nii.gz'),
+        ('annot', 'truth.nii.gz'),
+    ]
+}[_C.TRAIN.DATASET]
 
 # Total mini-batch size
 _C.TEST.BATCH_SIZE = 1
@@ -299,7 +334,8 @@ def init_cfg(cfg, parent_dir=''):
     cfg.MODEL.ID = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
 
     # Output basedir.
-    cfg.OUTPUT_DIR = os.path.join(cfg.PROJECT.EXPERIMENT_DIR, cfg.TRAIN.DATASET, parent_dir, cfg.MODEL.ID)
+    destin_set = cfg.TEST.DATASET if cfg.TEST.ENABLE else cfg.TRAIN.DATASET
+    cfg.OUTPUT_DIR = os.path.join(cfg.PROJECT.EXPERIMENT_DIR, destin_set, parent_dir, cfg.MODEL.ID)
     if not os.path.exists(cfg.OUTPUT_DIR):
         os.makedirs(cfg.OUTPUT_DIR)
 

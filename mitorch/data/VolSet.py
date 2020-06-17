@@ -57,8 +57,6 @@ def read_nii_file(file_path, **kwargs):
     return nib_loader(file_path, **kwargs)
 
 
-# ----------- START RENAMING ---------------------
-
 def nib_loader(filename, enforce_nib_canonical=False, enforce_diag=False, dtype=np.float32):
     vol = nib.load(filename)
     vol = utils_ext.correct_nifti_header_if_necessary(vol)
@@ -94,8 +92,6 @@ def nib_loader(filename, enforce_nib_canonical=False, enforce_diag=False, dtype=
 
     return img_array, header
 
-# ----------- END RENAMING ---------------------
-
 
 def np2tuple(in_array):
     return tuple(in_array.flatten()) if isinstance(in_array, np.ndarray) else in_array
@@ -126,9 +122,10 @@ class VolSetABC(ABC, data.Dataset):
         self.sample_path_list = None
         self.dataset_root = os.path.join(self.cfg.PROJECT.DATASET_DIR, self.__class__.__name__)
 
-    @abstractmethod
     def _init_dataset(self):
-        raise NotImplementedError
+        self.dataset_path = self.dataset_root
+        self.in_modalities = self.cfg.TEST.IN_MOD if self.mode == 'test' else self.cfg.TEST.IN_MOD
+        self.sample_path_list = self.index_samples()
 
     @abstractmethod
     def index_samples(self):

@@ -6,75 +6,16 @@
 #  Implemented by Mahdi Biparva, May 2020
 #  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
-import os
 import nibabel as nib
 import data.transforms_mitorch as tf
 from torch.utils.data import DataLoader
 import torchvision.transforms as torch_tf
 from data.data_container import ds_worker_init_fn
-from data.SRIBILSet import SRIBIL
 from data.VolSet import collate_fn
 from models.build import build_model
 import utils.checkpoint as checkops
 import torch
 import numpy as np
-
-
-class TestSet(SRIBIL):
-    def __init__(self, cfg, mode, transform):
-        super().__init__(cfg, mode, transform)
-
-    def _init_dataset(self):
-        self.dataset_path = self.dataset_root
-        self.in_modalities = {
-            't1': 'T1.img',
-            'fl': 'FL.img',
-        }
-        self.sample_path_list = self.index_samples()
-
-    def index_samples(self):
-        return [self.cfg.TEST.DATA_PATH] if not self.cfg.TEST.BATCH_MODE else [
-            os.path.join(self.cfg.TEST.DATA_PATH, i)
-            for i in sorted(os.listdir(self.cfg.TEST.DATA_PATH))
-            ]
-
-    @staticmethod
-    def put_fname_template(path_name, file_name):
-        par_dir = path_name.rpartition('/')[-1]
-        return '{}_{}'.format(
-            par_dir,
-            file_name
-        )
-
-    def find_data_files_path(self, sample_path):
-        return {
-            u: os.path.join(sample_path, self.put_fname_template(sample_path, v))
-            for u, v in self.in_modalities.items()
-        }
-
-    def __getitem__(self, index):
-        sample_path = self.sample_path_list[index]
-
-        in_pipe_data = self.find_data_files_path(sample_path)
-        in_pipe_data = self.load_data(in_pipe_data,
-                                      enforce_nib_canonical=self.cfg.DATA.ENFORCE_NIB_CANONICAL,
-                                      enforce_diag=self.cfg.DATA.ENFORCE_DIAG,
-                                      dtype=np.float32)
-        in_pipe_data, in_pipe_meta = self.extract_data_meta(in_pipe_data)
-
-        in_pipe_meta = self.run_sanity_checks(in_pipe_meta)
-        in_pipe_meta['sample_path'] = sample_path
-
-        image_tensor = self.get_data_tensor(in_pipe_data)
-        annot_tensor = torch.zeros_like(image_tensor)
-
-        image_tensor = torch.stack(image_tensor, dim=-1)  # D x H x W x C
-        annot_tensor = annot_tensor.unsqueeze(dim=0)
-
-        if self.transform is not None:
-            image_tensor, _, in_pipe_meta = self.transform((image_tensor, annot_tensor, in_pipe_meta))
-
-        return image_tensor, in_pipe_meta
 
 
 def binarize_pred(p, binarize_threshold):
@@ -94,6 +35,7 @@ def save_pred(pred, output_dir):
 # TODO do it in functional or OOP later
 def test(cfg):
     # (0) initial setup
+    cfg.TRAIN.ENABLE = cfg.VALID.ENABLE = False
     np.random.seed(cfg.RNG_SEED)
     torch.manual_seed(cfg.RNG_SEED)
     cuda_device_id = cfg.GPU_ID
