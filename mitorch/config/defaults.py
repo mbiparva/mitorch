@@ -142,11 +142,11 @@ _C.TRAIN.IN_MOD = {  # TODO UPDATE THE NAME FROM PARISA
 # Total mini-batch size
 _C.TEST.BATCH_SIZE = 1
 
-# Path to the test data
-_C.TEST.DATA_PATH = ""
-
 # Path to the checkpoint to load the network weights.
 _C.TEST.CHECKPOINT_FILE_PATH = ""
+
+# Path to the test data
+_C.TEST.DATA_PATH = ""
 
 # Single or Batch test mode
 _C.TEST.BATCH_MODE = (False, True)[0]

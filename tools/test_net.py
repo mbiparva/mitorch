@@ -6,16 +6,18 @@
 #  Implemented by Mahdi Biparva, May 2020
 #  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
+import torch
+import numpy as np
 import nibabel as nib
 import data.transforms_mitorch as tf
 from torch.utils.data import DataLoader
 import torchvision.transforms as torch_tf
 from data.data_container import ds_worker_init_fn
 from data.VolSet import collate_fn
+from data.TestSetExt import TestSet
 from models.build import build_model
 import utils.checkpoint as checkops
-import torch
-import numpy as np
+from data.build import build_dataset
 
 
 def binarize_pred(p, binarize_threshold):
@@ -64,7 +66,11 @@ def test(cfg):
         tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
         tf.NormalizeMeanStdVolume(mean=cfg.DATA.MEAN, std=cfg.DATA.STD, inplace=True),
     ])
-    test_set = TestSet(cfg, 'test', transformations)
+    if len(cfg.TEST.DATA_PATH):
+        test_set = TestSet(cfg, 'test', transformations)
+    else:
+        test_set = build_dataset(cfg.TEST.DATASET, cfg, 'test', transformations)
+
     test_loader = DataLoader(test_set,
                              batch_size=1,
                              shuffle=False,

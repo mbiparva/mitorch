@@ -78,3 +78,24 @@ class SRIBILhfb(SRIBIL):
             annot_tensor[annot_tensor != 8] = 0  # checked in itk-snap app. Label 8 is the head.
             annot_tensor[annot_tensor == 8] = 1
         return annot_tensor
+
+
+@DATASET_REGISTRY.register()
+class SRIBILhfbTest(SRIBIL):
+    def __init__(self, cfg, mode, transform):
+        super().__init__(cfg, mode, transform)
+        self.prefix_name = True
+
+
+@DATASET_REGISTRY.register()
+class LEDUCQTest(SRIBIL):
+    def __init__(self, cfg, mode, transform):
+        super().__init__(cfg, mode, transform)
+        self.prefix_name = True
+
+
+@DATASET_REGISTRY.register()
+class PPMITest(SRIBIL):
+    def __init__(self, cfg, mode, transform):
+        super().__init__(cfg, mode, transform)
+        self.prefix_name = True

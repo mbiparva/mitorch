@@ -35,10 +35,9 @@ class TestSet(SRIBIL):
         if 'annot' in in_pipe_data:
             annot_tensor = in_pipe_data.pop('annot')
         else:
-            annot_tensor = torch.zeros_like(image_tensor)
+            annot_tensor = torch.zeros_like(list(in_pipe_data.values())[0])
 
         image_tensor = list(in_pipe_data.values())
-        else
 
         annot_tensor = self.curate_annotation(annot_tensor, ignore_index=self.cfg.MODEL.IGNORE_INDEX)
 
@@ -57,7 +56,7 @@ class TestSet(SRIBIL):
         in_pipe_meta = self.run_sanity_checks(in_pipe_meta)
         in_pipe_meta['sample_path'] = sample_path
 
-        image_tensor = self.get_data_tensor(in_pipe_data)
+        image_tensor, annot_tensor = self.get_data_tensor(in_pipe_data)
 
         image_tensor = torch.stack(image_tensor, dim=-1)  # D x H x W x C
         annot_tensor = annot_tensor.unsqueeze(dim=0)
