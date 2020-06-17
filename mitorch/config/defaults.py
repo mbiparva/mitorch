@@ -116,6 +116,8 @@ _C.TEST.CHECKPOINT_FILE_PATH = ""
 # Single or Batch test mode
 _C.TEST.BATCH_MODE = (False, True)[0]
 
+_C.TEST.BINARIZE_THRESHOLD = 0.5
+
 
 # # ---------------------------------------------------------------------------- #
 # # Batch norm options

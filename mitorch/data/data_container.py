@@ -90,7 +90,7 @@ class DataContainer:
                 # tf.SigmoidCorrection(inverse=(False, True)[0], channel_wise=True),
                 # tf.HistEqual(num_bins=256, channel_wise=True),
                 # tf.AdditiveNoise(sigma=0.5, noise_type=('gaussian', 'rician', 'rayleigh')[2], randomize_type=False,
-                #                  out_of_bound_mode=('normalize', 'clamp')[0], prand=True, channel_wise=True),
+                #                  out_of_bound_mode=('normalize', 'clamp')[1], prand=True, channel_wise=True),
             ]
         elif self.mode in ('valid', 'test'):
             transformations_body = [
