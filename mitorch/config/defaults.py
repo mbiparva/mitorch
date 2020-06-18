@@ -118,7 +118,7 @@ _C.TEST = CfgNode()
 _C.TEST.ENABLE = False
 
 # Dataset for testing.
-_C.TEST.DATASET = ('SRIBILhfbTest', 'LEDUCQTest', 'PPMITest')[2]
+_C.TEST.DATASET = ('SRIBILhfbTest', 'LEDUCQTest', 'PPMITest')[1]
 
 # Input Modalities
 _C.TEST.IN_MOD = {
@@ -154,7 +154,7 @@ _C.TEST.DATA_PATH = ""
 # Single or Batch test mode
 _C.TEST.BATCH_MODE = (False, True)[0]
 
-_C.TEST.BINARIZE_THRESHOLD = 0.55
+_C.TEST.BINARIZE_THRESHOLD = 0.45
 
 
 # # ---------------------------------------------------------------------------- #

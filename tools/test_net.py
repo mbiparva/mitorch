@@ -31,10 +31,25 @@ def binarize_pred(p, binarize_threshold):
     return p
 
 
-def save_pred(pred, output_dir, basename):
-    output_path = os.path.join(output_dir, '{}_mask_pred.nii.gz'.format(os.path.basename(basename)))
-    pred = pred.detach().cpu().numpy()
-    pred = nib.Nifti1Image(pred, np.eye(4))
+def save_pred(pred, output_dir, basename, *in_mod):
+    output_path = ''
+    file_type = ('nii', 'img')[0]
+    pred = pred.detach().cpu().numpy()[0, 0]  # batch size is 1, channel is 1 too.
+    if file_type == 'nii':
+        output_path = os.path.join(output_dir, '{}_mask_pred.nii.gz'.format(os.path.basename(basename)))
+        pred = nib.Nifti1Image(pred, np.eye(4))
+        if len(in_mod):
+            img = in_mod[0].detach().cpu().numpy()[0, 0]  # batch size is 1, channel 0 is usually T1
+            img_output_path = os.path.join(output_dir, '{}_T1.nii.gz'.format(os.path.basename(basename)))
+            img = nib.Nifti1Image(img, np.eye(4))
+            nib.save(img, img_output_path)
+            img = in_mod[0].detach().cpu().numpy()[0, 1]  # batch size is 1, channel 0 is usually T1
+            img_output_path = os.path.join(output_dir, '{}_FLAIR.nii.gz'.format(os.path.basename(basename)))
+            img = nib.Nifti1Image(img, np.eye(4))
+            nib.save(img, img_output_path)
+    elif file_type == 'img':
+        output_path = os.path.join(output_dir, '{}_mask_pred.img'.format(os.path.basename(basename)))
+        pred = nib.AnalyzeImage(pred, np.eye(4))
     nib.save(pred, output_path)
 
 
@@ -75,7 +90,7 @@ def test(cfg):
         tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
 
         tf.ResizeImageVolume(cfg.DATA.MAX_SIDE_SIZE, min_side=cfg.DATA.MIN_SIDE),
-        tf.PadToSizeVolume(cfg.DATA.MAX_SIDE_SIZE, padding_mode=cfg.DATA.PADDING_MODE),
+        # tf.PadToSizeVolume(cfg.DATA.MAX_SIDE_SIZE, padding_mode=cfg.DATA.PADDING_MODE),
 
         tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
         tf.NormalizeMeanStdVolume(mean=cfg.DATA.MEAN, std=cfg.DATA.STD, inplace=True),
@@ -130,7 +145,7 @@ def test(cfg):
 
         # (C) Save prediction
         if save_pred_flag:
-            save_pred(pred, cfg.OUTPUT_DIR, meta[0]['sample_path'])
+            save_pred(pred, cfg.OUTPUT_DIR, meta[0]['sample_path'], *[image])
 
         # (D) Evaluate prediction
         if eval_pred_flag:
