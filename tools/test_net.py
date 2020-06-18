@@ -85,6 +85,11 @@ def test(cfg):
         print('you chose {} mode'.format(('single', 'batch')[cfg.TEST.BATCH_MODE]))
         eval_pred_flag = False
         save_pred_flag = True
+
+        os.rmdir(cfg.OUTPUT_DIR)  # it is useless, we use hpo_output_dir instead
+        cfg.TEST.DATASET = 'TestSet{}'.format(('single', 'batch')[cfg.TEST.BATCH_MODE].upper())
+        cfg = init_cfg(cfg)
+
         cfg.TEST.IN_MOD = [  # TODO if needed, we can add this to the input arguments
             ('t1', 'T1_nu.img'),
             ('fl', 'T1acq_nu_FL.img'),
