@@ -99,3 +99,36 @@ class PPMITest(SRIBIL):
     def __init__(self, cfg, mode, transform):
         super().__init__(cfg, mode, transform)
         self.prefix_name = True
+
+    @staticmethod
+    def run_sanity_checks(in_pipe_meta):
+        return in_pipe_meta['fl']  # fl is correct, we skip sanity check since they don't match
+
+    # The reason we override getitem here in PPMI is that there is a misalignment between Flair and other modalities
+    # Flair has shape (x, x, x) others have (x, x, x, 1) which is wrong
+    def __getitem__(self, index):
+        sample_path = self.sample_path_list[index]
+
+        in_pipe_data = self.find_data_files_path(sample_path)
+        in_pipe_data = self.load_data(in_pipe_data,
+                                      enforce_nib_canonical=self.cfg.DATA.ENFORCE_NIB_CANONICAL,
+                                      enforce_diag=self.cfg.DATA.ENFORCE_DIAG,
+                                      dtype=np.float32)
+        in_pipe_data, in_pipe_meta = self.extract_data_meta(in_pipe_data)
+        for u, v in in_pipe_data.items():
+            if v.ndim == 4:
+                assert v.shape[-1] == 1
+                in_pipe_data[u] = in_pipe_data[u].squeeze(-1)
+
+        in_pipe_meta = self.run_sanity_checks(in_pipe_meta)
+        in_pipe_meta['sample_path'] = sample_path
+
+        image_tensor, annot_tensor = self.get_data_tensor(in_pipe_data)
+
+        image_tensor = torch.stack(image_tensor, dim=-1)  # D x H x W x C
+        annot_tensor = annot_tensor.unsqueeze(dim=0)
+
+        if self.transform is not None:
+            image_tensor, annot_tensor, in_pipe_meta = self.transform((image_tensor, annot_tensor, in_pipe_meta))
+
+        return image_tensor, annot_tensor, in_pipe_meta

@@ -6,6 +6,7 @@
 #  Implemented by Mahdi Biparva, May 2020
 #  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
+import os
 import torch
 import numpy as np
 import nibabel as nib
@@ -19,6 +20,7 @@ from models.build import build_model
 import utils.checkpoint as checkops
 from data.build import build_dataset
 from utils.metrics import dice_coefficient_metric, jaccard_index_metric, hausdorff_distance_metric
+from config.defaults import init_cfg
 
 
 def binarize_pred(p, binarize_threshold):
@@ -29,10 +31,11 @@ def binarize_pred(p, binarize_threshold):
     return p
 
 
-def save_pred(pred, output_dir):
-    pred = pred.cpu().numpy()
+def save_pred(pred, output_dir, basename):
+    output_path = os.path.join(output_dir, '{}_mask_pred.nii.gz'.format(os.path.basename(basename)))
+    pred = pred.detach().cpu().numpy()
     pred = nib.Nifti1Image(pred, np.eye(4))
-    nib.save(pred, output_dir)
+    nib.save(pred, output_path)
 
 
 # TODO do it in functional or OOP later
@@ -44,6 +47,9 @@ def eval_pred(p, a, meters, cfg):
 
 def test(cfg):
     # (0) initial setup
+    os.rmdir(cfg.OUTPUT_DIR)  # it is useless, we use hpo_output_dir instead
+    cfg = init_cfg(cfg)
+
     cfg.TRAIN.ENABLE = cfg.VALID.ENABLE = False
     np.random.seed(cfg.RNG_SEED)
     torch.manual_seed(cfg.RNG_SEED)
@@ -57,12 +63,11 @@ def test(cfg):
         device = torch.device('cpu')
 
     # (1) setup data root
-    assert cfg.TEST.DATA_PATH and len(cfg.TEST.DATA_PATH), 'TEST.DATA_PATH not set'
     assert cfg.TEST.CHECKPOINT_FILE_PATH and len(cfg.TEST.CHECKPOINT_FILE_PATH), 'TEST.CHECKPOINT_FILE_PATH not set'
-    print('you chose {} mode'.format(('single', 'batch')[cfg.TEST.BATCH_MODE]))
 
     # (2) define data pipeline
-    evaluate_pred = True
+    eval_pred_flag = True
+    save_pred_flag = True
     transformations = torch_tf.Compose([
         tf.ToTensorImageVolume(),
         tf.RandomOrientationTo('RPI'),
@@ -76,7 +81,9 @@ def test(cfg):
     ])
     # Define any test dataset with annotation as known dataset otherwise call TestSet
     if len(cfg.TEST.DATA_PATH):
-        evaluate_pred = False
+        print('you chose {} mode'.format(('single', 'batch')[cfg.TEST.BATCH_MODE]))
+        eval_pred_flag = False
+        save_pred_flag = True
         cfg.TEST.IN_MOD = [  # TODO if needed, we can add this to the input arguments
             ('t1', 'T1.nii.gz'),
             ('fl', 'FLAIR.nii.gz'),
@@ -107,6 +114,7 @@ def test(cfg):
         meters = dict()
 
         image = image.to(device, non_blocking=True)
+        annot = annot.to(device, non_blocking=True)
 
         # (A) Get prediction
         pred = net(image)
@@ -115,10 +123,11 @@ def test(cfg):
         pred = binarize_pred(pred, binarize_threshold=cfg.TEST.BINARIZE_THRESHOLD)
 
         # (C) Save prediction
-        save_pred(pred, cfg.OUTPUT_DIR)
+        if save_pred_flag:
+            save_pred(pred, cfg.OUTPUT_DIR, meta[0]['sample_path'])
 
         # (D) Evaluate prediction
-        if evaluate_pred:
+        if eval_pred_flag:
             eval_pred(pred, annot, meters, cfg)
             meters_test_set.append(meters)
 
@@ -126,7 +135,7 @@ def test(cfg):
           '*** Results are saved at:')
     print(cfg.OUTPUT_DIR)
 
-    if evaluate_pred:
+    if eval_pred_flag:
         print('\nEvaluation results on the test set is:')
         for k in meters_test_set[0].keys():
             print(k, np.array([i[k] for i in meters_test_set]).mean())

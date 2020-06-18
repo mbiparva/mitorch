@@ -118,26 +118,29 @@ _C.TEST = CfgNode()
 _C.TEST.ENABLE = False
 
 # Dataset for testing.
-_C.TEST.DATASET = ('SRIBILhfbTest', 'LEDUCQTest', 'PPMITest')[1]
+_C.TEST.DATASET = ('SRIBILhfbTest', 'LEDUCQTest', 'PPMITest')[2]
 
 # Input Modalities
-_C.TRAIN.IN_MOD = {  # TODO UPDATE THE NAME FROM PARISA
+_C.TEST.IN_MOD = {
     'SRIBILhfbTest': [
-        ('t1', 'T1.nii.gz'),
-        ('fl', 'FLAIR.nii.gz'),
-        ('annot', 'wmh.nii.gz'),
+        ('t1', 'T1_nu.nii.gz'),
+        ('fl', 'T1acq_nu_FL.nii.gz'),
+        ('annot', 'T1acq_nu_HfBd.nii.gz'),
+        # ('t2', 'T1acq_nu_T2.nii.gz'),
     ],
     'LEDUCQTest': [
         ('t1', 'T1_nu.nii.gz'),
-        ('fl', 'T1acq_nu_FL.nii.gz'),
-        ('annot', 'wmh_seg.nii.gz'),
+        ('fl', 'T1acq_nu_FL_Warped.nii.gz'),
+        ('annot', 'T1acq_nu_HfB_pred_edit.nii.gz'),
+        # ('t2', 'T1acq_nu_T2_Warped.nii.gz'),
     ],
     'PPMITest': [
-        ('t1', 't1.nii.gz'),
-        ('fl', 'flair.nii.gz'),
-        ('annot', 'truth.nii.gz'),
+        ('t1', 'T1_nu.img'),
+        ('fl', 'T1acq_nu_FL.img'),
+        ('annot', 'T1acq_nu_HfBd.img'),
+        # ('t2', 'T1acq_nu_T2.img'),
     ]
-}[_C.TRAIN.DATASET]
+}[_C.TEST.DATASET]
 
 # Total mini-batch size
 _C.TEST.BATCH_SIZE = 1
