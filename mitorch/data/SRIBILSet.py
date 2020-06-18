@@ -99,13 +99,15 @@ class PPMITest(SRIBIL):
     def __init__(self, cfg, mode, transform):
         super().__init__(cfg, mode, transform)
         self.prefix_name = True
+        # self.sample_path_list = self.sample_path_list[80:]
 
+    # The reason we override run_sanity_checks & getitem here in PPMI is that there is a
+    # misalignment between Flair and other modalities.
+    # Flair has shape (x, x, x) others have (x, x, x, 1) which is wrong
     @staticmethod
     def run_sanity_checks(in_pipe_meta):
         return in_pipe_meta['fl']  # fl is correct, we skip sanity check since they don't match
 
-    # The reason we override getitem here in PPMI is that there is a misalignment between Flair and other modalities
-    # Flair has shape (x, x, x) others have (x, x, x, 1) which is wrong
     def __getitem__(self, index):
         sample_path = self.sample_path_list[index]
 

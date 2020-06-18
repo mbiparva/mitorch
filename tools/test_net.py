@@ -54,6 +54,7 @@ def test(cfg):
     np.random.seed(cfg.RNG_SEED)
     torch.manual_seed(cfg.RNG_SEED)
     cuda_device_id = cfg.GPU_ID
+    torch.cuda.set_device(cuda_device_id)
     if cfg.NUM_GPUS > 0 and torch.cuda.is_available():
         device = torch.device('cuda:{}'.format(cuda_device_id))
         print('cuda available')
@@ -85,9 +86,9 @@ def test(cfg):
         eval_pred_flag = False
         save_pred_flag = True
         cfg.TEST.IN_MOD = [  # TODO if needed, we can add this to the input arguments
-            ('t1', 'T1.nii.gz'),
-            ('fl', 'FLAIR.nii.gz'),
-            # ('annot', 'wmh.nii.gz'),
+            ('t1', 'T1_nu.img'),
+            ('fl', 'T1acq_nu_FL.img'),
+            # ('annot', 'T1acq_nu_HfBd.img'),
         ]
         test_set = TestSet(cfg, 'test', transformations)
     else:
@@ -110,7 +111,7 @@ def test(cfg):
     # (4) loop over samples
     meters_test_set = list()
     for cnt, (image, annot, meta) in enumerate(test_loader):
-        print(cnt, len(test_loader))
+        print(cnt+1, len(test_loader))
         meters = dict()
 
         image = image.to(device, non_blocking=True)
