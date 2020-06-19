@@ -331,6 +331,19 @@ _C.HPO.EVAL_METRIC = _C.PROJECT.METERS[2]  # ['loss', 'r2', 'mse', 'mae']  # TOD
 _C.HPO.TOTAL_TRIALS = 100
 
 
+# # ---------------------------------------------------------------------------- #
+# # WMH options
+# # ---------------------------------------------------------------------------- #
+_C.WMH = CfgNode()
+
+# Whether WMH is enabled
+_C.WMH.ENABLE = True if _C.TRAIN.DATASET in ('WMHSegmentationChallenge', 'SRIBIL') else False
+
+# HFB checkpoint to load
+_C.WMH.HFB_CHECKPOINT = os.path.join(_C.PROJECT.EXPERIMENT_DIR,
+                                     'SRIBILhfb/20200612_132847_859588/checkpoints/checkpoint_epoch_00040.pyth')
+
+
 def init_cfg(cfg, parent_dir=''):
     """ Initialize those with hierarchical dependencies and conditions, critical for multi-case experimentation"""
     # Model ID
