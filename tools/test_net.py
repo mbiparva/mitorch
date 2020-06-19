@@ -127,6 +127,7 @@ def test(cfg):
     # (3) create network and load snapshots
     net = build_model(cfg, 0)
     checkops.load_checkpoint(cfg.TEST.CHECKPOINT_FILE_PATH, net, data_parallel=False)
+    net.eval()
 
     # (4) loop over samples
     meters_test_set = list()

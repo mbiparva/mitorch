@@ -84,7 +84,7 @@ class DataContainer:
                 # tf.RandomFlipImageVolume(dim=-1),
 
                 # tf.RandomBrightness(value=0.25, prand=True, channel_wise=True),
-                # tf.RandomContrast(value=0.25, prand=True, channel_wise=True),
+                tf.RandomContrast(value=0.25, prand=True, channel_wise=True),
                 # tf.RandomGamma(value=2.0, prand=True, channel_wise=True),
                 # tf.LogCorrection(inverse=(False, True)[0], channel_wise=True),
                 # tf.SigmoidCorrection(inverse=(False, True)[0], channel_wise=True),
@@ -99,7 +99,7 @@ class DataContainer:
                 tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
 
                 tf.ResizeImageVolume(self.cfg.DATA.MAX_SIDE_SIZE, min_side=self.cfg.DATA.MIN_SIDE),
-                tf.PadToSizeVolume(self.cfg.DATA.MAX_SIDE_SIZE, padding_mode=self.cfg.DATA.PADDING_MODE),
+                # tf.PadToSizeVolume(self.cfg.DATA.MAX_SIDE_SIZE, padding_mode=self.cfg.DATA.PADDING_MODE),
 
                 # tf.HistEqual(num_bins=256, channel_wise=True),
             ]

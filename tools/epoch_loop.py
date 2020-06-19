@@ -20,7 +20,7 @@ import utils.checkpoint as checkops
 
 import torch
 from torch.utils.tensorboard import SummaryWriter
-from netwrapper.net_wrapper import NetWrapper
+from netwrapper.net_wrapper import NetWrapperHFB, NetWrapperWMH
 
 logger = logging.get_logger(__name__)
 
@@ -132,7 +132,10 @@ class EpochLoop:
         self.evaluator = Evaluator(self.cfg, self.device) if self.cfg.VALID.ENABLE else None
 
     def setup_net(self):
-        self.net_wrapper = NetWrapper(self.device, self.cfg)
+        if self.cfg.WMH.ENABLE:
+            self.net_wrapper = NetWrapperWMH(self.device, self.cfg)
+        else:
+            self.net_wrapper = NetWrapperHFB(self.device, self.cfg)
 
     def run(self, start_epoch):
         logger.info("Start epoch: {}".format(start_epoch + 1))

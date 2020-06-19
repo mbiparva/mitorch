@@ -7,10 +7,10 @@
 import os
 import torch
 import numpy as np
-from data.SRIBILSet import SRIBIL
+from data.SRIBILSet import SRIBILBase
 
 
-class TestSet(SRIBIL):
+class TestSet(SRIBILBase):
     def __init__(self, cfg, mode, transform):
         super().__init__(cfg, mode, transform)
         self.prefix_name = True

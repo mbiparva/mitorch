@@ -54,7 +54,7 @@ _C.TRAIN.ENABLE = True
 _C.TRAIN.HPO = (False, True)[0]
 
 # Dataset.
-_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb')[2]
+_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb')[1]
 
 # Input Modalities
 _C.TRAIN.IN_MOD = {
@@ -118,7 +118,7 @@ _C.TEST = CfgNode()
 _C.TEST.ENABLE = False
 
 # Dataset for testing.
-_C.TEST.DATASET = ('SRIBILhfbTest', 'LEDUCQTest', 'PPMITest')[1]
+_C.TEST.DATASET = ('SRIBILhfbTest', 'LEDUCQTest', 'PPMITest')[2]
 
 # Input Modalities
 _C.TEST.IN_MOD = {
@@ -154,7 +154,7 @@ _C.TEST.DATA_PATH = ""
 # Single or Batch test mode
 _C.TEST.BATCH_MODE = (False, True)[0]
 
-_C.TEST.BINARIZE_THRESHOLD = 0.45
+_C.TEST.BINARIZE_THRESHOLD = 0.55
 
 
 # # ---------------------------------------------------------------------------- #
@@ -341,7 +341,18 @@ _C.WMH.ENABLE = True if _C.TRAIN.DATASET in ('WMHSegmentationChallenge', 'SRIBIL
 
 # HFB checkpoint to load
 _C.WMH.HFB_CHECKPOINT = os.path.join(_C.PROJECT.EXPERIMENT_DIR,
-                                     'SRIBILhfb/20200612_132847_859588/checkpoints/checkpoint_epoch_00040.pyth')
+                                     'SRIBILhfb/20200612_134356_471570/checkpoints/checkpoint_epoch_00060.pyth')
+
+# Whether to use ground-truth HFB masks
+_C.WMH.HFB_GT = (False, True)[1] if _C.TRAIN.DATASET == 'SRIBIL' else False  # must be True only when SRIBIL
+
+_C.WMH.BINARIZE_THRESHOLD = 0.5
+
+_C.WMH.MAX_SIDE_SIZE = 160
+
+_C.WMH.FILL = 0
+
+_C.WMH.PADDING_MODE = ('mean', 'median', 'min', 'max')[0]
 
 
 def init_cfg(cfg, parent_dir=''):

@@ -14,6 +14,7 @@ from models.build import build_model
 import utils.checkpoint as checkops
 from netwrapper.optimizer import construct_optimizer, construct_scheduler
 from netwrapper.build import build_loss
+from data.functional_mitorch import resize, pad
 
 
 class NetWrapper(nn.Module):
@@ -83,3 +84,136 @@ class NetWrapper(nn.Module):
             self.optimizer.zero_grad()
 
         return loss.item()
+
+
+class NetWrapperHFB(NetWrapper):
+    def __init__(self, device, cfg):
+        super().__init__(device, cfg)
+
+
+class NetWrapperWMH(NetWrapper):
+    def __init__(self, device, cfg):
+        super().__init__(device, cfg)
+
+    def _create_net(self, device):
+        self._create_net_hfb(device)
+        self.net_core = build_model(self.cfg, device)
+
+    def _create_net_hfb(self, device):
+        self.net_core_hfb = build_model(self.cfg, device)
+        self.load_checkpoint_hfb(self.cfg.WMH.HFB_CHECKPOINT)
+        self.net_core_hfb.eval()
+
+    def load_checkpoint_hfb(self, ckpnt_path):
+        checkops.load_checkpoint(ckpnt_path, self.net_core_hfb, data_parallel=self.cfg.NUM_GPUS > 1)
+
+    def load_checkpoint(self, ckpnt_path):
+        self.load_checkpoint_hfb(self.cfg.WMH.HFB_CHECKPOINT)
+        return checkops.load_checkpoint(
+            ckpnt_path,
+            self.net_wrapper.net_core,
+            self.cfg.NUM_GPUS > 1,
+            self.net_wrapper.optimizer
+        )
+
+    def forward(self, x):
+        x = self.hfb_extract(x)
+        x = self.net_core(x)
+
+        return x
+
+    @staticmethod
+    def binarize_pred(p, binarize_threshold):
+        prediction_mask = p.ge(binarize_threshold)
+        p = p.masked_fill(prediction_mask, 1)
+        p = p.masked_fill(~prediction_mask, 0)
+
+        return p
+
+    @staticmethod
+    def gen_cropping_box(pred):
+        return [(p.min(0)[0].tolist(), p.max(0)[0].tolist()) for p in pred]
+
+    @staticmethod
+    def crop_masked_input(x, cropping_box):
+        b, d, h, w, = x.shape
+        pad_amount = 0
+
+        def pad_lower_clamp(value):
+            return max(0, value - pad_amount)
+
+        def pad_upper_clamp(value):
+            return min(d, value + pad_amount)
+
+        return [
+            x[
+                i,
+                pad_lower_clamp(cropping_box[i][0][0]): pad_upper_clamp(cropping_box[i][1][0])+1,  # max is inclusive
+                pad_lower_clamp(cropping_box[i][0][1]): pad_upper_clamp(cropping_box[i][1][1])+1,
+                pad_lower_clamp(cropping_box[i][0][2]): pad_upper_clamp(cropping_box[i][1][2])+1
+            ] for i in range(b)
+        ]
+
+    @staticmethod
+    def pad_input(x, target_size, fill, padding_mode):
+        target_size = target_size.clone()
+        auto_fill_ind = target_size == -1
+        image_size = torch.tensor(x.shape)
+        target_size[auto_fill_ind] = image_size[auto_fill_ind]
+        assert (image_size <= target_size).all()
+        size_offset = target_size - image_size
+        padding_before = size_offset // 2
+        padding_after = size_offset - padding_before
+        padding = tuple(torch.stack((padding_before.flip(0), padding_after.flip(0))).T.flatten().tolist())
+
+        if padding_mode in ('mean', 'median', 'min', 'max'):
+            fill = getattr(x, padding_mode)().item()
+            padding_mode = 'constant'
+
+        return pad(x, padding, fill, padding_mode)
+
+    def resize_pad_input(self, x, target_size, fill, padding_mode):
+        return torch.stack([
+            self.pad_input(
+                resize(
+                    v,
+                    target_size,
+                    'trilinear',
+                    min_side=False
+                ),
+                target_size,
+                fill,
+                padding_mode
+            )
+            for v in x
+        ])
+
+    def compute_pred(self, x):
+        # predict mask
+        with torch.no_grad():
+            pred = self.net_core_hfb(x)
+
+        # generate mask
+        pred = self.binarize_pred(pred, binarize_threshold=self.cfg.WMH.BINARIZE_THRESHOLD)
+
+        return pred
+
+    def hfb_extract(self, x):
+        if self.cfg.WMH.HFB_GT:
+            pred, x = x[:, -1], x[:, :-1]
+        else:
+            pred = self.compute_pred(x)
+
+        # generate cropping_box
+        cropping_box = self.gen_cropping_box(pred)
+
+        # multiply input with binary mask
+        x = x * pred
+
+        # crop masked input using the cropping_box
+        x = self.crop_masked_input(x, cropping_box)
+
+        # resize cropped input
+        x = self.resize_pad_input(x, self.cfg.WMH.MAX_SIDE_SIZE, self.cfg.WMH.FILL, self.cfg.WMH.PADDING_MODE)
+
+        return x
