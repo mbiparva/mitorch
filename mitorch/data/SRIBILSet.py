@@ -76,7 +76,7 @@ class SRIBIL(SRIBILBase):
         }
 
         annot_tensor = in_pipe_data.pop('annot')
-        hfb_tensor = in_pipe_data.pop('hfb')
+        hfb_tensor = in_pipe_data.pop('hfb') if 'hfb' in in_pipe_data else None
         image_tensor = list(in_pipe_data.values())
 
         annot_tensor = self.curate_annotation(annot_tensor, ignore_index=self.cfg.MODEL.IGNORE_INDEX)
@@ -99,7 +99,8 @@ class SRIBIL(SRIBILBase):
         image_tensor, annot_tensor, hfb_tensor = self.get_data_tensor(in_pipe_data)
 
         image_tensor = torch.stack(image_tensor, dim=-1)  # D x H x W x C
-        annot_tensor = torch.stack((annot_tensor, hfb_tensor))  # put hfb in annot since both are label tensor
+        # put hfb in annot since both are label tensor
+        annot_tensor = annot_tensor.unsqueeze(dim=0) if hfb_tensor is None else torch.stack((annot_tensor, hfb_tensor))
 
         if self.transform is not None:
             image_tensor, annot_tensor, in_pipe_meta = self.transform((image_tensor, annot_tensor, in_pipe_meta))

@@ -344,7 +344,7 @@ _C.WMH.HFB_CHECKPOINT = os.path.join(_C.PROJECT.EXPERIMENT_DIR,
                                      'SRIBILhfb/20200612_134356_471570/checkpoints/checkpoint_epoch_00060.pyth')
 
 # Whether to use ground-truth HFB masks
-_C.WMH.HFB_GT = (False, True)[1] if _C.TRAIN.DATASET == 'SRIBIL' else False  # must be True only when SRIBIL
+_C.WMH.HFB_GT = (False, True)[0] if _C.TRAIN.DATASET == 'SRIBIL' else False  # must be True only when SRIBIL
 
 _C.WMH.BINARIZE_THRESHOLD = 0.5
 

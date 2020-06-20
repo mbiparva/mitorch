@@ -198,6 +198,8 @@ class NetWrapperWMH(NetWrapper):
         # generate mask
         pred = self.binarize_pred(pred, binarize_threshold=self.cfg.WMH.BINARIZE_THRESHOLD)
 
+        pred = pred.squeeze(1)
+
         return pred
 
     def resize_crop_pad_annot(self, annotation, cropping_box):
@@ -219,13 +221,14 @@ class NetWrapperWMH(NetWrapper):
         if self.cfg.WMH.HFB_GT:
             annotation, pred = annotation[:, 0], annotation[:, 1]
         else:
+            annotation = annotation.squeeze(1)
             pred = self.compute_pred(x)
 
         # generate cropping_box
         cropping_box = self.gen_cropping_box(pred)
 
         # multiply input with binary mask
-        x = x * pred
+        x = x * pred  # TODO we can ignore masking out-of-mask regions out
 
         # crop masked input using the cropping_box
         x = self.crop_masked_input(x, cropping_box)
