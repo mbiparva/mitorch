@@ -99,13 +99,10 @@ class SRIBIL(SRIBILBase):
         image_tensor, annot_tensor, hfb_tensor = self.get_data_tensor(in_pipe_data)
 
         image_tensor = torch.stack(image_tensor, dim=-1)  # D x H x W x C
-        annot_tensor = torch.tensor((annot_tensor, hfb_tensor))  # put hfb in annot since both are label tensor
+        annot_tensor = torch.stack((annot_tensor, hfb_tensor))  # put hfb in annot since both are label tensor
 
         if self.transform is not None:
             image_tensor, annot_tensor, in_pipe_meta = self.transform((image_tensor, annot_tensor, in_pipe_meta))
-
-        image_tensor = torch.cat((image_tensor, annot_tensor[:, 1].unsqueeze(1)), dim=1)  # cat hfb to the bottom of img
-        annot_tensor = annot_tensor[:, 0].unsqueeze(1)
 
         return image_tensor, annot_tensor, in_pipe_meta
 

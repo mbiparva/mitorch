@@ -21,7 +21,10 @@ class Evaluator(BatchBase):
     def batch_main(self, netwrapper, x, annotation):
         meters = dict()
 
-        p = netwrapper.forward(x)
+        if self.cfg.WMH.ENABLE:
+            p, annotation = netwrapper.forward((x, annotation))
+        else:
+            p = netwrapper.forward(x)
 
         a = self.generate_gt(annotation)
 

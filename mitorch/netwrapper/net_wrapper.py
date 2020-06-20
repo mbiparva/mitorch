@@ -117,10 +117,10 @@ class NetWrapperWMH(NetWrapper):
         )
 
     def forward(self, x):
-        x = self.hfb_extract(x)
+        x, annotation = self.hfb_extract(x)
         x = self.net_core(x)
 
-        return x
+        return x, annotation
 
     @staticmethod
     def binarize_pred(p, binarize_threshold):
@@ -132,12 +132,12 @@ class NetWrapperWMH(NetWrapper):
 
     @staticmethod
     def gen_cropping_box(pred):
-        return [(p.min(0)[0].tolist(), p.max(0)[0].tolist()) for p in pred]
+        return [(p.eq(1).nonzero().min(0)[0].tolist(), p.eq(1).nonzero().max(0)[0].tolist()) for p in pred]
 
     @staticmethod
     def crop_masked_input(x, cropping_box):
-        b, d, h, w, = x.shape
-        pad_amount = 0
+        b, _, d, h, w = x.shape
+        pad_amount = 6
 
         def pad_lower_clamp(value):
             return max(0, value - pad_amount)
@@ -148,17 +148,19 @@ class NetWrapperWMH(NetWrapper):
         return [
             x[
                 i,
-                pad_lower_clamp(cropping_box[i][0][0]): pad_upper_clamp(cropping_box[i][1][0])+1,  # max is inclusive
-                pad_lower_clamp(cropping_box[i][0][1]): pad_upper_clamp(cropping_box[i][1][1])+1,
-                pad_lower_clamp(cropping_box[i][0][2]): pad_upper_clamp(cropping_box[i][1][2])+1
+                :,
+                pad_lower_clamp(cropping_box[i][0][0]): pad_upper_clamp(cropping_box[i][1][0]),  # max is inclusive
+                pad_lower_clamp(cropping_box[i][0][1]): pad_upper_clamp(cropping_box[i][1][1]),
+                pad_lower_clamp(cropping_box[i][0][2]): pad_upper_clamp(cropping_box[i][1][2])
             ] for i in range(b)
         ]
 
     @staticmethod
     def pad_input(x, target_size, fill, padding_mode):
+        target_size = torch.tensor(tuple([target_size] * 3))
         target_size = target_size.clone()
         auto_fill_ind = target_size == -1
-        image_size = torch.tensor(x.shape)
+        image_size = torch.tensor(x.shape[1:])
         target_size[auto_fill_ind] = image_size[auto_fill_ind]
         assert (image_size <= target_size).all()
         size_offset = target_size - image_size
@@ -172,13 +174,13 @@ class NetWrapperWMH(NetWrapper):
 
         return pad(x, padding, fill, padding_mode)
 
-    def resize_pad_input(self, x, target_size, fill, padding_mode):
+    def resize_pad_input(self, x, target_size, fill, padding_mode, interpolation='trilinear'):
         return torch.stack([
             self.pad_input(
                 resize(
                     v,
                     target_size,
-                    'trilinear',
+                    interpolation,
                     min_side=False
                 ),
                 target_size,
@@ -198,9 +200,24 @@ class NetWrapperWMH(NetWrapper):
 
         return pred
 
+    def resize_crop_pad_annot(self, annotation, cropping_box):
+        annotation = annotation.unsqueeze(1)
+        annotation = self.crop_masked_input(annotation, cropping_box)
+        annotation = self.resize_pad_input(
+            annotation,
+            self.cfg.WMH.MAX_SIDE_SIZE,
+            0,
+            'constant',
+            interpolation='nearest'
+        )
+
+        return annotation
+
     def hfb_extract(self, x):
+        x, annotation = x
+
         if self.cfg.WMH.HFB_GT:
-            pred, x = x[:, -1], x[:, :-1]
+            annotation, pred = annotation[:, 0], annotation[:, 1]
         else:
             pred = self.compute_pred(x)
 
@@ -216,4 +233,7 @@ class NetWrapperWMH(NetWrapper):
         # resize cropped input
         x = self.resize_pad_input(x, self.cfg.WMH.MAX_SIDE_SIZE, self.cfg.WMH.FILL, self.cfg.WMH.PADDING_MODE)
 
-        return x
+        # crop and resize-pad annotation
+        annotation = self.resize_crop_pad_annot(annotation, cropping_box)
+
+        return x, annotation
