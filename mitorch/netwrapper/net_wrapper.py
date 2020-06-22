@@ -137,7 +137,7 @@ class NetWrapperWMH(NetWrapper):
     @staticmethod
     def crop_masked_input(x, cropping_box):
         b, _, d, h, w = x.shape
-        pad_amount = 6
+        pad_amount = 2
 
         def pad_lower_clamp(value):
             return max(0, value - pad_amount)

@@ -65,7 +65,7 @@ class DataContainer:
             'drop_last': drop_last,
         }
 
-    def create_transform(self):
+    def create_transform_flat(self):
         # --- BODY ---
         if self.mode == 'train':
             transformations_body = [
@@ -173,59 +173,74 @@ class DataContainer:
             transformations_head + transformations_body + transformations_tail
         )
 
-    def create_transform_hpo(self):
-        transformations_head = [
-            tf.ToTensorImageVolume(),
-            (
-                tf.RandomOrientationTo('RPI'),
-                tf.RandomOrientationTo('RPI', prand=True)
-            )[self.cfg.DATA.EXP.HEAD_ORI],
-            (
-                tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
-                tf.RandomResampleTomm(target_spacing=(1, 1, 1), target_spacing_scale=(0.2, 0.2, 0.2), prand=True),
-            )[self.cfg.DATA.EXP.HEAD_RES],
-        ]
-        transformations_tail = (
-            [
-                tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
-                tf.NormalizeMeanStdVolume(
-                    mean=self.cfg.DATA.MEAN,
-                    std=self.cfg.DATA.STD,
-                    inplace=True
-                ),
-            ],
-            [
-                tf.NormalizeMeanStdVolume(
-                    mean=[-0.06902332603931427, -0.0901104062795639],
-                    std=[0.07958264648914337, 0.07952401041984558],
-                    inplace=True
-                ),
-            ]
-        )[self.cfg.DATA.EXP.TAIL]
-
+    def create_transform(self):
         if self.mode == 'train':
             transformations_body = [
+                tf.ToTensorImageVolume(),
+                (
+                    tf.RandomOrientationTo('RPI'),
+                    tf.RandomOrientationTo('RPI', prand=True)
+                )[self.cfg.DATA.EXP.HEAD_ORI],
+                (
+                    tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
+                    tf.RandomResampleTomm(target_spacing=(1, 1, 1), target_spacing_scale=(0.2, 0.2, 0.2), prand=True),
+                )[self.cfg.DATA.EXP.HEAD_RES],
+
                 tf.ResizeImageVolume(self.cfg.DATA.MAX_SIDE_SIZE, min_side=False),
                 tf.PadToSizeVolume(self.cfg.DATA.MAX_SIDE_SIZE, padding_mode=self.cfg.DATA.PADDING_MODE),
-                (
-                    tf.CenterCropImageVolume(self.cfg.DATA.CROP_SIZE),
-                    tf.RandomCropImageVolume(self.cfg.DATA.CROP_SIZE),
-                    tf.RandomResizedCropImageVolume(self.cfg.DATA.CROP_SIZE, scale=self.cfg.DATA.CROP_SCALE),
-                )[self.cfg.DATA.EXP.BODY_CRO],
             ] + (
+                    [],
+                    [tf.CenterCropImageVolume(self.cfg.DATA.CROP_SIZE)],
+                    [tf.RandomCropImageVolume(self.cfg.DATA.CROP_SIZE)],
+                    [tf.RandomResizedCropImageVolume(self.cfg.DATA.CROP_SIZE, scale=self.cfg.DATA.CROP_SCALE)],
+            )[self.cfg.DATA.EXP.BODY_CRO] + (
+                [],
                 [tf.RandomFlipImageVolume(dim=-1)],
-                []
-            )[self.cfg.DATA.EXP.BODY_FLI]
+            )[self.cfg.DATA.EXP.BODY_FLI] + (
+                [],
+                [[
+                    tf.RandomBrightness(value=0.25, prand=True, channel_wise=True),
+                    tf.RandomContrast(value=0.25, prand=True, channel_wise=True),
+                    tf.RandomGamma(value=2.0, prand=True, channel_wise=True),
+                    tf.LogCorrection(inverse=(False, True)[0], channel_wise=True),
+                    tf.SigmoidCorrection(inverse=(False, True)[0], channel_wise=True),
+                    tf.HistEqual(num_bins=256, channel_wise=True),
+                    tf.AdditiveNoise(sigma=0.5, noise_type=('gaussian', 'rician', 'rayleigh')[0], randomize_type=False,
+                                     out_of_bound_mode=('normalize', 'clamp')[1], prand=True, channel_wise=True),
+                    tf.AdditiveNoise(sigma=0.5, noise_type=('gaussian', 'rician', 'rayleigh')[1], randomize_type=False,
+                                     out_of_bound_mode=('normalize', 'clamp')[1], prand=True, channel_wise=True),
+                    tf.AdditiveNoise(sigma=0.5, noise_type=('gaussian', 'rician', 'rayleigh')[2], randomize_type=False,
+                                     out_of_bound_mode=('normalize', 'clamp')[1], prand=True, channel_wise=True),
+                ][self.cfg.DATA.EXP.INTENSITY_SEL]]
+            )[self.cfg.DATA.EXP.INTENSITY]
+
         elif self.mode in ('valid', 'test'):
             transformations_body = [
-                tf.ResizeImageVolume(self.cfg.DATA.MAX_SIDE_SIZE, min_side=False),
-                tf.PadToSizeVolume(self.cfg.DATA.MAX_SIDE_SIZE, padding_mode=self.cfg.DATA.PADDING_MODE),
+                tf.ToTensorImageVolume(),
+                tf.RandomOrientationTo('RPI'),
+                tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
+
+                tf.ResizeImageVolume(self.cfg.DATA.MAX_SIDE_SIZE, min_side=self.cfg.DATA.MIN_SIDE),
+                # tf.PadToSizeVolume(self.cfg.DATA.MAX_SIDE_SIZE, padding_mode=self.cfg.DATA.PADDING_MODE),
+
+                # tf.HistEqual(num_bins=256, channel_wise=True),
             ]
+
         else:
             raise NotImplementedError
 
+        # --- TAIL ---
+        transformations_tail = [
+            tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
+            tf.NormalizeMeanStdVolume(
+                mean=self.cfg.DATA.MEAN,
+                std=self.cfg.DATA.STD,
+                inplace=True
+            ),
+        ]
+
         return torch_tf.Compose(
-            transformations_head + transformations_body + transformations_tail
+            transformations_body + transformations_tail
         )
 
     def data_split(self):

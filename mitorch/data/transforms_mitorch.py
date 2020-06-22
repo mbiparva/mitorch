@@ -809,7 +809,7 @@ class HistEqual(Transformable):
 
 class AdditiveNoise(Randomizable):
     NOISE_TYPE = ('gaussian', 'rician', 'rayleigh',)
-    MAX_SIGMA = 3
+    MAX_SIGMA = 1.5
 
     def __init__(self, sigma, noise_type='gaussian', randomize_type=False, out_of_bound_mode='normalize',
                  channel_wise=True, *args, **kwargs):

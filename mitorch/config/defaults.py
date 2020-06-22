@@ -242,10 +242,13 @@ _C.DATA.ENFORCE_DIAG = (False, True)[1]
 _C.DATA.EXP = CfgNode()
 
 _C.DATA.EXP.HEAD_ORI = (0, 1)[0]
-_C.DATA.EXP.HEAD_RES = (0, 1)[1]
-_C.DATA.EXP.TAIL = (0, 1)[0]
+_C.DATA.EXP.HEAD_RES = (0, 1)[0]
 _C.DATA.EXP.BODY_CRO = (0, 1, 2)[2]
 _C.DATA.EXP.BODY_FLI = (0, 1)[0]
+_C.DATA.EXP.INTENSITY = (False, True)[0]
+_C.DATA.EXP.INTENSITY_SEL = (0, 1, 2, 3, 4, 5, 6, 7, 8)[0]
+
+
 
 # ---------------------------------------------------------------------------- #
 # Optimizer options
@@ -344,7 +347,7 @@ _C.WMH.HFB_CHECKPOINT = os.path.join(_C.PROJECT.EXPERIMENT_DIR,
                                      'SRIBILhfb/20200612_134356_471570/checkpoints/checkpoint_epoch_00060.pyth')
 
 # Whether to use ground-truth HFB masks
-_C.WMH.HFB_GT = (False, True)[0] if _C.TRAIN.DATASET == 'SRIBIL' else False  # must be True only when SRIBIL
+_C.WMH.HFB_GT = (False, True)[1] if _C.TRAIN.DATASET == 'SRIBIL' else False  # must be True only when SRIBIL
 
 _C.WMH.BINARIZE_THRESHOLD = 0.5
 

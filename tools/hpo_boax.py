@@ -96,13 +96,6 @@ hp_set = [
             ],
         },
         {
-            'name': 'DATA.EXP.TAIL',
-            'type': 'choice',
-            'values': [
-                0, 1,
-            ],
-        },
-        {
             'name': 'DATA.EXP.BODY_CRO',
             'type': 'choice',
             'values': [
