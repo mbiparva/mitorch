@@ -69,7 +69,7 @@ _C.TRAIN.IN_MOD = {
         ('annot', 'wmh_seg.nii.gz'),
     ],
     'SRIBILhfb': [
-        # ('t1', 't1.nii.gz'),
+        ('t1', 't1.nii.gz'),
         ('fl', 'fl.nii.gz'),
         ('t2', 't2.nii.gz'),
         ('annot', 'truth.nii.gz'),
@@ -230,11 +230,11 @@ _C.DATA.CROP_SCALE = ((0.7, 1.0), (0.8, 1.0), (0.9, 1.0))[1]
 # The mean value of the volume raw voxels across the T1, FLAIR, T2 channels.
 # ATTENTION: Assumes the order of channels is always T1, FLAIR, T2.
 # _C.DATA.MEAN = [0.18278566002845764, 0.1672040820121765]  # MAGED PREP - TODO add it to the init of dataset
-_C.DATA.MEAN = [0.058173052966594696, 0.044205766171216965, 0.04969067499041557][1:3]  # [:_C.MODEL.INPUT_CHANNELS]
+_C.DATA.MEAN = [0.058173052966594696, 0.044205766171216965, 0.04969067499041557][:_C.MODEL.INPUT_CHANNELS]  # [1:3]
 
 # The standard deviation value of the volume raw voxels across the above channels.
 # _C.DATA.STD = [0.018310515210032463, 0.017989424988627434]  # MAGED PREP
-_C.DATA.STD = [0.021794982254505157, 0.02334374189376831, 0.024663571268320084][1:3]  # [:_C.MODEL.INPUT_CHANNELS]
+_C.DATA.STD = [0.021794982254505157, 0.02334374189376831, 0.024663571268320084][:_C.MODEL.INPUT_CHANNELS]
 
 _C.DATA.PADDING_MODE = ('mean', 'median', 'min', 'max')[0]
 
