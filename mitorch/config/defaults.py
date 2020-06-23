@@ -54,7 +54,7 @@ _C.TRAIN.ENABLE = True
 _C.TRAIN.HPO = (False, True)[0]
 
 # Dataset.
-_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb')[1]
+_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb')[2]
 
 # Input Modalities
 _C.TRAIN.IN_MOD = {
@@ -69,8 +69,9 @@ _C.TRAIN.IN_MOD = {
         ('annot', 'wmh_seg.nii.gz'),
     ],
     'SRIBILhfb': [
-        ('t1', 't1.nii.gz'),
-        ('fl', 'flair.nii.gz'),
+        # ('t1', 't1.nii.gz'),
+        ('fl', 'fl.nii.gz'),
+        ('t2', 't2.nii.gz'),
         ('annot', 'truth.nii.gz'),
         ]
 }[_C.TRAIN.DATASET]
@@ -205,7 +206,7 @@ _C.MODEL.ENCO_DEPTH = 5
 _C.MODEL.NUM_PRED_LEVELS = 3
 
 # Number of input channels to the model
-_C.MODEL.INPUT_CHANNELS = 2  # T1 & FLAIR
+_C.MODEL.INPUT_CHANNELS = (len(_C.TEST.IN_MOD) - 1) if _C.TEST.ENABLE else (len(_C.TRAIN.IN_MOD) - 1)
 
 
 # -----------------------------------------------------------------------------
@@ -226,11 +227,14 @@ _C.DATA.CROP_SIZE = (192-16*2, 192-16*1, 192)[0]
 # The spatial crop scale of the input volume.
 _C.DATA.CROP_SCALE = ((0.7, 1.0), (0.8, 1.0), (0.9, 1.0))[1]
 
-# The mean value of the volume raw voxels across the T1 and Flair channels.
-_C.DATA.MEAN = [0.18278566002845764, 0.1672040820121765]  # TODO add it to the init of dataset to automatically fine it.
+# The mean value of the volume raw voxels across the T1, FLAIR, T2 channels.
+# ATTENTION: Assumes the order of channels is always T1, FLAIR, T2.
+# _C.DATA.MEAN = [0.18278566002845764, 0.1672040820121765]  # MAGED PREP - TODO add it to the init of dataset
+_C.DATA.MEAN = [0.058173052966594696, 0.044205766171216965, 0.04969067499041557][1:3]  # [:_C.MODEL.INPUT_CHANNELS]
 
-# The standard deviation value of the volume raw voxels across the T1 and Flair channels.
-_C.DATA.STD = [0.018310515210032463, 0.017989424988627434]
+# The standard deviation value of the volume raw voxels across the above channels.
+# _C.DATA.STD = [0.018310515210032463, 0.017989424988627434]  # MAGED PREP
+_C.DATA.STD = [0.021794982254505157, 0.02334374189376831, 0.024663571268320084][1:3]  # [:_C.MODEL.INPUT_CHANNELS]
 
 _C.DATA.PADDING_MODE = ('mean', 'median', 'min', 'max')[0]
 
@@ -243,7 +247,7 @@ _C.DATA.EXP = CfgNode()
 
 _C.DATA.EXP.HEAD_ORI = (0, 1)[0]
 _C.DATA.EXP.HEAD_RES = (0, 1)[0]
-_C.DATA.EXP.BODY_CRO = (0, 1, 2)[2]
+_C.DATA.EXP.BODY_CRO = (0, 1, 2, 3)[0]
 _C.DATA.EXP.BODY_FLI = (0, 1)[0]
 _C.DATA.EXP.INTENSITY = (False, True)[0]
 _C.DATA.EXP.INTENSITY_SEL = (0, 1, 2, 3, 4, 5, 6, 7, 8)[0]

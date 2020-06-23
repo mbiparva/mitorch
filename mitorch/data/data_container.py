@@ -65,7 +65,7 @@ class DataContainer:
             'drop_last': drop_last,
         }
 
-    def create_transform_flat(self):
+    def create_transform(self):
         # --- BODY ---
         if self.mode == 'train':
             transformations_body = [
@@ -173,7 +173,7 @@ class DataContainer:
             transformations_head + transformations_body + transformations_tail
         )
 
-    def create_transform(self):
+    def create_transform_hpo(self):
         if self.mode == 'train':
             transformations_body = [
                 tf.ToTensorImageVolume(),

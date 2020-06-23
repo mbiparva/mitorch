@@ -13,7 +13,7 @@ from utils.hpo import *
 import train_net_hpo
 
 pp = PrettyPrinter(indent=4)
-EXP_SEL = (0, 1, 2, 3)[0]
+EXP_SEL = (0, 1, 2, 3)[1]
 
 # Experiment #1
 hp_set = [
@@ -99,7 +99,7 @@ hp_set = [
             'name': 'DATA.EXP.BODY_CRO',
             'type': 'choice',
             'values': [
-                0, 1, 2
+                0, 1, 2, 3
             ],
         },
         {
@@ -187,17 +187,10 @@ hp_set = [
             ],
         },
         {
-            'name': 'DATA.EXP.TAIL',
-            'type': 'choice',
-            'values': [
-                0, 1,
-            ],
-        },
-        {
             'name': 'DATA.EXP.BODY_CRO',
             'type': 'choice',
             'values': [
-                0, 1, 2
+                0, 1, 2, 3
             ],
         },
         {
