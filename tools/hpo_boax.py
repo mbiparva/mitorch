@@ -13,7 +13,7 @@ from utils.hpo import *
 import train_net_hpo
 
 pp = PrettyPrinter(indent=4)
-EXP_SEL = (0, 1, 2, 3)[1]
+EXP_SEL = (0, 1, 2, 3)[0]
 
 # Experiment #1
 hp_set = [
@@ -200,6 +200,34 @@ hp_set = [
                 0, 1
             ],
         },
+        {
+            'name': 'DATA.EXP.INTENSITY',
+            'type': 'choice',
+            'values': [
+                False, True
+            ],
+        },
+        {
+            'name': 'DATA.EXP.INTENSITY_SEL',
+            'type': 'choice',
+            'values': [
+                0, 1, 2, 3, 4, 5, 6, 7, 8,
+            ],
+        },
+        {
+            'name': 'DATA.MAX_SIDE_SIZE',
+            'type': 'choice',
+            'values': [
+                176, 192, 208, 224, 240, 256,
+            ],
+        },
+        {
+            'name': 'DATA.CROP_SIZE_FACTOR',
+            'type': 'choice',
+            'values': [
+                1, 2, 3, 4,
+            ],
+        }
     ],
     [
         {
@@ -235,6 +263,8 @@ def boax_train_evaluate(parameterization):
     print('BoAx experimentation; len of experiments {}; parameters {}'.format(len_exps_g, hps_dict))
 
     cfg = init_cfg(cfg, parent_dir=hpo_parent_dir_g)
+    # cfg.WMH.MAX_SIDE_SIZE = cfg.DATA.MAX_SIDE_SIZE - 16*2
+    # cfg.DATA.CROP_SIZE = cfg.DATA.MAX_SIDE_SIZE - 16*cfg.DATA.CROP_SIZE_FACTOR
     eval_met_dict = train_net_hpo.hpo_train_eval_instance(cfg)
 
     hps_dict = {u: ', '.join(list(map(str, v))) if isinstance(v, (tuple, list)) else v for u, v in hps_dict.items()}

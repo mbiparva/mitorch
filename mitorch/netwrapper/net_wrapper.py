@@ -100,9 +100,24 @@ class NetWrapperWMH(NetWrapper):
         self.net_core = build_model(self.cfg, device)
 
     def _create_net_hfb(self, device):
+        # REMOVE IT
+        N_BASE_FILTERS = self.cfg.MODEL.N_BASE_FILTERS
+        ENCO_DEPTH = self.cfg.MODEL.ENCO_DEPTH
+        DROPOUT_RATE = self.cfg.MODEL.DROPOUT_RATE
+        self.cfg.MODEL.N_BASE_FILTERS = 16
+        self.cfg.MODEL.ENCO_DEPTH = 5
+        self.cfg.MODEL.DROPOUT_RATE = 0.25
+        # REMOVE IT
+
         self.net_core_hfb = build_model(self.cfg, device)
         self.load_checkpoint_hfb(self.cfg.WMH.HFB_CHECKPOINT)
         self.net_core_hfb.eval()
+
+        # REMOVE IT
+        self.cfg.MODEL.N_BASE_FILTERS = N_BASE_FILTERS
+        self.cfg.MODEL.ENCO_DEPTH = ENCO_DEPTH
+        self.cfg.MODEL.DROPOUT_RATE = DROPOUT_RATE
+        # REMOVE IT
 
     def load_checkpoint_hfb(self, ckpnt_path):
         checkops.load_checkpoint(ckpnt_path, self.net_core_hfb, data_parallel=self.cfg.NUM_GPUS > 1)
@@ -134,26 +149,30 @@ class NetWrapperWMH(NetWrapper):
     def gen_cropping_box(pred):
         return [(p.eq(1).nonzero().min(0)[0].tolist(), p.eq(1).nonzero().max(0)[0].tolist()) for p in pred]
 
-    @staticmethod
-    def crop_masked_input(x, cropping_box):
+    def crop_masked_input(self, x, cropping_box):
         b, _, d, h, w = x.shape
-        pad_amount = 2
+        if self.cfg.WMH.CROPPING:
+            pad_amount = 2
 
-        def pad_lower_clamp(value):
-            return max(0, value - pad_amount)
+            def pad_lower_clamp(value):
+                return max(0, value - pad_amount)
 
-        def pad_upper_clamp(value):
-            return min(d, value + pad_amount)
+            def pad_upper_clamp(value):
+                return min(d, value + pad_amount)
 
-        return [
-            x[
-                i,
-                :,
-                pad_lower_clamp(cropping_box[i][0][0]): pad_upper_clamp(cropping_box[i][1][0]),  # max is inclusive
-                pad_lower_clamp(cropping_box[i][0][1]): pad_upper_clamp(cropping_box[i][1][1]),
-                pad_lower_clamp(cropping_box[i][0][2]): pad_upper_clamp(cropping_box[i][1][2])
-            ] for i in range(b)
-        ]
+            return [
+                x[
+                    i,
+                    :,
+                    pad_lower_clamp(cropping_box[i][0][0]): pad_upper_clamp(cropping_box[i][1][0]),  # max is inclusive
+                    pad_lower_clamp(cropping_box[i][0][1]): pad_upper_clamp(cropping_box[i][1][1]),
+                    pad_lower_clamp(cropping_box[i][0][2]): pad_upper_clamp(cropping_box[i][1][2])
+                ] for i in range(b)
+            ]
+        else:
+            return [
+                x[i, :] for i in range(b)
+            ]
 
     @staticmethod
     def pad_input(x, target_size, fill, padding_mode):
@@ -175,20 +194,14 @@ class NetWrapperWMH(NetWrapper):
         return pad(x, padding, fill, padding_mode)
 
     def resize_pad_input(self, x, target_size, fill, padding_mode, interpolation='trilinear'):
-        return torch.stack([
-            self.pad_input(
-                resize(
-                    v,
-                    target_size,
-                    interpolation,
-                    min_side=False
-                ),
-                target_size,
-                fill,
-                padding_mode
-            )
-            for v in x
-        ])
+        if self.cfg.WMH.RESIZING_PADDING:
+            # x = [resize(v, [target_size]*3, interpolation, min_side=False) for v in x]
+            x = [resize(v, target_size, interpolation, min_side=False) for v in x]
+            x = [self.pad_input(v, target_size, fill, padding_mode) for v in x]
+
+        x = torch.stack(x)
+
+        return x
 
     def compute_pred(self, x):
         # predict mask
@@ -202,8 +215,16 @@ class NetWrapperWMH(NetWrapper):
 
         return pred
 
+    def resize_crop_pad_input(self, x, cropping_box):
+        # crop masked input using the cropping_box
+        x = self.crop_masked_input(x, cropping_box)
+
+        # resize cropped input
+        x = self.resize_pad_input(x, self.cfg.WMH.MAX_SIDE_SIZE, self.cfg.WMH.FILL, self.cfg.WMH.PADDING_MODE)
+
+        return x
+
     def resize_crop_pad_annot(self, annotation, cropping_box):
-        annotation = annotation.unsqueeze(1)
         annotation = self.crop_masked_input(annotation, cropping_box)
         annotation = self.resize_pad_input(
             annotation,
@@ -216,6 +237,11 @@ class NetWrapperWMH(NetWrapper):
         return annotation
 
     def hfb_extract(self, x):
+        # REMOVE IT
+        # from test_net import save_pred
+        # import time
+        # time_id = str(int(time.time()))
+
         x, annotation = x
 
         if self.cfg.WMH.HFB_GT:
@@ -223,6 +249,9 @@ class NetWrapperWMH(NetWrapper):
         else:
             annotation = annotation.squeeze(1)
             pred = self.compute_pred(x)
+        annotation = annotation.unsqueeze(1)
+        # save_pred(pred.unsqueeze(1), '/gpfs/fs0/scratch/m/mgoubran/mbiparva/wmh_pytorch/tools/samples', time_id+'_hfb', *[x])
+        # save_pred(annotation, '/gpfs/fs0/scratch/m/mgoubran/mbiparva/wmh_pytorch/tools/samples', time_id+'_hfb', *[x])
 
         # generate cropping_box
         cropping_box = self.gen_cropping_box(pred)
@@ -230,13 +259,13 @@ class NetWrapperWMH(NetWrapper):
         # multiply input with binary mask
         x = x * pred  # TODO we can ignore masking out-of-mask regions out
 
-        # crop masked input using the cropping_box
-        x = self.crop_masked_input(x, cropping_box)
-
-        # resize cropped input
-        x = self.resize_pad_input(x, self.cfg.WMH.MAX_SIDE_SIZE, self.cfg.WMH.FILL, self.cfg.WMH.PADDING_MODE)
+        # crop and resize-pad input
+        x = self.resize_crop_pad_input(x, cropping_box)
 
         # crop and resize-pad annotation
         annotation = self.resize_crop_pad_annot(annotation, cropping_box)
+
+        # REMOVE IT
+        # save_pred(annotation, '/gpfs/fs0/scratch/m/mgoubran/mbiparva/wmh_pytorch/tools/samples', time_id, *[x])
 
         return x, annotation

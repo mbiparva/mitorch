@@ -24,7 +24,7 @@ class WMHSegmentationChallenge(VolSetABC):
 
     def _init_dataset(self):
         self.dataset_path = os.path.join(self.dataset_root, 'uncompressed')
-        self.in_modalities = self.cfg.TEST.IN_MOD if self.mode == 'test' else self.cfg.TEST.IN_MOD
+        self.in_modalities = self.cfg.TEST.IN_MOD if self.mode == 'test' else self.cfg.TRAIN.IN_MOD
         self.in_modalities = {u: v for u, v in self.in_modalities}
         self.sample_path_list = self.index_samples()
 

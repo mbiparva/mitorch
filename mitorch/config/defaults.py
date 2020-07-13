@@ -41,6 +41,8 @@ _C.PROJECT.METERS = ['loss', 'dice_coeff', 'jaccard_ind', 'hausdorff_dist']
 # Training, Validation, and Test Split Ratio
 _C.PROJECT.TVSR = 0.80
 _C.PROJECT.TSR = 0.0
+_C.PROJECT.PA_INDICES = (False, True)[0]
+
 
 # ---------------------------------------------------------------------------- #
 # Training options.
@@ -54,7 +56,7 @@ _C.TRAIN.ENABLE = True
 _C.TRAIN.HPO = (False, True)[0]
 
 # Dataset.
-_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb')[2]
+_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb')[1]
 
 # Input Modalities
 _C.TRAIN.IN_MOD = {
@@ -71,7 +73,7 @@ _C.TRAIN.IN_MOD = {
     'SRIBILhfb': [
         ('t1', 't1.nii.gz'),
         ('fl', 'fl.nii.gz'),
-        ('t2', 't2.nii.gz'),
+        # ('t2', 't2.nii.gz'),
         ('annot', 'truth.nii.gz'),
         ]
 }[_C.TRAIN.DATASET]
@@ -223,6 +225,7 @@ _C.DATA.UNI_SCALE = (False, True)[1]
 
 # The spatial crop size of the input volume.
 _C.DATA.CROP_SIZE = (192-16*2, 192-16*1, 192)[0]
+_C.DATA.CROP_SIZE_FACTOR = 0  # BOAX script will change it at init.
 
 # The spatial crop scale of the input volume.
 _C.DATA.CROP_SCALE = ((0.7, 1.0), (0.8, 1.0), (0.9, 1.0))[1]
@@ -250,8 +253,7 @@ _C.DATA.EXP.HEAD_RES = (0, 1)[0]
 _C.DATA.EXP.BODY_CRO = (0, 1, 2, 3)[0]
 _C.DATA.EXP.BODY_FLI = (0, 1)[0]
 _C.DATA.EXP.INTENSITY = (False, True)[0]
-_C.DATA.EXP.INTENSITY_SEL = (0, 1, 2, 3, 4, 5, 6, 7, 8)[0]
-
+_C.DATA.EXP.INTENSITY_SEL = (0, 1, 2, 3, 4, 5, 6, 7, 8)[1]
 
 
 # ---------------------------------------------------------------------------- #
@@ -360,6 +362,9 @@ _C.WMH.MAX_SIDE_SIZE = 160
 _C.WMH.FILL = 0
 
 _C.WMH.PADDING_MODE = ('mean', 'median', 'min', 'max')[0]
+
+_C.WMH.CROPPING = (False, True)[0]
+_C.WMH.RESIZING_PADDING = (False, True)[0]
 
 
 def init_cfg(cfg, parent_dir=''):

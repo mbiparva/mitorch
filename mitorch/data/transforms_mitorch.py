@@ -155,7 +155,8 @@ class RandomResampleTomm(Randomizable):
         affine_ = torch.tensor(meta['affine'], dtype=torch.float)
         affine_ = affine_.reshape(4, 4)
         affine = affine_[:dim, :dim]
-        affine[affine != 0] = torch.tensor(meta['spacing'])  # TODO assume affine has not rotation just scaling
+        # affine[affine != 0] = torch.tensor(meta['spacing'])  # this assumes affine has not rotation just scaling
+        affine[range(len(affine)), range(len(affine))] = torch.tensor(meta['spacing']) * affine.diagonal().sign()
         meta['affine'] = affine_.flatten().tolist()
 
         return image, annot, meta

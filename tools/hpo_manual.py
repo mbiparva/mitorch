@@ -11,7 +11,7 @@ from config.defaults import init_cfg
 from utils.hpo import *
 import train_net_hpo
 
-EXP_SEL = (0, 1, 2, 3, 4, 5)[5]
+EXP_SEL = (0, 1, 2, 3, 4, 5, 6)[6]
 
 hp_set = [
     {
@@ -94,6 +94,11 @@ hp_set = [
             0.12, 0.25, 0.5,
         )
     },
+    {
+        'DATA.EXP.INTENSITY_SEL': (
+            0, 1, 2, 3, 4, 5, 6, 7, 8
+        ),
+    },
 ][EXP_SEL]
 
 
@@ -106,6 +111,8 @@ def run(cfg, tb_hps_sw, len_exps, hpo_parent_dir):
             continue
         print('manual hps iter {:02}|{} started: {}'.format(i, len_exps-1, hps_dict))
         cfg = init_cfg(cfg, parent_dir=hpo_parent_dir)
+        # cfg.WMH.MAX_SIDE_SIZE = cfg.DATA.MAX_SIDE_SIZE - 16*2
+        # cfg.DATA.CROP_SIZE = cfg.DATA.MAX_SIDE_SIZE - 16 * cfg.DATA.CROP_SIZE_FACTOR
         eval_met_dict = train_net_hpo.hpo_train_eval_instance(cfg)
 
         hps_dict = {u: ', '.join(list(map(str, v))) if isinstance(v, (tuple, list)) else v for u, v in hps_dict.items()}

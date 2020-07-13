@@ -15,6 +15,7 @@ import torchvision.transforms as torch_tf
 from torch.utils.data import random_split
 from .build import build_dataset
 from data.VolSet import collate_fn
+import os
 
 
 # noinspection PyUnresolvedReferences
@@ -64,61 +65,6 @@ class DataContainer:
             'shuffle': shuffle,
             'drop_last': drop_last,
         }
-
-    def create_transform(self):
-        # --- BODY ---
-        if self.mode == 'train':
-            transformations_body = [
-                tf.ToTensorImageVolume(),
-                tf.RandomOrientationTo('RPI'),
-                tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
-                # tf.RandomResampleTomm(target_spacing=(1, 1, 1), target_spacing_scale=(0.2, 0.2, 0.2), prand=True),
-
-                tf.ResizeImageVolume(self.cfg.DATA.MAX_SIDE_SIZE, min_side=self.cfg.DATA.MIN_SIDE),
-                tf.PadToSizeVolume(self.cfg.DATA.MAX_SIDE_SIZE, padding_mode=self.cfg.DATA.PADDING_MODE),
-                # tf.CenterCropImageVolume(self.cfg.DATA.CROP_SIZE),
-                # tf.RandomCropImageVolume(self.cfg.DATA.CROP_SIZE),
-                # tf.RandomResizedCropImageVolume(self.cfg.DATA.CROP_SIZE,
-                #                                 scale=self.cfg.DATA.CROP_SCALE,
-                #                                 uni_scale=self.cfg.DATA.UNI_SCALE),
-                # tf.RandomFlipImageVolume(dim=-1),
-
-                # tf.RandomBrightness(value=0.25, prand=True, channel_wise=True),
-                tf.RandomContrast(value=0.25, prand=True, channel_wise=True),
-                # tf.RandomGamma(value=2.0, prand=True, channel_wise=True),
-                # tf.LogCorrection(inverse=(False, True)[0], channel_wise=True),
-                # tf.SigmoidCorrection(inverse=(False, True)[0], channel_wise=True),
-                # tf.HistEqual(num_bins=256, channel_wise=True),
-                # tf.AdditiveNoise(sigma=0.5, noise_type=('gaussian', 'rician', 'rayleigh')[2], randomize_type=False,
-                #                  out_of_bound_mode=('normalize', 'clamp')[1], prand=True, channel_wise=True),
-            ]
-        elif self.mode in ('valid', 'test'):
-            transformations_body = [
-                tf.ToTensorImageVolume(),
-                tf.RandomOrientationTo('RPI'),
-                tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
-
-                tf.ResizeImageVolume(self.cfg.DATA.MAX_SIDE_SIZE, min_side=self.cfg.DATA.MIN_SIDE),
-                # tf.PadToSizeVolume(self.cfg.DATA.MAX_SIDE_SIZE, padding_mode=self.cfg.DATA.PADDING_MODE),
-
-                # tf.HistEqual(num_bins=256, channel_wise=True),
-            ]
-        else:
-            raise NotImplementedError
-
-        # --- TAIL ---
-        transformations_tail = [
-            tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
-            tf.NormalizeMeanStdVolume(
-                mean=self.cfg.DATA.MEAN,
-                std=self.cfg.DATA.STD,
-                inplace=True
-            ),
-        ]
-
-        return torch_tf.Compose(
-            transformations_body + transformations_tail
-        )
 
     def create_transform_interleaved(self):
         # --- HEAD ---
@@ -173,6 +119,63 @@ class DataContainer:
             transformations_head + transformations_body + transformations_tail
         )
 
+    def create_transform(self):
+        # --- BODY ---
+        if self.mode == 'train':
+            transformations_body = [
+                tf.ToTensorImageVolume(),
+                tf.RandomOrientationTo('RPI'),
+                # tf.RandomOrientationTo('RPI', prand=True),
+                tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
+                # tf.RandomResampleTomm(target_spacing=(1, 1, 1), target_spacing_scale=(0.2, 0.2, 0.2), prand=True),
+
+                # tf.ResizeImageVolume(self.cfg.DATA.MAX_SIDE_SIZE, min_side=self.cfg.DATA.MIN_SIDE),
+                # tf.PadToSizeVolume(self.cfg.DATA.MAX_SIDE_SIZE, padding_mode=self.cfg.DATA.PADDING_MODE),
+                # tf.CenterCropImageVolume(self.cfg.DATA.CROP_SIZE),
+                # tf.RandomCropImageVolume(self.cfg.DATA.CROP_SIZE),
+                # tf.RandomResizedCropImageVolume(self.cfg.DATA.CROP_SIZE,
+                #                                 scale=self.cfg.DATA.CROP_SCALE,
+                #                                 uni_scale=self.cfg.DATA.UNI_SCALE),
+                # tf.RandomFlipImageVolume(dim=-1),
+
+                # tf.RandomBrightness(value=0.25, prand=True, channel_wise=True),
+                # tf.RandomContrast(value=0.25, prand=True, channel_wise=True),
+                # tf.RandomGamma(value=2.0, prand=True, channel_wise=True),
+                # tf.LogCorrection(inverse=(False, True)[1], channel_wise=True),
+                # tf.SigmoidCorrection(inverse=(False, True)[0], channel_wise=True),
+                # tf.HistEqual(num_bins=256, channel_wise=True),
+                # tf.AdditiveNoise(sigma=0.5, noise_type=('gaussian', 'rician', 'rayleigh')[1], randomize_type=False,
+                #                  out_of_bound_mode=('normalize', 'clamp')[1], prand=True, channel_wise=True),
+            ]
+        elif self.mode in ('valid', 'test'):
+            transformations_body = [
+                tf.ToTensorImageVolume(),
+                tf.RandomOrientationTo('RPI'),
+                # tf.RandomOrientationTo('RPI', prand=True),
+                tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
+
+                # tf.ResizeImageVolume(self.cfg.DATA.MAX_SIDE_SIZE, min_side=self.cfg.DATA.MIN_SIDE),
+                # tf.PadToSizeVolume(self.cfg.DATA.MAX_SIDE_SIZE, padding_mode=self.cfg.DATA.PADDING_MODE),
+
+                # tf.HistEqual(num_bins=256, channel_wise=True),
+            ]
+        else:
+            raise NotImplementedError
+
+        # --- TAIL ---
+        transformations_tail = [
+            tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
+            # tf.NormalizeMeanStdVolume(
+            #     mean=self.cfg.DATA.MEAN,
+            #     std=self.cfg.DATA.STD,
+            #     inplace=True
+            # ),
+        ]
+
+        return torch_tf.Compose(
+            transformations_body + transformations_tail
+        )
+
     def create_transform_hpo(self):
         if self.mode == 'train':
             transformations_body = [
@@ -204,7 +207,7 @@ class DataContainer:
                     tf.RandomGamma(value=2.0, prand=True, channel_wise=True),
                     tf.LogCorrection(inverse=(False, True)[0], channel_wise=True),
                     tf.SigmoidCorrection(inverse=(False, True)[0], channel_wise=True),
-                    tf.HistEqual(num_bins=256, channel_wise=True),
+                    tf.HistEqual(num_bins=512, channel_wise=True),
                     tf.AdditiveNoise(sigma=0.5, noise_type=('gaussian', 'rician', 'rayleigh')[0], randomize_type=False,
                                      out_of_bound_mode=('normalize', 'clamp')[1], prand=True, channel_wise=True),
                     tf.AdditiveNoise(sigma=0.5, noise_type=('gaussian', 'rician', 'rayleigh')[1], randomize_type=False,
@@ -243,6 +246,25 @@ class DataContainer:
             transformations_body + transformations_tail
         )
 
+    def data_split_pa_ind(self):
+        with open(os.path.join(self.cfg.PROJECT.DATASET_DIR, 'wmh_validation_subjs.txt'), 'r') as fh:
+            ind_list = fh.readlines()
+        ind_list = [i.strip() for i in ind_list]
+        ind_list_index = list()
+        non_ind_list_index = list()
+        for i, s in enumerate(self.dataset.sample_path_list):
+            s_name = s.rpartition('/')[-1]
+            if s_name in ind_list:
+                ind_list_index.append(i)
+            else:
+                non_ind_list_index.append(i)
+        if self.mode == 'train':
+            self.dataset = torch.utils.data.Subset(self.dataset, non_ind_list_index)
+        elif self.mode == 'valid':
+            self.dataset = torch.utils.data.Subset(self.dataset, ind_list_index)
+        elif self.mode == 'test':
+            raise NotImplementedError('undefined in this function')
+
     def data_split(self):
         torch.manual_seed(self.cfg.RNG_SEED)
         n_tst = int(len(self.dataset) * self.cfg.PROJECT.TSR)
@@ -269,7 +291,10 @@ class DataContainer:
 
         self.dataset = build_dataset(self.dataset_name, self.cfg, self.mode, transformations)
 
-        self.data_split()
+        if self.cfg.TRAIN and self.cfg.TRAIN.DATASET == 'SRIBIL' and self.cfg.PROJECT.PA_INDICES:
+            self.data_split_pa_ind()
+        else:
+            self.data_split()
 
     def create_dataloader(self):
         self.dataloader = DataLoader(self.dataset,

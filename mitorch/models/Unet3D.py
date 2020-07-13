@@ -122,7 +122,7 @@ class CompoundBlock(nn.Module):
 class Encoder(nn.Module):
     def __init__(self, cfg):
         super().__init__()
-        self.cfg = cfg
+        self.cfg = cfg.clone()
         self.stride = self.dilation = (2, 2, 2)
         self.p = self.cfg.MODEL.DROPOUT_RATE
 
@@ -153,7 +153,7 @@ class Encoder(nn.Module):
 class Decoder(nn.Module):
     def __init__(self, cfg):
         super().__init__()
-        self.cfg = cfg
+        self.cfg = cfg.clone()
 
         self._create_net()
 
@@ -195,7 +195,7 @@ class Decoder(nn.Module):
 class SegHead(nn.Module):
     def __init__(self, cfg):
         super().__init__()
-        self.cfg = cfg
+        self.cfg = cfg.clone()
 
         self._create_net()
 
@@ -238,7 +238,7 @@ class SegHead(nn.Module):
 class Unet3D(nn.Module):
     def __init__(self, cfg):
         super().__init__()
-        self.cfg = cfg
+        self.cfg = cfg.clone()
 
         self._create_net()
 
