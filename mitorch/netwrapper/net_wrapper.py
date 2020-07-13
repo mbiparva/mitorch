@@ -237,11 +237,6 @@ class NetWrapperWMH(NetWrapper):
         return annotation
 
     def hfb_extract(self, x):
-        # REMOVE IT
-        # from test_net import save_pred
-        # import time
-        # time_id = str(int(time.time()))
-
         x, annotation = x
 
         if self.cfg.WMH.HFB_GT:
@@ -250,8 +245,6 @@ class NetWrapperWMH(NetWrapper):
             annotation = annotation.squeeze(1)
             pred = self.compute_pred(x)
         annotation = annotation.unsqueeze(1)
-        # save_pred(pred.unsqueeze(1), '/gpfs/fs0/scratch/m/mgoubran/mbiparva/wmh_pytorch/tools/samples', time_id+'_hfb', *[x])
-        # save_pred(annotation, '/gpfs/fs0/scratch/m/mgoubran/mbiparva/wmh_pytorch/tools/samples', time_id+'_hfb', *[x])
 
         # generate cropping_box
         cropping_box = self.gen_cropping_box(pred)
@@ -264,8 +257,5 @@ class NetWrapperWMH(NetWrapper):
 
         # crop and resize-pad annotation
         annotation = self.resize_crop_pad_annot(annotation, cropping_box)
-
-        # REMOVE IT
-        # save_pred(annotation, '/gpfs/fs0/scratch/m/mgoubran/mbiparva/wmh_pytorch/tools/samples', time_id, *[x])
 
         return x, annotation
