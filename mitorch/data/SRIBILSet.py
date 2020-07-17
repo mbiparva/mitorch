@@ -186,3 +186,10 @@ class PPMITest(SRIBILBase):
             image_tensor, annot_tensor, in_pipe_meta = self.transform((image_tensor, annot_tensor, in_pipe_meta))
 
         return image_tensor, annot_tensor, in_pipe_meta
+
+
+@DATASET_REGISTRY.register()
+class SRIBILTest(SRIBIL):
+    def __init__(self, cfg, mode, transform):
+        super().__init__(cfg, mode, transform)
+        self.prefix_name = True

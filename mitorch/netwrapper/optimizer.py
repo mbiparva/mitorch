@@ -41,9 +41,9 @@ def construct_optimizer(model, cfg):
     # Having a different weight decay on batchnorm might cause a performance
     # drop.
     optim_params = [
-        {"params": bn_params, "weight_decay": cfg.BN.WEIGHT_DECAY},
         {"params": non_bn_parameters, "weight_decay": cfg.SOLVER.WEIGHT_DECAY},
-    ]
+    ] + ([{"params": bn_params, "weight_decay": cfg.BN.WEIGHT_DECAY}] if len(bn_params) else [])
+
     # Check all parameters will be passed into optimizer.
     assert len(list(model.parameters())) == len(non_bn_parameters) + len(
         bn_params
@@ -123,9 +123,9 @@ def construct_scheduler(optimizer, cfg):
             return optim.lr_scheduler.LambdaLR(optimizer,
                                                lr_lambda=lr_lambda)
         elif cfg.SOLVER.SCHEDULER_TYPE == 'plateau':
-            return optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-                                                        factor=0.1,
-                                                        patience=10,
+            return ReduceLROnPlateau(optimizer,
+                                                        factor=0.5,
+                                                        patience=5,
                                                         cooldown=0,
                                                         verbose=True)
         elif cfg.SOLVER.SCHEDULER_TYPE == 'cosine':
@@ -151,3 +151,15 @@ class StepLRestart(optim.lr_scheduler._LRScheduler):
     def get_lr(self):
         return [base_lr * self.gamma ** ((self.last_epoch % self.restart_size) // self.step_size)
                 for base_lr in self.base_lrs]
+
+
+# add get_last_lr to ReduceLROnPlateau to remain compatible with other types
+class ReduceLROnPlateau(optim.lr_scheduler.ReduceLROnPlateau):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._last_lr = [group['lr'] for group in self.optimizer.param_groups]
+
+    def get_last_lr(self):
+        """ Return last computed learning rate by current scheduler.
+        """
+        return self._last_lr

@@ -56,7 +56,7 @@ _C.TRAIN.ENABLE = True
 _C.TRAIN.HPO = (False, True)[0]
 
 # Dataset.
-_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb')[1]
+_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb')[0]
 
 # Input Modalities
 _C.TRAIN.IN_MOD = {
@@ -121,7 +121,7 @@ _C.TEST = CfgNode()
 _C.TEST.ENABLE = False
 
 # Dataset for testing.
-_C.TEST.DATASET = ('SRIBILhfbTest', 'LEDUCQTest', 'PPMITest')[2]
+_C.TEST.DATASET = ('SRIBILhfbTest', 'LEDUCQTest', 'PPMITest', 'SRIBILTest')[3]
 
 # Input Modalities
 _C.TEST.IN_MOD = {
@@ -142,7 +142,12 @@ _C.TEST.IN_MOD = {
         ('fl', 'T1acq_nu_FL.img'),
         ('annot', 'T1acq_nu_HfBd.img'),
         # ('t2', 'T1acq_nu_T2.img'),
-    ]
+    ],
+    'SRIBILTest': [
+        ('t1', 'T1_nu.nii.gz'),
+        ('fl', 'T1acq_nu_FL.nii.gz'),
+        ('annot', 'wmh_seg.nii.gz'),
+    ],
 }[_C.TEST.DATASET]
 
 # Total mini-batch size
@@ -243,7 +248,7 @@ _C.DATA.PADDING_MODE = ('mean', 'median', 'min', 'max')[0]
 
 # Dataset enforces canonical orientation and diagonality upon loading nii volumes
 _C.DATA.ENFORCE_NIB_CANONICAL = (False, True)[0]
-_C.DATA.ENFORCE_DIAG = (False, True)[1]
+_C.DATA.ENFORCE_DIAG = (False, True)[0]
 
 # Data transformation pipeline experimentation
 _C.DATA.EXP = CfgNode()
@@ -285,10 +290,10 @@ _C.SOLVER.WEIGHT_DECAY = 1e-5
 _C.SOLVER.OPTIMIZING_METHOD = ('sgd', 'adadelta', 'adagrad', 'rmsprop', 'adam')[2]
 
 # Enable Scheduler
-_C.SOLVER.SCHEDULER_MODE = False
+_C.SOLVER.SCHEDULER_MODE = True
 
 # Set the type of scheduler
-_C.SOLVER.SCHEDULER_TYPE = ('step', 'step_restart', 'multi', 'lambda', 'plateau', 'cosine')[0]
+_C.SOLVER.SCHEDULER_TYPE = ('step', 'step_restart', 'multi', 'lambda', 'plateau', 'cosine')[-2]
 
 # ---------------------------------------------------------------------------- #
 # Misc options

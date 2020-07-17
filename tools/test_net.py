@@ -21,6 +21,7 @@ import utils.checkpoint as checkops
 from data.build import build_dataset
 from utils.metrics import dice_coefficient_metric, jaccard_index_metric, hausdorff_distance_metric
 from config.defaults import init_cfg
+from netwrapper.net_wrapper import NetWrapperHFB, NetWrapperWMH
 
 
 def binarize_pred(p, binarize_threshold):
@@ -60,6 +61,7 @@ def eval_pred(p, a, meters, cfg):
     meters['hausdorff_dist'] = hausdorff_distance_metric(p, a, ignore_index=cfg.MODEL.IGNORE_INDEX)
 
 
+@torch.no_grad()
 def test(cfg):
     # (0) initial setup
     os.rmdir(cfg.OUTPUT_DIR)  # it is useless, we use hpo_output_dir instead
@@ -89,14 +91,15 @@ def test(cfg):
         tf.RandomOrientationTo('RPI'),
         tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
 
-        tf.ResizeImageVolume(cfg.DATA.MAX_SIDE_SIZE, min_side=cfg.DATA.MIN_SIDE),
+        # tf.ResizeImageVolume(cfg.DATA.MAX_SIDE_SIZE, min_side=cfg.DATA.MIN_SIDE),
         # tf.PadToSizeVolume(cfg.DATA.MAX_SIDE_SIZE, padding_mode=cfg.DATA.PADDING_MODE),
 
         tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
-        tf.NormalizeMeanStdVolume(mean=cfg.DATA.MEAN, std=cfg.DATA.STD, inplace=True),
+        # tf.NormalizeMeanStdVolume(mean=cfg.DATA.MEAN, std=cfg.DATA.STD, inplace=True),
     ])
     # Define any test dataset with annotation as known dataset otherwise call TestSet
     if len(cfg.TEST.DATA_PATH):
+        assert not cfg.WMH.ENABLE, 'batch or single mode is undefined for WMH Segmentation'
         print('you chose {} mode'.format(('single', 'batch')[cfg.TEST.BATCH_MODE]))
         eval_pred_flag = False
         save_pred_flag = True
@@ -109,6 +112,9 @@ def test(cfg):
             ('t1', 'T1_nu.img'),
             ('fl', 'T1acq_nu_FL.img'),
             # ('annot', 'T1acq_nu_HfBd.img'),
+            # ('t1', 'T1_nu.nii.gz'),  # wmh test cases
+            # ('fl', 'T1acq_nu_FL.nii.gz'),
+            # ('annot', 'wmh_seg.nii.gz'),
         ]
         test_set = TestSet(cfg, 'test', transformations)
     else:
@@ -125,9 +131,13 @@ def test(cfg):
                              )
 
     # (3) create network and load snapshots
-    net = build_model(cfg, 0)
-    checkops.load_checkpoint(cfg.TEST.CHECKPOINT_FILE_PATH, net, data_parallel=False)
-    net.eval()
+    if cfg.WMH.ENABLE:
+        net_wrapper = NetWrapperWMH(device, cfg)
+    else:
+        net_wrapper = NetWrapperHFB(device, cfg)
+
+    checkops.load_checkpoint(cfg.TEST.CHECKPOINT_FILE_PATH, net_wrapper.net_core, data_parallel=False)
+    net_wrapper.net_core.eval()
 
     # (4) loop over samples
     meters_test_set = list()
@@ -139,7 +149,10 @@ def test(cfg):
         annot = annot.to(device, non_blocking=True)
 
         # (A) Get prediction
-        pred = net(image)
+        if cfg.WMH.ENABLE:
+            pred, annot, image = net_wrapper.forward((image, annot), return_input=True)
+        else:
+            pred = net_wrapper.forward(image)
 
         # (B) Threshold prediction
         pred = binarize_pred(pred, binarize_threshold=cfg.TEST.BINARIZE_THRESHOLD)

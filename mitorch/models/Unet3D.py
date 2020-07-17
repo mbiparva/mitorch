@@ -27,7 +27,7 @@ def pad_if_necessary(x, x_b):
         padding_tensor = torch.stack((padding_size_l, padding_size_r)).T.flatten().flip(dims=(0,)).tolist()
         return x, nn.functional.pad(x_b, pad=padding_tensor, mode='constant', value=0)
     else:
-        return x[:, :, :x_b.size(2), :x_b.size(3), :x_b.size(4)], x_b
+        return x[:, :, :x_b.size(2), :x_b.size(3), :x_b.size(4)].contiguous(), x_b
 
 
 class BasicBlock(nn.Sequential):

@@ -100,24 +100,24 @@ class NetWrapperWMH(NetWrapper):
         self.net_core = build_model(self.cfg, device)
 
     def _create_net_hfb(self, device):
-        # REMOVE IT
-        N_BASE_FILTERS = self.cfg.MODEL.N_BASE_FILTERS
-        ENCO_DEPTH = self.cfg.MODEL.ENCO_DEPTH
-        DROPOUT_RATE = self.cfg.MODEL.DROPOUT_RATE
-        self.cfg.MODEL.N_BASE_FILTERS = 16
-        self.cfg.MODEL.ENCO_DEPTH = 5
-        self.cfg.MODEL.DROPOUT_RATE = 0.25
-        # REMOVE IT
+        # # REMOVE IT
+        # N_BASE_FILTERS = self.cfg.MODEL.N_BASE_FILTERS
+        # ENCO_DEPTH = self.cfg.MODEL.ENCO_DEPTH
+        # DROPOUT_RATE = self.cfg.MODEL.DROPOUT_RATE
+        # self.cfg.MODEL.N_BASE_FILTERS = 16
+        # self.cfg.MODEL.ENCO_DEPTH = 5
+        # self.cfg.MODEL.DROPOUT_RATE = 0.25
+        # # REMOVE IT
 
         self.net_core_hfb = build_model(self.cfg, device)
         self.load_checkpoint_hfb(self.cfg.WMH.HFB_CHECKPOINT)
         self.net_core_hfb.eval()
 
-        # REMOVE IT
-        self.cfg.MODEL.N_BASE_FILTERS = N_BASE_FILTERS
-        self.cfg.MODEL.ENCO_DEPTH = ENCO_DEPTH
-        self.cfg.MODEL.DROPOUT_RATE = DROPOUT_RATE
-        # REMOVE IT
+        # # REMOVE IT
+        # self.cfg.MODEL.N_BASE_FILTERS = N_BASE_FILTERS
+        # self.cfg.MODEL.ENCO_DEPTH = ENCO_DEPTH
+        # self.cfg.MODEL.DROPOUT_RATE = DROPOUT_RATE
+        # # REMOVE IT
 
     def load_checkpoint_hfb(self, ckpnt_path):
         checkops.load_checkpoint(ckpnt_path, self.net_core_hfb, data_parallel=self.cfg.NUM_GPUS > 1)
@@ -131,11 +131,14 @@ class NetWrapperWMH(NetWrapper):
             self.net_wrapper.optimizer
         )
 
-    def forward(self, x):
+    def forward(self, x, return_input=False):
         x, annotation = self.hfb_extract(x)
-        x = self.net_core(x)
+        pred = self.net_core(x)
 
-        return x, annotation
+        if return_input:
+            return pred, annotation, x
+        else:
+            return pred, annotation
 
     @staticmethod
     def binarize_pred(p, binarize_threshold):
@@ -154,19 +157,19 @@ class NetWrapperWMH(NetWrapper):
         if self.cfg.WMH.CROPPING:
             pad_amount = 2
 
-            def pad_lower_clamp(value):
-                return max(0, value - pad_amount)
+            def pad_lower_clamp(value, m_value=0):
+                return max(m_value, value - pad_amount)
 
-            def pad_upper_clamp(value):
-                return min(d, value + pad_amount)
+            def pad_upper_clamp(value, m_value):
+                return min(m_value, value + pad_amount)
 
             return [
                 x[
                     i,
                     :,
-                    pad_lower_clamp(cropping_box[i][0][0]): pad_upper_clamp(cropping_box[i][1][0]),  # max is inclusive
-                    pad_lower_clamp(cropping_box[i][0][1]): pad_upper_clamp(cropping_box[i][1][1]),
-                    pad_lower_clamp(cropping_box[i][0][2]): pad_upper_clamp(cropping_box[i][1][2])
+                    pad_lower_clamp(cropping_box[i][0][0]): pad_upper_clamp(cropping_box[i][1][0], d) + 1,
+                    pad_lower_clamp(cropping_box[i][0][1]): pad_upper_clamp(cropping_box[i][1][1], h) + 1,
+                    pad_lower_clamp(cropping_box[i][0][2]): pad_upper_clamp(cropping_box[i][1][2], w) + 1
                 ] for i in range(b)
             ]
         else:
@@ -237,6 +240,12 @@ class NetWrapperWMH(NetWrapper):
         return annotation
 
     def hfb_extract(self, x):
+        # REMOVE IT
+        # from test_net import save_pred
+        # import time
+        # time_id = str(int(time.time()))
+        # save_dir = '/gpfs/fs0/scratch/m/mgoubran/mbiparva/wmh_pytorch/tools/samples'
+
         x, annotation = x
 
         if self.cfg.WMH.HFB_GT:
@@ -245,6 +254,8 @@ class NetWrapperWMH(NetWrapper):
             annotation = annotation.squeeze(1)
             pred = self.compute_pred(x)
         annotation = annotation.unsqueeze(1)
+        # save_pred(pred.unsqueeze(1), save_dir, time_id+'_hfb', *[x])
+        # save_pred(annotation, save_dir, time_id+'_wmh')
 
         # generate cropping_box
         cropping_box = self.gen_cropping_box(pred)
@@ -257,5 +268,8 @@ class NetWrapperWMH(NetWrapper):
 
         # crop and resize-pad annotation
         annotation = self.resize_crop_pad_annot(annotation, cropping_box)
+
+        # REMOVE IT
+        # save_pred(annotation, save_dir, time_id, *[x])
 
         return x, annotation

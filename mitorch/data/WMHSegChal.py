@@ -55,5 +55,6 @@ class WMHSegmentationChallenge(VolSetABC):
             cat_labels
         )
         if 2 in cat_labels:
-            annot_tensor[annot_tensor == 2] = ignore_index  # TODO check this with Unet3D to see what is done there.
+            annot_tensor[annot_tensor == 2] = ignore_index
+            # annot_tensor[annot_tensor == 2] = 0
         return annot_tensor

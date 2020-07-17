@@ -8,5 +8,5 @@
 
 from .build import DATASET_REGISTRY, build_dataset
 from .WMHSegChal import WMHSegmentationChallenge
-from .SRIBILSet import SRIBIL, SRIBILhfb, SRIBILhfbTest, LEDUCQTest, PPMITest
+from .SRIBILSet import SRIBIL, SRIBILhfb, SRIBILhfbTest, LEDUCQTest, PPMITest, SRIBILTest
 
