@@ -55,6 +55,6 @@ class WMHSegmentationChallenge(VolSetABC):
             cat_labels
         )
         if 2 in cat_labels:
-            annot_tensor[annot_tensor == 2] = ignore_index
-            # annot_tensor[annot_tensor == 2] = 0
+            # annot_tensor[annot_tensor == 2] = ignore_index  # This was problematic -- TODO check dice loss
+            annot_tensor[annot_tensor == 2] = 0
         return annot_tensor

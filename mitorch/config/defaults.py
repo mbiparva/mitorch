@@ -56,7 +56,7 @@ _C.TRAIN.ENABLE = True
 _C.TRAIN.HPO = (False, True)[0]
 
 # Dataset.
-_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb')[0]
+_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb', 'TRAP', 'CAPTURE')[4]
 
 # Input Modalities
 _C.TRAIN.IN_MOD = {
@@ -75,7 +75,9 @@ _C.TRAIN.IN_MOD = {
         ('fl', 'fl.nii.gz'),
         # ('t2', 't2.nii.gz'),
         ('annot', 'truth.nii.gz'),
-        ]
+        ],
+    'TRAP': [],
+    'CAPTURE': [],
 }[_C.TRAIN.DATASET]
 
 if socket.gethostname() == 'cerveau.sri.utoronto.ca':
@@ -287,7 +289,7 @@ _C.SOLVER.WEIGHT_DECAY = 1e-5
 # TODO add warup and scheduler hypers here
 
 # Optimization method.
-_C.SOLVER.OPTIMIZING_METHOD = ('sgd', 'adadelta', 'adagrad', 'rmsprop', 'adam')[2]
+_C.SOLVER.OPTIMIZING_METHOD = ('sgd', 'adadelta', 'adagrad', 'rmsprop', 'adam')[4]
 
 # Enable Scheduler
 _C.SOLVER.SCHEDULER_MODE = True
@@ -340,7 +342,7 @@ _C.HPO.RANGE_START = 0
 # length of the HPO range --- MUST BE SET
 _C.HPO.RANGE_LEN = 0
 
-_C.HPO.EVAL_METRIC = _C.PROJECT.METERS[2]  # ['loss', 'r2', 'mse', 'mae']  # TODO Update Meters modules
+_C.HPO.EVAL_METRIC = _C.PROJECT.METERS[1]
 
 _C.HPO.TOTAL_TRIALS = 100
 
@@ -370,6 +372,15 @@ _C.WMH.PADDING_MODE = ('mean', 'median', 'min', 'max')[0]
 
 _C.WMH.CROPPING = (False, True)[0]
 _C.WMH.RESIZING_PADDING = (False, True)[0]
+
+
+# # ---------------------------------------------------------------------------- #
+# # Neuron and Virus Tracing Segmentation options
+# # ---------------------------------------------------------------------------- #
+_C.NVT = CfgNode()
+
+# Whether NVT is enabled
+_C.NVT.ENABLE = True if _C.TRAIN.DATASET in ('TRAP', 'CAPTURE') else False
 
 
 def init_cfg(cfg, parent_dir=''):

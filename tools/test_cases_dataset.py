@@ -36,7 +36,7 @@ def main():
     dataset_name = cfg.TRAIN.DATASET
     mode = 'training'
     max_side = 192
-    crop_size, crop_scale = 176, (0.80, 1.0)
+    crop_size, crop_scale = 64, (0.80, 1.0)
     # transformations = ComposePrintSize([
     #     tf.ToTensorImageVolume(),
     #     tf.RandomOrientationTo('ARI', prand=True),
@@ -55,15 +55,16 @@ def main():
     #     ),
     #     ])
     transformations = ComposePrintSize([
-        tf.ToTensorImageVolume(),
-        tf.RandomOrientationTo('ARI'),
-        tf.RandomResampleTomm(target_spacing=(1.0, 1.0, 1.0)),
-        tf.ResizeImageVolume(max_side, min_side=False),
-        tf.PadToSizeVolume(max_side, padding_mode='mean'),
-        tf.RandomResizedCropImageVolume(crop_size, scale=crop_scale),
+        # tf.ToTensorImageVolume(),
+        # tf.RandomOrientationTo('ARI'),
+        # tf.RandomResampleTomm(target_spacing=(1.0, 1.0, 1.0)),
+        # tf.ResizeImageVolume(max_side, min_side=False),
+        # tf.PadToSizeVolume(max_side, padding_mode='mean'),
+        tf.RandomCropImageVolume(crop_size, prand=True),
+        # tf.RandomResizedCropImageVolume(crop_size, scale=crop_scale),
         tf.RandomFlipImageVolume(dim=-1),
         # ------------- Intensity Pipeline ------------------
-        tf.RandomBrightness(value=(-0.25, +0.25)[1], prand=True, channel_wise=False),
+        # tf.RandomBrightness(value=(-0.25, +0.25)[1], prand=True, channel_wise=False),
         # tf.RandomContrast(value=(-0.25, +0.25)[1]),
         # tf.RandomGamma(value=(0.25, 2.0)[0], prand=True),
         # tf.LogCorrection(inverse=(False, True)[0]),
@@ -73,18 +74,18 @@ def main():
         #                  out_of_bound_mode=('normalize', 'clamp')[1], prand=False),
         # ---------------------------------------------------
         tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
-        tf.NormalizeMeanStdVolume(
-            mean=[0.18278566002845764, 0.1672040820121765],
-            std=[0.018310515210032463, 0.017989424988627434],
-            inplace=True
-        ),
+        # tf.NormalizeMeanStdVolume(
+        #     mean=[0.18278566002845764, 0.1672040820121765],
+        #     std=[0.018310515210032463, 0.017989424988627434],
+        #     inplace=True
+        # ),
         ])
     dataset = build_dataset(dataset_name, cfg, mode, transformations)
     dataloader = DataLoader(
         dataset,
-        batch_size=2,
+        batch_size=4,
         shuffle=False,
-        num_workers=0,
+        num_workers=4,
         pin_memory=False,
         drop_last=True,
         collate_fn=collate_fn,
