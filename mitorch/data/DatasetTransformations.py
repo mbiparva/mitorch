@@ -11,8 +11,9 @@ from abc import ABC, abstractmethod
 
 
 class BaseTransformations(ABC):
-    def __init__(self, cfg):
+    def __init__(self, cfg, mode):
         self.cfg = cfg
+        self.mode = mode
 
     def __call__(self, *args, **kwargs):
         return self.create_transform()
@@ -24,8 +25,8 @@ class BaseTransformations(ABC):
 
 @TRANSFORMATION_REGISTRY.register()
 class HFBTransformations(BaseTransformations):
-    def __init__(self, cfg):
-        super().__init__(cfg)
+    def __init__(self, cfg, mode):
+        super().__init__(cfg, mode)
 
     def create_transform(self):
         # --- BODY ---
@@ -68,8 +69,8 @@ class HFBTransformations(BaseTransformations):
 
 @TRANSFORMATION_REGISTRY.register()
 class WMHTransformations(BaseTransformations):
-    def __init__(self, cfg):
-        super().__init__(cfg)
+    def __init__(self, cfg, mode):
+        super().__init__(cfg, mode)
 
     def create_transform(self):
         # --- BODY ---
@@ -100,8 +101,8 @@ class WMHTransformations(BaseTransformations):
 
 @TRANSFORMATION_REGISTRY.register()
 class NVTTransformations(BaseTransformations):
-    def __init__(self, cfg):
-        super().__init__(cfg)
+    def __init__(self, cfg, mode):
+        super().__init__(cfg, mode)
 
     def create_transform(self):
         # --- BODY ---

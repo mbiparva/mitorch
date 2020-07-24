@@ -120,6 +120,9 @@ class RandomOrientationTo(Randomizable):
             meta
         )
 
+    def __repr__(self):
+        return self.__class__.__name__ + '(target_orient={0})'.format(self.target_orient)
+
 
 class RandomResampleTomm(Randomizable):
     def __init__(self, target_spacing=(1, 1, 1), target_spacing_scale=(0.2, 0.2, 0.2),

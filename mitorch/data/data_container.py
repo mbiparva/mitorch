@@ -198,12 +198,16 @@ class DataContainer:
         CHOOSE_BEST_TRANSFORMS = (False, True)[1]
         CHOOSE_HPO_TRANSFORMS = (False, True)[0]
         if CHOOSE_BEST_TRANSFORMS:
-            return build_transformations(self.dataset_name, self.cfg)()
+            transformations = build_transformations(self.dataset_name, self.cfg, self.mode)()
         else:
             if CHOOSE_HPO_TRANSFORMS:
-                return self.create_transform_hpo()
+                transformations = self.create_transform_hpo()
             else:
-                return self.create_transform_single()
+                transformations = self.create_transform_single()
+
+        self.cfg.transformations = transformations.__str__()
+
+        return transformations
 
     def data_split_pa_ind(self):
         with open(os.path.join(self.cfg.PROJECT.DATASET_DIR, 'wmh_validation_subjs.txt'), 'r') as fh:

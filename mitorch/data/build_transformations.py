@@ -18,11 +18,13 @@ The call should return a `torch.utils.data.Dataset` object.
 
 
 # noinspection PyCallingNonCallable
-def build_transformations(dataset_name, cfg):
+def build_transformations(dataset_name, cfg, mode):
     """
     Build a dataset, defined by `dataset_name`.
     Args:
         dataset_name (str): the name of the dataset to be constructed.
+        mode (str): the split of the data loader. Options include `train`,
+            `val`, and `test`.
         cfg (CfgNode): configs.
     Returns:
         Dataset: a constructed transformation list specified by dataset_name.
@@ -35,4 +37,4 @@ def build_transformations(dataset_name, cfg):
         name = 'NVTTransformations'
     else:
         raise NotImplementedError
-    return TRANSFORMATION_REGISTRY.get(name)(cfg)
+    return TRANSFORMATION_REGISTRY.get(name)(cfg, mode)
