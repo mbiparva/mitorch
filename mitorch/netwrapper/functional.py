@@ -112,14 +112,25 @@ def _hausdorff_distance_func(e_1, e_2, maximum=True, percentile=95):
         one_from_two = one_from_two.max()
         two_from_one = two_from_one.max()
     else:
-        try:  # IndexError is raised at BOAX with "cannot do a non-empty take from an empty axes"
-            one_from_two = np.percentile(one_from_two, percentile)
-            two_from_one = np.percentile(two_from_one, percentile)
-        except Exception as e:
-            print('CAUGHT:', e)
-            print('LARGE_NUMBER assigned instead')
-            one_from_two = LARGE_NUMBER
-            two_from_one = LARGE_NUMBER
+        one_from_two = np.percentile(one_from_two, percentile)
+        # it seems this makes issue and since gt is empty, I set 0
+        two_from_one = np.percentile(two_from_one, percentile) if len(two_from_one) else 0
+        # try:  # IndexError is raised at BOAX with "cannot do a non-empty take from an empty axes"
+        #     one_from_two = np.percentile(one_from_two, percentile)
+        # except Exception as e:
+        #     print('CAUGHT:', e)
+        #     print('LARGE_NUMBER assigned instead')
+        #     one_from_two = LARGE_NUMBER
+        # try:  # IndexError is raised at BOAX with "cannot do a non-empty take from an empty axes"
+        #     two_from_one = np.percentile(two_from_one, percentile)
+        # except Exception as e:
+        #     if not e_2_per.any():
+        #         print('annot is all zero hence h95 metric is empty for two_from_one')
+        #         two_from_one = 0
+        #     else:
+        #         print('CAUGHT:', e)
+        #         print('LARGE_NUMBER assigned instead')
+        #         two_from_one = LARGE_NUMBER
     # TODO we can even use mean
 
     return np.max((one_from_two, two_from_one))
