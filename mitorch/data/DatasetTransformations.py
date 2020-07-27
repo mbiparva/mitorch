@@ -78,13 +78,13 @@ class WMHTransformations(BaseTransformations):
             transformations_body = [
                 tf.ToTensorImageVolume(),
                 tf.RandomOrientationTo('RPI'),
-                # tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
+                tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
             ]
         elif self.mode in ('valid', 'test'):
             transformations_body = [
                 tf.ToTensorImageVolume(),
                 tf.RandomOrientationTo('RPI'),
-                # tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
+                tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
             ]
         else:
             raise NotImplementedError

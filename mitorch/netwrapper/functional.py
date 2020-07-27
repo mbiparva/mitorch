@@ -112,7 +112,7 @@ def _hausdorff_distance_func(e_1, e_2, maximum=True, percentile=95):
         one_from_two = one_from_two.max()
         two_from_one = two_from_one.max()
     else:
-        one_from_two = np.percentile(one_from_two, percentile)
+        one_from_two = np.percentile(one_from_two, percentile) if len(one_from_two) else LARGE_NUMBER
         # it seems this makes issue and since gt is empty, I set 0
         two_from_one = np.percentile(two_from_one, percentile) if len(two_from_one) else 0
         # try:  # IndexError is raised at BOAX with "cannot do a non-empty take from an empty axes"
