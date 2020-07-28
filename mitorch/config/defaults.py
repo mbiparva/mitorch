@@ -187,11 +187,11 @@ _C.MODEL.ARCH = "unet3d"
 # Model name
 _C.MODEL.MODEL_NAME = ('Unet3D', )[0]
 
-# The number of classes to predict for the model.
-_C.MODEL.NUM_CLASSES = 1
-
 # Loss function.
-_C.MODEL.LOSS_FUNC = ('CrossEntropyLoss', 'DiceLoss', 'WeightedHausdorffLoss')[1]
+_C.MODEL.LOSS_FUNC = ('CrossEntropyLoss', 'DiceLoss', 'WeightedHausdorffLoss')[0]
+
+# The number of classes to predict for the model.
+_C.MODEL.NUM_CLASSES = 2 if _C.MODEL.LOSS_FUNC == 'CrossEntropyLoss' else 1
 
 _C.MODEL.LOSS_AUG_WHL = (False, True)[0]
 _C.MODEL.WHL_NUM_DEPTH_SHEETS = (2, 4, 8)[2]

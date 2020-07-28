@@ -62,6 +62,7 @@ class BatchBase(ABC):
         p = p.softmax(dim=1)
         p = p[:, 1, ...]
         p = p.unsqueeze(dim=1)
+        a = a.unsqueeze(dim=1)
         a = a.float()
 
         return p, a
