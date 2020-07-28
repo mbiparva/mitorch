@@ -56,7 +56,7 @@ _C.TRAIN.ENABLE = True
 _C.TRAIN.HPO = (False, True)[0]
 
 # Dataset.
-_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb', 'TRAP', 'CAPTURE')[3]
+_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb', 'TRAP', 'CAPTURE')[4]
 
 # Input Modalities
 _C.TRAIN.IN_MOD = {
@@ -76,8 +76,8 @@ _C.TRAIN.IN_MOD = {
         # ('t2', 't2.nii.gz'),
         ('annot', 'truth.nii.gz'),
         ],
-    'TRAP': [],
-    'CAPTURE': [],
+    'TRAP': [[], [], []],  # just to imitate the typical behaviour for INPUT_CHANNELS
+    'CAPTURE': [[], []],
 }[_C.TRAIN.DATASET]
 
 if socket.gethostname() == 'cerveau.sri.utoronto.ca':
