@@ -56,7 +56,7 @@ _C.TRAIN.ENABLE = True
 _C.TRAIN.HPO = (False, True)[0]
 
 # Dataset.
-_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb', 'TRAP', 'CAPTURE')[4]
+_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb', 'TRAP', 'CAPTURE')[3]
 
 # Input Modalities
 _C.TRAIN.IN_MOD = {
@@ -381,6 +381,7 @@ _C.NVT = CfgNode()
 
 # Whether NVT is enabled
 _C.NVT.ENABLE = True if _C.TRAIN.DATASET in ('TRAP', 'CAPTURE') else False
+_C.NVT.NUM_MULTI_PATCHES = 1
 
 
 def init_cfg(cfg, parent_dir=''):

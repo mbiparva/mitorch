@@ -21,6 +21,28 @@ from PIL import Image
 import shutil
 
 
+# noinspection PyUnresolvedReferences
+def collate_fn(batch):
+    elem = batch[0]
+    elem_type = type(elem)
+    if isinstance(elem, torch.Tensor):
+        out = None
+        if torch.utils.data.get_worker_info() is not None:
+            # If we're in a background process, concatenate directly into a
+            # shared memory tensor to avoid an extra copy
+            numel = sum([x.numel() for x in batch])
+            storage = elem.storage()._new_shared(numel)
+            out = elem.new(storage)
+        return torch.cat(batch, 0, out=out)
+    elif isinstance(elem, container_abcs.Mapping):  # this is called for the meta
+        return batch
+    elif isinstance(elem, container_abcs.Sequence):  # this is called at the beginning
+        transposed = zip(*batch)
+        return [collate_fn(samples) for samples in transposed]
+
+    raise TypeError(default_collate_err_msg_format.format(elem_type))
+
+
 class AutoPatching(ABC, data.Dataset):
     def __init__(self, cfg, mode, transform, **kwargs):
         super().__init__(**kwargs)
@@ -219,7 +241,14 @@ class AutoPatching(ABC, data.Dataset):
         image_tensor, annot_tensor = self.load_image_annot_patch(p_path)
 
         if self.transform is not None:
-            image_tensor, annot_tensor, in_pipe_meta = self.transform((image_tensor, annot_tensor, p_meta))
+            image_tensor_list, annot_tensor_list = list(), list()
+            for _ in range(self.cfg.NVT.NUM_MULTI_PATCHES):
+                image_tensor, annot_tensor, in_pipe_meta = self.transform((image_tensor, annot_tensor, p_meta))
+                image_tensor_list.append(image_tensor)
+                annot_tensor_list.append(annot_tensor)
+
+            image_tensor = torch.stack(image_tensor_list)
+            annot_tensor = torch.stack(annot_tensor_list)
 
         return image_tensor, annot_tensor, p_meta
 

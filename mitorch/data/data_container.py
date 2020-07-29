@@ -15,7 +15,8 @@ import torchvision.transforms as torch_tf
 from torch.utils.data import random_split
 from .build import build_dataset
 from .build_transformations import build_transformations
-from data.VolSet import collate_fn
+from data.VolSet import collate_fn as collate_fn_vol
+from data.NeuroSegSets import collate_fn as collate_fn_pat
 import os
 
 
@@ -44,6 +45,8 @@ class DataContainer:
         self.create_dataloader()
 
     def init_dl_params(self):
+        collate_fn = collate_fn_pat if self.cfg.NVT.ENABLE else collate_fn_vol
+
         if self.mode == 'train':
             dataset_name = self.cfg.TRAIN.DATASET
             batch_size = self.cfg.TRAIN.BATCH_SIZE
@@ -65,6 +68,7 @@ class DataContainer:
             'batch_size': batch_size,
             'shuffle': shuffle,
             'drop_last': drop_last,
+            'collate_fn': collate_fn,
         }
 
     def create_transform_single(self):
@@ -205,7 +209,7 @@ class DataContainer:
             else:
                 transformations = self.create_transform_single()
 
-        self.cfg.transformations = transformations.__str__()
+        self.save_transformations_str(transformations)
 
         return transformations
 
@@ -264,6 +268,8 @@ class DataContainer:
                                      num_workers=self.cfg.DATA_LOADER.NUM_WORKERS,
                                      pin_memory=self.cfg.DATA_LOADER.PIN_MEMORY,
                                      worker_init_fn=ds_worker_init_fn,
-                                     collate_fn=collate_fn,
                                      ** self.dl_params
                                      )
+
+    def save_transformations_str(self, transformations):
+        self.cfg.__setitem__(f'transformations_{self.mode}'.upper(), transformations.__str__())
