@@ -171,7 +171,7 @@ class RandomCropImageVolume(Randomizable):
         if 'prand' in kwargs and not kwargs['prand']:
             raise ValueError('If you want to turn prand off, use CenterCropImageVolume instead. '
                              'This one does crop location randomization by default')
-        kwargs['prand'] = True  # we always set prand to True for ths particular transform
+        kwargs['prand'] = True  # we always set prand to True for this particular transform
         super().__init__(*args, **kwargs)
         if isinstance(size, numbers.Number):
             self.size = (int(size), int(size), int(size))
@@ -224,6 +224,26 @@ class RandomCropImageVolume(Randomizable):
 
     def __repr__(self):
         return self.__class__.__name__ + '(size={0})'.format(self.size)
+
+
+class RandomCropImageVolumeConditional(RandomCropImageVolume):
+    def __init__(self, size, *args, **kwargs):
+        super().__init__(size, *args, **kwargs)
+        self.num_attemps = kwargs.get('num_attemps', 10)
+        self.threshold = kwargs.get('threshold', 0)
+
+        assert 0 < self.num_attemps, 'num of attempts must be > 0'
+        assert 0 <= self.threshold, 'threshold must be >= 0'
+
+    def __call__(self, volume):
+        image = annot = meta = None
+
+        for _ in range(self.num_attemps):
+            image, annot, meta = super().__call__(volume)
+            if annot.sum() > self.threshold:
+                break
+
+        return image, annot, meta
 
 
 # noinspection PyMissingConstructor

@@ -381,7 +381,17 @@ _C.NVT = CfgNode()
 
 # Whether NVT is enabled
 _C.NVT.ENABLE = True if _C.TRAIN.DATASET in ('TRAP', 'CAPTURE') else False
+
 _C.NVT.NUM_MULTI_PATCHES = 1
+
+_C.NVT.PATCH_SELECTION_POLICY = (False, True)[0]
+
+_C.NVT.ENFORCE_SELECTION_POLICY = (False, True)[0]
+
+_C.NVT.SELECTION_LB = 0
+
+_C.NVT.RANDOM_CROP_NUM_ATTEMPS = 20
+_C.NVT.RANDOM_CROP_THRESHOLD = 0
 
 
 def init_cfg(cfg, parent_dir=''):

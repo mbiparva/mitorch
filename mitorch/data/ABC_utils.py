@@ -22,7 +22,7 @@ class Transformable(ABC):
 
 
 class Randomizable(Transformable):
-    def __init__(self, prand=False):
+    def __init__(self, prand=False, **kwargs):
         """
         Sets the general randomization status of the transformation
         Args:

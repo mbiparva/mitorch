@@ -19,6 +19,7 @@ from collections import defaultdict
 import tifffile as tiff
 from PIL import Image
 import shutil
+import csv
 
 
 # noinspection PyUnresolvedReferences
@@ -67,6 +68,9 @@ class AutoPatching(ABC, data.Dataset):
 
         self.patch_list = self.list_pro_patches()
 
+        if self.cfg.NVT.PATCH_SELECTION_POLICY:
+            self.patch_list = self.load_save_selections()
+
     def _init_pars(self, cfg, mode, transform):
         self.cfg = cfg
         self.mode = mode
@@ -99,7 +103,7 @@ class AutoPatching(ABC, data.Dataset):
 
             s_path = os.path.join(dataset_pro_path, s)
 
-            # (1) Index Files for all channels
+            # (1) Index Files for all patches
             patch_list.extend([
                 os.path.join(s_path, i) for i in sorted(os.listdir(s_path))
             ])
@@ -242,10 +246,10 @@ class AutoPatching(ABC, data.Dataset):
 
         if self.transform is not None:
             image_tensor_list, annot_tensor_list = list(), list()
-            for _ in range(self.cfg.NVT.NUM_MULTI_PATCHES):
-                image_tensor, annot_tensor, in_pipe_meta = self.transform((image_tensor, annot_tensor, p_meta))
-                image_tensor_list.append(image_tensor)
-                annot_tensor_list.append(annot_tensor)
+            for _ in range(max(1, self.cfg.NVT.NUM_MULTI_PATCHES)):
+                image_tensor_patch, annot_tensor_patch, _ = self.transform((image_tensor, annot_tensor, p_meta))
+                image_tensor_list.append(image_tensor_patch)
+                annot_tensor_list.append(annot_tensor_patch)
 
             image_tensor = torch.stack(image_tensor_list)
             annot_tensor = torch.stack(annot_tensor_list)
@@ -286,6 +290,26 @@ class AutoPatching(ABC, data.Dataset):
     @abstractmethod
     def is_data_dir(self, sample_dir_name):
         pass
+
+    def select_patches(self):
+        return [
+            p for p in self.patch_list if tiff.imread(p)[:, -1, :, :].sum() > self.cfg.NVT.SELECTION_LB
+        ]
+
+    def load_save_selections(self):
+        selected_patch_path = os.path.join(self.dataset_path, f'patch_selection_policy_{self.cfg.NVT.SELECTION_LB}.csv')
+        if self.cfg.NVT.ENFORCE_SELECTION_POLICY or not os.path.exists(selected_patch_path):
+            self.cfg.NVT.ENFORCE_SELECTION_POLICY = False  # once done in training, don't need to repeat in valid
+            patch_list = self.select_patches()
+            with open(selected_patch_path, 'w') as fh:
+                csv.writer(fh).writerow(patch_list)
+        else:
+            with open(selected_patch_path, 'r') as fh:
+                patch_list = list(csv.reader(fh))[0]
+
+        print(f'{patch_list}|{self.patch_list} large patches are selected.')
+
+        return patch_list
 
 
 @DATASET_REGISTRY.register()

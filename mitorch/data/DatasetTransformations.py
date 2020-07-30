@@ -108,7 +108,9 @@ class NVTTransformations(BaseTransformations):
         # --- BODY ---
         if self.mode == 'train':
             transformations_body = [
-                tf.RandomCropImageVolume(self.cfg.DATA.CROP_SIZE, prand=True),
+                tf.RandomCropImageVolumeConditional(self.cfg.DATA.CROP_SIZE, prand=True,
+                                                    num_attemps=self.cfg.NVT.RANDOM_CROP_NUM_ATTEMPS,
+                                                    threshold=self.cfg.NVT.RANDOM_CROP_THRESHOLD),
                 tf.RandomFlipImageVolume(dim=-1),
             ]
         elif self.mode in ('valid', 'test'):
