@@ -95,12 +95,9 @@ class BatchBase(ABC):
 
             image = image.to(self.device, non_blocking=True)
             annotation = annotation.to(self.device, non_blocking=True)
-            # print('img: ', [
-            #     int(i.sum()) for i in image
+            # print('annotation sum: ', [
+            #     int(i.sum()) for i in annotation
             # ])
-            print('ant', [
-                int(i.sum()) for i in annotation
-            ])
 
             self.batch_main(netwrapper, image, annotation)
 

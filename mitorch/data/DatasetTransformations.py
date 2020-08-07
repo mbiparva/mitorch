@@ -111,7 +111,7 @@ class NVTTransformations(BaseTransformations):
                 tf.RandomCropImageVolumeConditional(self.cfg.DATA.CROP_SIZE, prand=True,
                                                     num_attemps=self.cfg.NVT.RANDOM_CROP_NUM_ATTEMPS,
                                                     threshold=self.cfg.NVT.RANDOM_CROP_THRESHOLD),
-                tf.RandomFlipImageVolume(dim=-1),
+                # tf.RandomFlipImageVolume(dim=-1),
             ]
         elif self.mode in ('valid', 'test'):
             transformations_body = [
@@ -122,7 +122,7 @@ class NVTTransformations(BaseTransformations):
 
         # --- TAIL ---
         transformations_tail = [
-            tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
+            # tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
         ]
 
         return torch_tf.Compose(

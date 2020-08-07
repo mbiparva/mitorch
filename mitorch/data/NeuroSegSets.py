@@ -20,6 +20,8 @@ import tifffile as tiff
 from PIL import Image
 import shutil
 import csv
+from tqdm import tqdm
+from joblib import Parallel, delayed
 
 
 # noinspection PyUnresolvedReferences
@@ -292,9 +294,48 @@ class AutoPatching(ABC, data.Dataset):
         pass
 
     def select_patches(self):
-        return [
-            p for p in self.patch_list if tiff.imread(p)[:, -1, :, :].sum() > self.cfg.NVT.SELECTION_LB
-        ]
+        selected_patches = list()
+        patch_sums = list()
+        parallel = True
+        PARALLEL_JOBS = self.cfg.DATA_LOADER.NUM_WORKERS
+
+        def par_job(p, cfg_nvt_selection_lb, annot_sanity_check):
+            patch_pj = annot_sanity_check(torch.tensor(tiff.imread(p)[:, -1, :, :].astype(np.float)))
+            patch_sum_pj = patch_pj.sum().int().item()
+            if patch_sum_pj > cfg_nvt_selection_lb:
+                return p, patch_sum_pj
+
+            return None, patch_sum_pj
+
+        if parallel:
+            par_outputs = np.array(
+                Parallel(n_jobs=PARALLEL_JOBS, require='sharedmem')(
+                    delayed(par_job)(*p) for p in zip(
+                        self.patch_list,
+                        [self.cfg.NVT.SELECTION_LB] * len(self.patch_list),
+                        [self.annot_sanity_check] * len(self.patch_list),
+                    )
+                )
+            )
+            selected_patches = [i[0] for i in par_outputs if i[0] is not None]
+            patch_sums = [i[1] for i in par_outputs]
+        else:
+            for p in tqdm(self.patch_list):
+                patch = self.annot_sanity_check(torch.tensor(tiff.imread(p)[:, -1, :, :].astype(np.float)))
+                patch_sum = patch.sum().int().item()
+                patch_sums.append(patch_sum)
+                if patch_sum > self.cfg.NVT.SELECTION_LB:
+                    selected_patches.append(p)
+
+        patch_sums_path = os.path.join(self.dataset_path, 'patch_sums.csv')
+        if not os.path.exists(patch_sums_path):
+            with open(patch_sums_path, 'w') as fh:
+                csv.writer(fh).writerow(patch_sums)
+            print('patch sums saved!')
+
+        print('*** patch sums are: \n\n', patch_sums)
+
+        return selected_patches
 
     def load_save_selections(self):
         selected_patch_path = os.path.join(self.dataset_path, f'patch_selection_policy_{self.cfg.NVT.SELECTION_LB}.csv')
@@ -307,7 +348,7 @@ class AutoPatching(ABC, data.Dataset):
             with open(selected_patch_path, 'r') as fh:
                 patch_list = list(csv.reader(fh))[0]
 
-        print(f'{patch_list}|{self.patch_list} large patches are selected.')
+        print(f'{len(patch_list)}|{len(self.patch_list)} large patches are selected.')
 
         return patch_list
 

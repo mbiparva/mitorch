@@ -11,10 +11,10 @@ from config.defaults import init_cfg
 from utils.hpo import *
 import train_net_hpo
 
-EXP_SEL = (0, 1, 2, 3, 4, 5, 6)[6]
+EXP_SEL = 7
 
-hp_set = [
-    {
+hp_set = {
+    0: {
         'SOLVER.BASE_LR': (
             1e-2,
             1e-3,
@@ -46,7 +46,7 @@ hp_set = [
             True,
         )
     },
-    {
+    1: {
         'DATA.EXP.HEAD_ORI': (
             0, 1
         ),
@@ -63,17 +63,17 @@ hp_set = [
             0, 1
         ),
     },
-    {
+    2: {
         'TRAIN.BATCH_SIZE': (
             1, 2, 4
         ),
     },
-    {
+    3: {
         'DATA.MAX_SIDE_SIZE': (
             192, 208, 224, 240, 256,
         ),
     },
-    {
+    4: {
         'DATA.CROP_SIZE': (
             3, 2, 1, 0,
         ),
@@ -86,7 +86,7 @@ hp_set = [
 
         )
     },
-    {
+    5: {
         'MODEL.WHL_NUM_DEPTH_SHEETS': (
             2, 4, 8,
         ),
@@ -94,12 +94,24 @@ hp_set = [
             0.12, 0.25, 0.5,
         )
     },
-    {
+    6: {
         'DATA.EXP.INTENSITY_SEL': (
             0, 1, 2, 3, 4, 5, 6, 7, 8
         ),
     },
-][EXP_SEL]
+    7: {
+        'NVT.RANDOM_CROP_THRESHOLD': (
+            0, 32, 64, 128, 256, 512, 1024
+        ),
+        # 'NVT.NUM_MULTI_PATCHES': (
+        #     4, 8, 16, 32, 64
+        # ),
+        # 'NVT.SELECTION_LB': (
+        #     0, 100, 200, 400, 800
+        #     16000, 32000, 64000, 128000, 256000, 512000
+        # ),
+    },
+}[EXP_SEL]
 
 
 def run(cfg, tb_hps_sw, len_exps, hpo_parent_dir):

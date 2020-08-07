@@ -163,7 +163,7 @@ class WeightedHausdorffLoss(_WeightedLoss):
             input_b, target_b = input[b], target[b]
 
             CUSTOM_DISTANCE = True
-            VERSION = (0, 1, 2)[2]
+            VERSION = (0, 1, 2)[0]
             if VERSION == 0:
                 NUM_ATTEMPTS = 10
                 ATTEMPT_DIVISOR = 0.5
