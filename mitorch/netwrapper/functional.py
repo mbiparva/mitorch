@@ -8,6 +8,8 @@ import torch
 import scipy.ndimage
 import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances
+import torch.nn as nn
+import torch.nn.functional as F
 
 
 def apply_ignore_index(input, target, ignore_index, fill_value=0):
@@ -212,30 +214,35 @@ def focal_loss(
 
     # compute softmax over the classes axis
     # input_soft: torch.Tensor = F.softmax(input, dim=1) + eps
-    input_soft = input  # input is already passed to Sigmoid. It is binary classification
+    # input = input + eps  # input is already passed to Sigmoid. It is binary classification
+    input = input.squeeze(dim=1)
 
     # create the labels one hot tensor
     # target_one_hot: torch.Tensor = one_hot(
     #     target, num_classes=input.shape[1],
     #     device=input.device, dtype=input.dtype)
-    target_one_hot = target.unsqueeze(dim=1)  # target is already one-hot since it is a binary classification problem
+    # target_one_hot = target.unsqueeze(dim=1)  # target is already one-hot since it is a binary classification problem
+
+    # loss = target_one_hot * torch.log(input_soft)
+    loss = nn.BCELoss(reduction='none')(input, target)
+    # loss = F.binary_cross_entropy(input, target, reduction='none')
 
     # compute the actual focal loss
-    weight = torch.pow(-input_soft + 1., gamma)
+    weight = torch.pow(-input + 1., gamma)
+    focal = alpha * weight
 
-    focal = -alpha * weight * torch.log(input_soft)
-    loss_tmp = torch.sum(target_one_hot * focal, dim=1)
+    floss = focal * loss
 
     if reduction == 'none':
-        loss = loss_tmp
+        pass
     elif reduction == 'mean':
-        loss = torch.mean(loss_tmp)
+        floss = torch.mean(floss)
     elif reduction == 'sum':
-        loss = torch.sum(loss_tmp)
+        floss = torch.sum(floss)
     else:
         raise NotImplementedError("Invalid reduction mode: {}"
                                   .format(reduction))
-    return loss
+    return floss
 
 
 if __name__ == '__main__':
