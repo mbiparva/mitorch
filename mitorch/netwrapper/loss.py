@@ -7,7 +7,6 @@
 from torch.nn.modules.loss import _WeightedLoss, CrossEntropyLoss
 from netwrapper.functional import dice_coeff, apply_ignore_index
 from .build import LOSS_REGISTRY
-
 import math
 import torch
 from sklearn.utils.extmath import cartesian
@@ -16,6 +15,8 @@ from torch import nn
 # TODO: Use cdist or pairwise_distances for other a comprehensive list of distances
 from scipy.spatial.distance import cdist
 from sklearn.metrics.pairwise import pairwise_distances
+import torch.nn.functional as F
+from .functional import focal_loss
 
 
 @LOSS_REGISTRY.register()
@@ -74,16 +75,10 @@ class WeightedHausdorffLoss(_WeightedLoss):
 
     @staticmethod
     def create_coordinate_list(input_shape):
-        input_depth, input_height, input_width = input_shape
-        d_range, h_range, w_range = np.arange(input_depth), np.arange(input_height), np.arange(input_width)
+        assert len(input_shape) > 1
+        shape_range = [np.arange(i) for i in input_shape]
 
-        volume_coordinates = torch.from_numpy(
-            cartesian([
-                d_range,
-                h_range,
-                w_range
-            ])
-        )
+        volume_coordinates = torch.from_numpy(cartesian(shape_range))
 
         return volume_coordinates
 
@@ -114,13 +109,13 @@ class WeightedHausdorffLoss(_WeightedLoss):
         estimate_num_points = input_b.sum()
 
         eps = 1e-6
-        alpha = 4
 
         # Weighted Hausdorff Distance
         input_term_b = (1 / (estimate_num_points + eps)) * (input_b_flat * torch.min(distance_matrix, 1)[0]).sum()
 
         PAPER_IMP = False
         if not PAPER_IMP:
+            alpha = 4
             target_term_b = torch.min((distance_matrix + eps) / (input_b_repeated ** alpha + eps / max_distance), 0)[0]
             target_term_b = torch.clamp(target_term_b, 0, max_distance)
             target_term_b = torch.mean(target_term_b, 0)
@@ -130,10 +125,131 @@ class WeightedHausdorffLoss(_WeightedLoss):
                 assert p < 0
                 return torch.mean((tensor + eps) ** p, dim, keepdim=keepdim) ** (1. / p)
 
-            POWER = -3
+            POWER = -4  # what paper use
             weighted_d_matrix = (1 - input_b_repeated) * max_distance + input_b_repeated * distance_matrix
             target_term_b = generaliz_mean(weighted_d_matrix, p=POWER, dim=0, keepdim=False)
             target_term_b = torch.mean(target_term_b)
+
+        return input_term_b, target_term_b
+
+    def compute_terms(self, input_b, target_b, input_shape, input_device, max_distance):
+        assert target_b.sum(), 'assertion raised since target_b == 0'
+
+        CUSTOM_DISTANCE = True
+        VERSION = (0, 1, 2)[2]  # 0 crashed out of memory with 64x3, 1 is a boundary approximation
+        if VERSION == 0:
+            NUM_ATTEMPTS = 10
+            ATTEMPT_DIVISOR = 0.5
+            WINDOW_SIZE = 0.3
+            assert 0 < WINDOW_SIZE < 0.5
+            LOWER_QUANTILE, UPPER_QUANTILE = 0.5 - WINDOW_SIZE, 0.5 + WINDOW_SIZE
+            input_b_np = input_b.detach().cpu().numpy().flatten()
+            target_b_nz, distance_matrix = None, None
+            for i in range(NUM_ATTEMPTS):
+                try:
+                    # TODO can avoid create_coordinate_list and use input_b.ge(lower_bound)
+                    # cuda throws out of memory error, use cpu, even that fails
+                    # input_b_nz = volume_coordinates.float().to('cpu')
+                    lower_bound = np.quantile(input_b_np, LOWER_QUANTILE)
+                    upper_bound = np.quantile(input_b_np, UPPER_QUANTILE)
+                    input_b_i = input_b.lt(lower_bound) | input_b.ge(upper_bound)
+                    input_b_nz = input_b_i.nonzero().float().to('cpu')
+                    target_b_nz = target_b.nonzero().float().to('cpu')
+
+                    assert input_b_nz.numel()
+
+                    if CUSTOM_DISTANCE:
+                        distance_matrix = cdist_custom_euclidean(input_b_nz, target_b_nz).to('cuda')
+                    else:
+                        input_b_nz = input_b_nz.detach().cpu().numpy()
+                        target_b_nz = target_b_nz.detach().cpu().numpy()
+                        distance_matrix = pairwise_distances(input_b_nz, target_b_nz, metric='euclidean', n_jobs=8)
+                    input_b = input_b[input_b_i]
+                    break
+                except RuntimeError as e:
+                    print('this error is thrown at the distance matrix calculation', e)
+                    print('try to tighten the lower and upper bounds by halt of the distances to the extremes')
+                    LOWER_QUANTILE = LOWER_QUANTILE * ATTEMPT_DIVISOR
+                    UPPER_QUANTILE = UPPER_QUANTILE + (1.0 - UPPER_QUANTILE) * ATTEMPT_DIVISOR
+            assert distance_matrix is not None, 'attempts failed to fit distance_matrix into memory'
+        elif VERSION == 1:
+            # version one crashes too, there are two options:
+            # (1) use for loop over depth
+            # (2) use hausdorff after some epoch once it is stable, as an auxiliary term ---> chose this one ;)
+            input_b_ge, target_b = input_b.ge(0.98), target_b.bool()
+            input_b_boundary, target_b_boundary = self._boundary_extraction_approximation(input_b_ge, target_b)
+            input_b_nz = input_b_boundary.nonzero().float()
+            target_b_nz = target_b_boundary.nonzero().float()
+            input_b = input_b[input_b_boundary]
+            if CUSTOM_DISTANCE:
+                input_b_nz = input_b_nz.to(input_device)
+                target_b_nz = target_b_nz.to(input_device)
+                distance_matrix = cdist_custom_euclidean(input_b_nz, target_b_nz)
+            else:
+                input_b_nz_np = input_b_nz.detach().cpu().numpy()
+                target_b_nz_np = target_b_nz.detach().cpu().numpy()
+                distance_matrix = pairwise_distances(input_b_nz_np, target_b_nz_np, metric='euclidean', n_jobs=12)
+                distance_matrix = torch.from_numpy(distance_matrix).to(input_device)
+        elif VERSION == 2:
+            UNIFORM_IND_SAMPLING = (False, True)[1]
+
+            # Use randomly weighted sampled depth sheets and measure loss at them.
+            max_distance = (input_shape[1:].float() ** 2).sum().sqrt().item()
+            input_term_b, target_term_b = list(), list()
+
+            target_b_r_weights = target_b.sum(-1).sum(-1)
+            assert target_b_r_weights.sum(), 'target_b_r_weights.sum() == 0'
+            print(target_b_r_weights.sum())
+
+            # TODO use some measure of overlap so the sheets with high error would have higher weights
+            if UNIFORM_IND_SAMPLING:
+                target_b_r_weights = target_b_r_weights.long().cpu().numpy()
+                target_b_r_weights_nz_i = np.where(target_b_r_weights != 0)[0]
+                depth_r_ind = np.random.choice(
+                    target_b_r_weights_nz_i, min(self.whl_num_depth_sheets, len(target_b_r_weights_nz_i)), replace=False
+                )
+            else:
+                depth_sampling_weights = target_b_r_weights / target_b_r_weights.sum()
+                depth_r_ind = torch.multinomial(depth_sampling_weights, self.whl_num_depth_sheets, replacement=False)
+            assert len(depth_r_ind)
+
+            ALL_COORD = (False, True)[1]
+            volume_coordinates = self.create_coordinate_list(input_shape[1:])
+            input_b_ge, target_b = input_b.ge(self.whl_seg_thr), target_b.bool()
+
+            for i in depth_r_ind:
+                if ALL_COORD:
+                    input_b_nz = volume_coordinates.float().to('cpu')
+                    input_b_i = input_b[i]
+                else:
+                    input_b_ge_i = input_b_ge[i]
+                    input_b_nz = input_b_ge_i.nonzero().float()
+                    input_b_i = input_b[i, input_b_ge_i]
+                if len(input_b_i) == 0:
+                    print('**** one depth sheet got zero prediction ove the threshold ****')
+                    continue
+                target_b_i = target_b[i]
+                target_b_nz = target_b_i.nonzero().float()
+                # CUSTOM_DISTANCE
+                input_b_nz = input_b_nz.to(input_device)
+                target_b_nz = target_b_nz.to(input_device)
+                distance_matrix = cdist_custom_euclidean(input_b_nz, target_b_nz)
+                input_term_b_i, target_term_b_i = self.calculate_terms(input_b_i, target_b_nz,
+                                                                       distance_matrix, max_distance)
+                input_term_b.append(input_term_b_i)
+                target_term_b.append(target_term_b_i)
+
+            assert len(input_term_b) and len(target_term_b), 'got all depth sheets zero'
+            input_term_b = torch.stack(input_term_b)
+            target_term_b = torch.stack(target_term_b)
+
+            input_term_b = input_term_b.mean()
+            target_term_b = target_term_b.mean()
+        else:
+            raise NotImplementedError
+
+        if not VERSION == 2:
+            input_term_b, target_term_b = self.calculate_terms(input_b, target_b_nz, distance_matrix, max_distance)
 
         return input_term_b, target_term_b
 
@@ -162,98 +278,18 @@ class WeightedHausdorffLoss(_WeightedLoss):
         for b in range(batch_size):
             input_b, target_b = input[b], target[b]
 
-            CUSTOM_DISTANCE = True
-            VERSION = (0, 1, 2)[0]
-            if VERSION == 0:
-                NUM_ATTEMPTS = 10
-                ATTEMPT_DIVISOR = 0.5
-                WINDOW_SIZE = 0.3
-                assert 0 < WINDOW_SIZE < 0.5
-                LOWER_QUANTILE, UPPER_QUANTILE = 0.5 - WINDOW_SIZE, 0.5 + WINDOW_SIZE
-                input_b_np = input_b.detach().cpu().numpy().flatten()
-                target_b_nz, distance_matrix = None, None
-                for i in range(NUM_ATTEMPTS):
-                    try:
-                        # TODO can avoid create_coordinate_list and use input_b.ge(lower_bound)
-                        # cuda throws out of memory error, use cpu, even that fails
-                        # input_b_nz = volume_coordinates.float().to('cpu')
-                        lower_bound = np.quantile(input_b_np, LOWER_QUANTILE)
-                        upper_bound = np.quantile(input_b_np, UPPER_QUANTILE)
-                        input_b_nz = (input_b.lt(lower_bound) | input_b.ge(upper_bound)).nonzero().float().to('cpu')
-                        target_b_nz = target_b.nonzero().float().to('cpu')
-
-                        if CUSTOM_DISTANCE:
-                            distance_matrix = cdist_custom_euclidean(input_b_nz, target_b_nz)
-                        else:
-                            input_b_nz = input_b_nz.detach().cpu().numpy()
-                            target_b_nz = target_b_nz.detach().cpu().numpy()
-                            distance_matrix = pairwise_distances(input_b_nz, target_b_nz, metric='euclidean', n_jobs=8)
-
-                        break
-                    except RuntimeError as e:
-                        print('this error is thrown at the distance matrix calculation', e)
-                        print('try to tighten the lower and upper bounds by halt of the distances to the extremes')
-                        LOWER_QUANTILE = LOWER_QUANTILE * ATTEMPT_DIVISOR
-                        UPPER_QUANTILE = UPPER_QUANTILE + (1.0 - UPPER_QUANTILE) * ATTEMPT_DIVISOR
-                assert distance_matrix is not None, 'attempts failed to fit distance_matrix into memory'
-            elif VERSION == 1:
-                # version two crashes too, there are two options:
-                # (1) use for loop over depth
-                # (2) use hausdorff after some epoch once it is stable, as an auxiliary term ---> chose this one ;)
-                input_b_ge, target_b = input_b.ge(0.98), target_b.bool()
-                input_b_boundary, target_b_boundary = self._boundary_extraction_approximation(input_b_ge, target_b)
-                input_b_nz = input_b_boundary.nonzero().float()
-                target_b_nz = target_b_boundary.nonzero().float()
-                input_b = input_b[input_b_boundary]
-                if CUSTOM_DISTANCE:
-                    input_b_nz = input_b_nz.to(input_device)
-                    target_b_nz = target_b_nz.to(input_device)
-                    distance_matrix = cdist_custom_euclidean(input_b_nz, target_b_nz)
-                else:
-                    input_b_nz_np = input_b_nz.detach().cpu().numpy()
-                    target_b_nz_np = target_b_nz.detach().cpu().numpy()
-                    distance_matrix = pairwise_distances(input_b_nz_np, target_b_nz_np, metric='euclidean', n_jobs=12)
-                    distance_matrix = torch.from_numpy(distance_matrix).to(input_device)
-            elif VERSION == 2:
-                # Use randomly weighted sampled depth sheets and measure loss at them.
-                max_distance = (input_shape[1:].float() ** 2).sum().sqrt().item()
-                input_term_b, target_term_b = list(), list()
-
-                target_b_r_weights = target_b.sum(-1).sum(-1)
-                depth_sampling_weights = target_b_r_weights / target_b_r_weights.sum()
-                # TODO use some measure of overlap so the sheets with high error would have higher weights
-                depth_r_ind = torch.multinomial(depth_sampling_weights, self.whl_num_depth_sheets, replacement=False)
-
-                input_b_ge, target_b = input_b.ge(self.whl_seg_thr), target_b.bool()
-
-                for i in depth_r_ind:
-                    input_b_ge_i, target_b_i = input_b_ge[i], target_b[i]
-                    input_b_nz = input_b_ge_i.nonzero().float()
-                    input_b_i = input_b[i, input_b_ge_i]
-                    if len(input_b_i) == 0:
-                        print('**** one depth sheet got zero prediction ove the threshold ****')
-                        continue
-                    target_b_nz = target_b_i.nonzero().float()
-                    # CUSTOM_DISTANCE
-                    input_b_nz = input_b_nz.to(input_device)
-                    target_b_nz = target_b_nz.to(input_device)
-                    distance_matrix = cdist_custom_euclidean(input_b_nz, target_b_nz)
-                    input_term_b_i, target_term_b_i = self.calculate_terms(input_b_i, target_b_nz,
-                                                                           distance_matrix, max_distance)
-                    input_term_b.append(input_term_b_i)
-                    target_term_b.append(target_term_b_i)
-
-                assert len(input_term_b) and len(target_term_b), 'got all depth sheets zero'
-                input_term_b = torch.stack(input_term_b)
-                target_term_b = torch.stack(target_term_b)
-
-                input_term_b = input_term_b.mean()
-                target_term_b = target_term_b.mean()
-            else:
-                raise NotImplementedError
-
-            if not VERSION == 2:
-                input_term_b, target_term_b = self.calculate_terms(input_b, target_b_nz, distance_matrix, max_distance)
+            try:
+                input_term_b, target_term_b = self.compute_terms(
+                    input_b,
+                    target_b,
+                    input_shape,
+                    input_device,
+                    max_distance
+                )
+            except Exception as e:
+                print(f'exception {e} caught, address it')
+                input_term_b = torch.tensor(0, device=input_device, dtype=torch.float, requires_grad=False)
+                target_term_b = torch.tensor(max_distance, device=input_device, dtype=torch.float, requires_grad=False)
 
             input_term.append(input_term_b)
             target_term.append(target_term_b)
@@ -268,3 +304,77 @@ class WeightedHausdorffLoss(_WeightedLoss):
             'sum': loss.sum(),
             'none': loss,
         }[self.reduction]
+
+
+# modified from Kornia
+# https://github.com/kornia/kornia/blob/master/kornia/losses/focal.py
+class FocalLossKornia(nn.Module):
+    r"""Criterion that computes Focal loss.
+
+    According to [1], the Focal loss is computed as follows:
+
+    .. math::
+
+        \text{FL}(p_t) = -\alpha_t (1 - p_t)^{\gamma} \, \text{log}(p_t)
+
+    where:
+       - :math:`p_t` is the model's estimated probability for each class.
+
+
+    Arguments:
+        alpha (float): Weighting factor :math:`\alpha \in [0, 1]`.
+        gamma (float): Focusing parameter :math:`\gamma >= 0`.
+        reduction (str, optional): Specifies the reduction to apply to the
+         output: ‘none’ | ‘mean’ | ‘sum’. ‘none’: no reduction will be applied,
+         ‘mean’: the sum of the output will be divided by the number of elements
+         in the output, ‘sum’: the output will be summed. Default: ‘none’.
+
+    Shape:
+        - Input: :math:`(N, C, *)` where C = number of classes.
+        - Target: :math:`(N, *)` where each value is
+          :math:`0 ≤ targets[i] ≤ C−1`.
+
+    Examples:
+        >>> N = 5  # num_classes
+        >>> kwargs = {"alpha": 0.5, "gamma": 2.0, "reduction": 'mean'}
+        >>> loss = kornia.losses.FocalLoss(**kwargs)
+        >>> input = torch.randn(1, N, 3, 5, requires_grad=True)
+        >>> target = torch.empty(1, 3, 5, dtype=torch.long).random_(N)
+        >>> output = loss(input, target)
+        >>> output.backward()
+
+    References:
+        [1] https://arxiv.org/abs/1708.02002
+    """
+
+    def __init__(self, alpha: float, gamma: float = 2.0,
+                 reduction: str = 'none') -> None:
+        super().__init__()
+        self.alpha: float = alpha
+        self.gamma: float = gamma
+        self.reduction: str = reduction
+        self.eps: float = 1e-6
+
+    def forward(  # type: ignore
+            self,
+            input: torch.Tensor,
+            target: torch.Tensor) -> torch.Tensor:
+        return focal_loss(input, target, self.alpha, self.gamma, self.reduction, self.eps)
+
+
+@LOSS_REGISTRY.register()
+class FocalLoss(FocalLossKornia):
+    def __init__(self, ignore_index=None, **kwargs):
+        self.ignore_index = ignore_index
+        super().__init__(**kwargs)
+
+    def forward(
+            self,
+            input: torch.Tensor,
+            target: torch.Tensor) -> torch.Tensor:
+
+        B, C = input.shape[:2]
+        input = input.reshape(B, C, -1)
+        target = target.reshape(B, -1)
+
+        return super().forward(input, target)

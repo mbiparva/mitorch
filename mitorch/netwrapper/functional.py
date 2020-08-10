@@ -174,6 +174,70 @@ def hausdorff_distance(input, target, ignore_index=-100, reduction='mean'):
     }[reduction]
 
 
+# modified from Kornia
+# https://github.com/kornia/kornia/blob/master/kornia/losses/focal.py
+def focal_loss(
+        input: torch.Tensor,
+        target: torch.Tensor,
+        alpha: float,
+        gamma: float = 2.0,
+        reduction: str = 'none',
+        eps: float = 1e-8) -> torch.Tensor:
+    r"""Function that computes Focal loss.
+
+    See :class:`~kornia.losses.FocalLoss` for details.
+    """
+    if not torch.is_tensor(input):
+        raise TypeError("Input type is not a torch.Tensor. Got {}"
+                        .format(type(input)))
+
+    if not len(input.shape) >= 2:
+        raise ValueError("Invalid input shape, we expect BxCx*. Got: {}"
+                         .format(input.shape))
+
+    if input.size(0) != target.size(0):
+        raise ValueError('Expected input batch_size ({}) to match target batch_size ({}).'
+                         .format(input.size(0), target.size(0)))
+
+    n = input.size(0)
+    out_size = (n,) + input.size()[2:]
+    if target.size()[1:] != input.size()[2:]:
+        raise ValueError('Expected target size {}, got {}'.format(
+            out_size, target.size()))
+
+    if not input.device == target.device:
+        raise ValueError(
+            "input and target must be in the same device. Got: {} and {}" .format(
+                input.device, target.device))
+
+    # compute softmax over the classes axis
+    # input_soft: torch.Tensor = F.softmax(input, dim=1) + eps
+    input_soft = input  # input is already passed to Sigmoid. It is binary classification
+
+    # create the labels one hot tensor
+    # target_one_hot: torch.Tensor = one_hot(
+    #     target, num_classes=input.shape[1],
+    #     device=input.device, dtype=input.dtype)
+    target_one_hot = target.unsqueeze(dim=1)  # target is already one-hot since it is a binary classification problem
+
+    # compute the actual focal loss
+    weight = torch.pow(-input_soft + 1., gamma)
+
+    focal = -alpha * weight * torch.log(input_soft)
+    loss_tmp = torch.sum(target_one_hot * focal, dim=1)
+
+    if reduction == 'none':
+        loss = loss_tmp
+    elif reduction == 'mean':
+        loss = torch.mean(loss_tmp)
+    elif reduction == 'sum':
+        loss = torch.sum(loss_tmp)
+    else:
+        raise NotImplementedError("Invalid reduction mode: {}"
+                                  .format(reduction))
+    return loss
+
+
 if __name__ == '__main__':
     from PIL import Image
     input_test = Image.open('/home/mbiparva/Downloads/input.jpg')
