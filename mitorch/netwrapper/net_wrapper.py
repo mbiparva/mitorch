@@ -77,7 +77,7 @@ class NetWrapper(nn.Module):
     def loss_update(self, p, a, step=True):
         loss = self.criterion(p, a)
         if self.cfg.MODEL.LOSS_AUG_WHL:
-            loss += 1.5 * self.criterion_aux(p, a)
+            loss += 10.0 * self.criterion_aux(p, a)
         # loss = self.criterion_aux(p, a)
 
         if step:

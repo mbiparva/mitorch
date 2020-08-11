@@ -233,6 +233,8 @@ def focal_loss(
 
     floss = focal * loss
 
+    # floss = torch.sum(floss, dim=1)
+
     if reduction == 'none':
         pass
     elif reduction == 'mean':

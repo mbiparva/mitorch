@@ -31,8 +31,10 @@ def pad_if_necessary(x, x_b):
 
 
 class BasicBlock(nn.Sequential):
-    def __init__(self, in_channels, out_channels, kernel_size=(3, 3, 3), stride=(1, 1, 1), dilation=(1, 1, 1),
-                 normalization='instancenorm', nonlinearity='leakyrelu'):
+    def __init__(
+            self, in_channels, out_channels, kernel_size=(3, 3, 3), stride=(1, 1, 1), dilation=(1, 1, 1),
+            normalization=('batchnorm', 'instancenorm')[0], nonlinearity=('relu', 'leakyrelu')[0]
+    ):
         super().__init__(
             self._create_convolution(in_channels, out_channels, kernel_size, stride, dilation),
             self._create_normalization(out_channels, normalization),
@@ -41,8 +43,9 @@ class BasicBlock(nn.Sequential):
 
     @staticmethod
     def _create_convolution(in_channels, out_channels, kernel_size, stride, dilation):
+        padding = tuple((torch.tensor(kernel_size) // 2 + torch.tensor(dilation) // 2).tolist())
         return nn.Conv3d(in_channels, out_channels,
-                         kernel_size=(3, 3, 3), stride=stride, padding=dilation, dilation=dilation,
+                         kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation,
                          groups=1, bias=False)  # TODO check bias=True, most nets use False though because of BN
 
     @staticmethod
@@ -90,10 +93,10 @@ class ParamUpSamplingBlock(nn.Sequential):
 
 
 class LocalizationBlock(nn.Sequential):
-    def __init__(self, in_channels, out_channels, kernel_size=(1, 1, 1), dilation=(2, 2, 2)):
+    def __init__(self, in_channels, out_channels, dilation=(2, 2, 2)):
         super().__init__(
             BasicBlock(in_channels, out_channels, dilation=dilation),
-            BasicBlock(out_channels, out_channels, kernel_size=kernel_size),
+            BasicBlock(out_channels, out_channels, kernel_size=(1, 1, 1)),
         )
 
 

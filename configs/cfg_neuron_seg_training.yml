@@ -14,10 +14,16 @@ NVT:
   RANDOM_CROP_THRESHOLD: 0
 MODEL:
   LOSS_FUNC: 'DiceLoss'  # 'CrossEntropyLoss'  # 'DiceLoss'
-  LOSS_AUG_WHL: true
+  LOSS_AUG_WHL: false
   WHL_NUM_DEPTH_SHEETS: 16  # (2, 4, 8, 16)
   WHL_SEG_THR: 0.5  # (0.12, 0.25, 0.5)
   ENCO_DEPTH: 5  # 5
+  DROPOUT_RATE: 0.30
 SOLVER:
 #  OPTIMIZING_METHOD: 'sgd'
-  SCHEDULER_MODE: true
+#  BASE_LR: 1e-2
+#  MOMENTUM: 0.9
+#  WEIGHT_DECAY: 1e-5
+#  MAX_EPOCH: 100
+#  NESTEROV: false
+  SCHEDULER_MODE: false

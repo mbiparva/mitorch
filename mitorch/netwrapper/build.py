@@ -39,7 +39,7 @@ def build_loss(cfg, name=None):
     elif name == 'FocalLoss':
         loss_params = {
             'alpha': 1.0,
-            'gamma': 4.0,
+            'gamma': 2.0,
             'reduction': 'mean',
         }
     else:
