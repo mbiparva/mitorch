@@ -43,7 +43,7 @@ class BasicBlock(nn.Sequential):
 
     @staticmethod
     def _create_convolution(in_channels, out_channels, kernel_size, stride, dilation):
-        padding = tuple((torch.tensor(kernel_size) // 2 + torch.tensor(dilation) // 2).tolist())
+        padding = tuple((torch.tensor(kernel_size) // 2 + torch.tensor(dilation) // 2).tolist())  # does the same
         return nn.Conv3d(in_channels, out_channels,
                          kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation,
                          groups=1, bias=False)  # TODO check bias=True, most nets use False though because of BN

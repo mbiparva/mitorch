@@ -124,10 +124,10 @@ def construct_scheduler(optimizer, cfg):
                                                lr_lambda=lr_lambda)
         elif cfg.SOLVER.SCHEDULER_TYPE == 'plateau':
             return ReduceLROnPlateau(optimizer,
-                                                        factor=0.5,
-                                                        patience=5,
-                                                        cooldown=0,
-                                                        verbose=True)
+                                     factor=0.5,
+                                     patience=5,
+                                     cooldown=0,
+                                     verbose=True)
         elif cfg.SOLVER.SCHEDULER_TYPE == 'cosine':
             return optim.lr_scheduler.CosineAnnealingLR(optimizer,
                                                         T_max=cfg.SOLVER.MAX_EPOCH,
