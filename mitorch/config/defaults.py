@@ -231,7 +231,7 @@ _C.DATA.MIN_SIDE = (False, True)[0]
 _C.DATA.UNI_SCALE = (False, True)[1]
 
 # The spatial crop size of the input volume.
-_C.DATA.CROP_SIZE = (192-16*2, 192-16*1, 192)[0]
+_C.DATA.CROP_SIZE = (192-16*2, 192-16*1, 192)[0]  # [0]  # change it from int to tuple for non-iso patching
 _C.DATA.CROP_SIZE_FACTOR = 0  # BOAX script will change it at init.
 
 # The spatial crop scale of the input volume.
@@ -392,6 +392,8 @@ _C.NVT.SELECTION_LB = 0
 
 _C.NVT.RANDOM_CROP_NUM_ATTEMPS = 20
 _C.NVT.RANDOM_CROP_THRESHOLD = 0
+
+_C.NVT.REPEAT_DATASET = 0  # < 2 is off
 
 
 def init_cfg(cfg, parent_dir=''):

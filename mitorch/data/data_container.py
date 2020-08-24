@@ -8,7 +8,7 @@
 
 import torch
 import numpy as np
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, ConcatDataset
 import torch.utils.data
 import data.transforms_mitorch as tf
 import torchvision.transforms as torch_tf
@@ -257,6 +257,9 @@ class DataContainer:
         transformations = self.create_transform()
 
         self.dataset = build_dataset(self.dataset_name, self.cfg, self.mode, transformations)
+
+        if self.cfg.NVT.ENABLE and self.cfg.NVT.REPEAT_DATASET > 1:
+            self.dataset = ConcatDataset([self.dataset]*self.cfg.NVT.REPEAT_DATASET)
 
         if self.cfg.TRAIN and self.cfg.TRAIN.DATASET == 'SRIBIL' and self.cfg.PROJECT.PA_INDICES:
             self.data_split_pa_ind()

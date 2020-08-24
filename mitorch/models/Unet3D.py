@@ -33,7 +33,7 @@ def pad_if_necessary(x, x_b):
 class BasicBlock(nn.Sequential):
     def __init__(
             self, in_channels, out_channels, kernel_size=(3, 3, 3), stride=(1, 1, 1), dilation=(1, 1, 1),
-            normalization=('batchnorm', 'instancenorm')[0], nonlinearity=('relu', 'leakyrelu')[0]
+            normalization=('batchnorm', 'instancenorm')[1], nonlinearity=('relu', 'leakyrelu')[1]
     ):
         super().__init__(
             self._create_convolution(in_channels, out_channels, kernel_size, stride, dilation),
@@ -96,7 +96,7 @@ class LocalizationBlock(nn.Sequential):
     def __init__(self, in_channels, out_channels, dilation=(2, 2, 2)):
         super().__init__(
             BasicBlock(in_channels, out_channels, dilation=dilation),
-            BasicBlock(out_channels, out_channels, kernel_size=(1, 1, 1)),
+            BasicBlock(out_channels, out_channels, kernel_size=(3, 3, 3)),  # network architecture changed
         )
 
 
@@ -126,7 +126,8 @@ class Encoder(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg.clone()
-        self.stride = self.dilation = (2, 2, 2)
+        self.stride = (2, 2, 2)
+        self.dilation = (2, 2, 2)  # (1, 1, 1)
         self.p = self.cfg.MODEL.DROPOUT_RATE
 
         self._create_net()

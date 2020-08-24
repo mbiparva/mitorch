@@ -115,7 +115,10 @@ class NVTTransformations(BaseTransformations):
             ]
         elif self.mode in ('valid', 'test'):
             transformations_body = [
-                tf.RandomCropImageVolume(self.cfg.DATA.CROP_SIZE, prand=True),  # TODO could removed
+                # tf.RandomCropImageVolume(self.cfg.DATA.CROP_SIZE, prand=True),  # TODO could removed
+                tf.RandomCropImageVolumeConditional(self.cfg.DATA.CROP_SIZE, prand=True,
+                                                    num_attemps=self.cfg.NVT.RANDOM_CROP_NUM_ATTEMPS,
+                                                    threshold=self.cfg.NVT.RANDOM_CROP_THRESHOLD),
             ]
         else:
             raise NotImplementedError
