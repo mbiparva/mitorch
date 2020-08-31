@@ -134,6 +134,7 @@ class NetWrapperWMH(NetWrapper):
         )
 
     def forward(self, x, return_input=False):
+        assert self.cfg.MODEL.PROCESSING_MODE == '3d', '2d processing is not addressed for WMH and HFB'
         x, annotation = self.hfb_extract(x)
         pred = self.net_core(x)
 

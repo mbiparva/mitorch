@@ -187,6 +187,8 @@ _C.MODEL.ARCH = "unet3d"
 # Model name
 _C.MODEL.MODEL_NAME = ('Unet3D', )[0]
 
+_C.MODEL.PROCESSING_MODE = ('2d', '3d')[1]
+
 # Loss function.
 _C.MODEL.LOSS_FUNC = ('CrossEntropyLoss', 'DiceLoss', 'WeightedHausdorffLoss', 'FocalLoss')[1]
 

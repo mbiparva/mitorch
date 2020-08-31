@@ -88,6 +88,28 @@ class BatchBase(ABC):
     def batch_main(self, net, x, annotation):
         pass
 
+    @staticmethod
+    def depth_sampling(image, annotation):
+        # create index tensor
+        image_shape = torch.tensor(image.shape)
+        d_size = image_shape[2].item()  # depth size
+        image_shape[2] = 1  # depth size is set to 1
+        b_size, image_shape = image_shape[0], image_shape[1:]
+        image_numel = image_shape.prod().item()
+
+        rand_ind = torch.randint(d_size, (b_size, 1))
+        rand_ind = rand_ind.repeat(1, image_numel)
+        rand_ind = rand_ind.reshape((b_size, *image_shape))
+        rand_ind = rand_ind.to(image.device)
+
+        # gather
+        image = image.gather(dim=2, index=rand_ind)
+
+        rand_ind = rand_ind[:, -1:, :]
+        annotation = annotation.gather(dim=2, index=rand_ind)
+
+        return image, annotation
+
     def batch_loop(self, netwrapper, cur_epoch):
 
         self.meters.iter_tic()
@@ -95,9 +117,10 @@ class BatchBase(ABC):
 
             image = image.to(self.device, non_blocking=True)
             annotation = annotation.to(self.device, non_blocking=True)
-            # print('annotation sum: ', [
-            #     int(i.sum()) for i in annotation
-            # ])
+
+            # For now I will keep 2d depth sampling at system-level, for both train and val, later could exclude val
+            if self.cfg.MODEL.PROCESSING_MODE == '2d':
+                image, annotation = self.depth_sampling(image, annotation)
 
             self.batch_main(netwrapper, image, annotation)
 

@@ -12,6 +12,22 @@ import torch.nn.functional as F
 from .build import MODEL_REGISTRY
 from .weight_init_helper import init_weights
 
+IS_3D = True
+
+
+def is_3d(size, lb=1):
+    if isinstance(size, (tuple, list)):
+        assert len(size) == 3, 'expects 3D iterables'
+        return (
+            is_3d(size[0], lb=lb),
+            size[1],
+            size[2],
+        )
+    elif isinstance(size, (int, float)):
+        return size if IS_3D else lb
+    else:
+        raise NotImplementedError
+
 
 def pad_if_necessary(x, x_b):
     mode = ('one', 'two')[1]
@@ -44,9 +60,10 @@ class BasicBlock(nn.Sequential):
     @staticmethod
     def _create_convolution(in_channels, out_channels, kernel_size, stride, dilation):
         padding = tuple((torch.tensor(kernel_size) // 2 + torch.tensor(dilation) // 2).tolist())  # does the same
-        return nn.Conv3d(in_channels, out_channels,
-                         kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation,
-                         groups=1, bias=False)  # TODO check bias=True, most nets use False though because of BN
+        return nn.Conv3d(
+            in_channels, out_channels, kernel_size=is_3d(kernel_size), stride=is_3d(stride),
+            padding=is_3d(padding, lb=0), dilation=is_3d(padding), groups=1, bias=False
+        )  # TODO check bias=True, most nets use False though because of BN
 
     @staticmethod
     def _create_normalization(out_channels, normalization):
@@ -87,7 +104,7 @@ class ContextBlock(nn.Sequential):
 class ParamUpSamplingBlock(nn.Sequential):
     def __init__(self, in_channels, out_channels, scale_factor=(2, 2, 2)):
         super().__init__(
-            nn.Upsample(scale_factor=scale_factor, mode='trilinear', align_corners=False),
+            nn.Upsample(scale_factor=is_3d(scale_factor), mode='trilinear', align_corners=False),
             BasicBlock(in_channels, out_channels),
         )
 
@@ -127,7 +144,7 @@ class Encoder(nn.Module):
         super().__init__()
         self.cfg = cfg.clone()
         self.stride = (2, 2, 2)
-        self.dilation = (2, 2, 2)  # (1, 1, 1)
+        self.dilation = (2, 2, 2)
         self.p = self.cfg.MODEL.DROPOUT_RATE
 
         self._create_net()
@@ -214,12 +231,12 @@ class SegHead(nn.Module):
             in_channels = self.cfg.MODEL.N_BASE_FILTERS * 2 ** i_r
             self.add_module(
                 self.get_layer_name(i, 'conv'),
-                nn.Conv3d(in_channels, self.cfg.MODEL.NUM_CLASSES, kernel_size=(1, 1, 1)),
+                nn.Conv3d(in_channels, self.cfg.MODEL.NUM_CLASSES, kernel_size=is_3d((1, 1, 1))),
             )
             if not i == self.num_pred_levels - 1:
                 self.add_module(
                     self.get_layer_name(i, 'upsam'),
-                    nn.Upsample(scale_factor=(2, 2, 2), mode='trilinear', align_corners=False),
+                    nn.Upsample(scale_factor=is_3d((2, 2, 2)), mode='trilinear', align_corners=False),
                 )
 
     def forward(self, x_input):
@@ -244,9 +261,15 @@ class Unet3D(nn.Module):
         super().__init__()
         self.cfg = cfg.clone()
 
+        self.set_processing_mode()
+
         self._create_net()
 
         self.init_weights()
+
+    def set_processing_mode(self):
+        global IS_3D
+        IS_3D = self.cfg.MODEL.PROCESSING_MODE == '3d'
 
     def _create_net(self):
         self.Encoder = Encoder(self.cfg)
