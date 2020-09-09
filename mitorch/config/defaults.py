@@ -185,7 +185,7 @@ _C.MODEL = CfgNode()
 _C.MODEL.ARCH = "unet3d"
 
 # Model name
-_C.MODEL.MODEL_NAME = ('Unet3D', )[0]
+_C.MODEL.MODEL_NAME = ('Unet3D', 'NestedUnet3D')[1]
 
 _C.MODEL.PROCESSING_MODE = ('2d', '3d')[1]
 
@@ -218,6 +218,15 @@ _C.MODEL.NUM_PRED_LEVELS = 3
 
 # Number of input channels to the model
 _C.MODEL.INPUT_CHANNELS = (len(_C.TEST.IN_MOD) - 1) if _C.TEST.ENABLE else (len(_C.TRAIN.IN_MOD) - 1)
+
+# Model settings
+_C.MODEL.SETTINGS = CfgNode({
+    'Unet3D': {},
+    'NestedUnet3D': {
+        'DEEP_SUPERVISION': (False, True)[1],
+        'N_HOP_DENSE_SKIP_CONNECTION': 1,  # must be > 0, 1 means no dense-skip-connections
+    },
+}[_C.MODEL.MODEL_NAME])
 
 
 # -----------------------------------------------------------------------------
@@ -414,6 +423,9 @@ def init_cfg(cfg, parent_dir=''):
 
 def _assert_and_infer_cfg(cfg):
     # TODO add assertion respectively
+    if 'N_HOP_DENSE_SKIP_CONNECTION' in cfg.MODEL.SETTINGS:
+        assert cfg.MODEL.SETTINGS.N_HOP_DENSE_SKIP_CONNECTION > 0
+
     return cfg
 
 
