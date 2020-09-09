@@ -4,7 +4,7 @@
 #  Implemented by Mahdi Biparva, May 2020
 #  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
-from torch.nn.modules.loss import _WeightedLoss, CrossEntropyLoss
+from torch.nn.modules.loss import _Loss, _WeightedLoss, CrossEntropyLoss
 from netwrapper.functional import dice_coeff, apply_ignore_index
 from .build import LOSS_REGISTRY
 import math
@@ -378,3 +378,132 @@ class FocalLoss(FocalLossKornia):
         target = target.reshape(B, -1)
 
         return super().forward(input, target)
+
+
+@LOSS_REGISTRY.register()
+class LovaszLoss(_Loss):
+    __constants__ = ['reduction']
+
+    def __init__(self, per_image=True, size_average=None, ignore_index=-100, reduce=None, reduction='mean'):
+        super().__init__(size_average, reduce, reduction)
+        self.per_image = per_image
+        self.ignore_index = ignore_index
+
+    # All the lovasz prefixed functions are taken with minor modifications from the package below.
+    # https://github.com/bermanmaxim/LovaszSoftmax/blob/master/pytorch/lovasz_losses.py
+    def lovasz_hinge(self, logits, labels, per_image=True, ignore=None):
+        """
+        Binary Lovasz hinge loss
+          logits: [B, D, H, W] Variable, logits at each pixel (between -infinity and +infinity)
+          labels: [B, D, H, W] Tensor, binary ground truth masks (0 or 1)
+          per_image: compute the loss per image instead of per batch
+          ignore: void class id
+        """
+        assert logits.ndim == labels.ndim
+
+        if per_image:
+            loss = self.lovasz_mean(
+                self.lovasz_hinge_flat(
+                    *self.lovasz_flatten_binary_scores(
+                        log.unsqueeze(0),
+                        lab.unsqueeze(0),
+                        ignore,
+                    )
+                )
+                for log, lab in zip(logits, labels)
+            )
+        else:
+            loss = self.lovasz_hinge_flat(
+                *self.lovasz_flatten_binary_scores(
+                    logits,
+                    labels,
+                    ignore,
+                )
+            )
+        return loss
+
+    def lovasz_hinge_flat(self, logits, labels):
+        """
+        Binary Lovasz hinge loss
+          logits: [P] Variable, logits at each prediction (between -infinity and +infinity)
+          labels: [P] Tensor, binary ground truth labels (0 or 1)
+          ignore: label to ignore
+        """
+        if len(labels) == 0:
+            # only void pixels, the gradients should be 0
+            return logits.sum() * 0.
+        signs = 2. * labels.float() - 1.
+        errors = (1. - logits * Variable(signs))  # TODO check signs is tensor with require_grad=True
+        errors_sorted, perm = torch.sort(errors, dim=0, descending=True)
+        perm = perm.data
+        gt_sorted = labels[perm]
+        grad = self.lovasz_grad(gt_sorted)
+        loss = torch.dot(F.relu(errors_sorted), Variable(grad))
+        return loss
+
+    @staticmethod
+    def lovasz_flatten_binary_scores(scores, labels, ignore=None):
+        """
+        Flattens predictions in the batch (binary case)
+        Remove labels equal to 'ignore'
+        """
+        scores = scores.view(-1)
+        labels = labels.view(-1)
+        if ignore is None:
+            return scores, labels
+        valid = (labels != ignore)
+        vscores = scores[valid]
+        vlabels = labels[valid]
+        return vscores, vlabels
+
+    @staticmethod
+    def lovasz_mean(loss, ignore_nan=False, empty=0):
+        """
+        nanmean compatible with generators.
+        """
+        try:
+            from itertools import ifilterfalse
+        except ImportError:  # py3k
+            from itertools import filterfalse as ifilterfalse
+
+        def isnan(x):
+            return x != x
+
+        loss = iter(loss)
+        if ignore_nan:
+            loss = ifilterfalse(isnan, loss)
+        try:
+            n = 1
+            acc = next(loss)
+        except StopIteration:
+            if empty == 'raise':
+                raise ValueError('Empty mean')
+            return empty
+        for n, v in enumerate(loss, 2):
+            acc += v
+        if n == 1:
+            return acc
+        return acc / n
+
+    @staticmethod
+    def lovasz_grad(gt_sorted):
+        """
+        Computes gradient of the Lovasz extension w.r.t sorted errors
+        See Alg. 1 in paper
+        """
+        p = len(gt_sorted)
+        gts = gt_sorted.sum()
+        intersection = gts - gt_sorted.float().cumsum(0)
+        union = gts + (1 - gt_sorted).float().cumsum(0)
+        jaccard = 1. - intersection / union
+        if p > 1:  # cover 1-pixel case
+            jaccard[1:p] = jaccard[1:p] - jaccard[0:-1]
+        return jaccard
+
+    def forward(self, input, target):
+        return self.lovasz_hinge(
+            input,
+            target,
+            per_image=self.per_image,
+            ignore=self.ignore_index,
+        )
