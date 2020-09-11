@@ -77,6 +77,8 @@ class BatchBase(ABC):
 
     def evaluate(self, p, a, meters):
         BINARIZE_THRESHOLD = 0.5
+        if isinstance(p, (tuple, list)):  # Deep_supervision returns outputs at multiple levels
+            p = torch.mean(torch.stack(p), dim=0)
         if self.cfg.MODEL.LOSS_FUNC == 'CrossEntropyLoss':
             p, a = self.cel_prep(p, a)
         p = self.binarize(p, binarize_threshold=BINARIZE_THRESHOLD)

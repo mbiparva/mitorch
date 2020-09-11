@@ -185,12 +185,12 @@ _C.MODEL = CfgNode()
 _C.MODEL.ARCH = "unet3d"
 
 # Model name
-_C.MODEL.MODEL_NAME = ('Unet3D', 'NestedUnet3D')[1]
+_C.MODEL.MODEL_NAME = ('Unet3D', 'NestedUnet3D')[0]
 
 _C.MODEL.PROCESSING_MODE = ('2d', '3d')[1]
 
 # Loss function.
-_C.MODEL.LOSS_FUNC = ('CrossEntropyLoss', 'DiceLoss', 'WeightedHausdorffLoss', 'FocalLoss')[1]
+_C.MODEL.LOSS_FUNC = ('CrossEntropyLoss', 'DiceLoss', 'WeightedHausdorffLoss', 'FocalLoss', 'LovaszLoss')[1]
 
 # The number of classes to predict for the model.
 _C.MODEL.NUM_CLASSES = 2 if _C.MODEL.LOSS_FUNC == 'CrossEntropyLoss' else 1
@@ -220,13 +220,13 @@ _C.MODEL.NUM_PRED_LEVELS = 3
 _C.MODEL.INPUT_CHANNELS = (len(_C.TEST.IN_MOD) - 1) if _C.TEST.ENABLE else (len(_C.TRAIN.IN_MOD) - 1)
 
 # Model settings
-_C.MODEL.SETTINGS = CfgNode({
-    'Unet3D': {},
-    'NestedUnet3D': {
-        'DEEP_SUPERVISION': (False, True)[1],
-        'N_HOP_DENSE_SKIP_CONNECTION': 1,  # must be > 0, 1 means no dense-skip-connections
-    },
-}[_C.MODEL.MODEL_NAME])
+_C.MODEL.SETTINGS = tuple({
+    'Unet3D': CfgNode({}),
+    'NestedUnet3D': CfgNode({
+        'DEEP_SUPERVISION': (False, True)[0],
+        'N_HOP_DENSE_SKIP_CONNECTION': 2,  # must be > 0, 1 means no dense-skip-connections
+    }),
+}.items())
 
 
 # -----------------------------------------------------------------------------

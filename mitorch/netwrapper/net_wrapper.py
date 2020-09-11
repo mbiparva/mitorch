@@ -74,11 +74,22 @@ class NetWrapper(nn.Module):
 
         return x
 
+    def compute_loss(self, p, a):
+        loss = torch.tensor([0], dtype=torch.float, device=p[0].device)
+        a = [a] * len(p)
+        for p_i, a_i in zip(p, a):
+            loss += self.criterion(p_i, a_i)
+            # loss += self.criterion_aux(p_i, a_i)
+            if self.cfg.MODEL.LOSS_AUG_WHL:
+                loss += 10.0 * self.criterion_aux(p_i, a_i)
+
+        return loss
+
     def loss_update(self, p, a, step=True):
-        loss = self.criterion(p, a)
-        if self.cfg.MODEL.LOSS_AUG_WHL:
-            loss += 10.0 * self.criterion_aux(p, a)
-        # loss = self.criterion_aux(p, a)
+        if not isinstance(p, (tuple, list)):
+            p = [p]
+
+        loss = self.compute_loss(p, a)
 
         if step:
             loss.backward()

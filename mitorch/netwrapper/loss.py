@@ -433,12 +433,12 @@ class LovaszLoss(_Loss):
             # only void pixels, the gradients should be 0
             return logits.sum() * 0.
         signs = 2. * labels.float() - 1.
-        errors = (1. - logits * Variable(signs))  # TODO check signs is tensor with require_grad=True
+        errors = (1. - logits * signs)
         errors_sorted, perm = torch.sort(errors, dim=0, descending=True)
         perm = perm.data
         gt_sorted = labels[perm]
         grad = self.lovasz_grad(gt_sorted)
-        loss = torch.dot(F.relu(errors_sorted), Variable(grad))
+        loss = torch.dot(F.relu(errors_sorted), grad)
         return loss
 
     @staticmethod
@@ -500,10 +500,18 @@ class LovaszLoss(_Loss):
             jaccard[1:p] = jaccard[1:p] - jaccard[0:-1]
         return jaccard
 
-    def forward(self, input, target):
+    def forward(
+            self,
+            input: torch.tensor,
+            target: torch.tensor) -> torch.tensor:
+
+        assert (input.is_contiguous() and target.is_contiguous())
+        assert input.size() == target.size(), "'input' and 'target' must have the same shape"
+        assert input.dtype == target.dtype, 'dtype does not match'
+
         return self.lovasz_hinge(
             input,
             target,
             per_image=self.per_image,
-            ignore=self.ignore_index,
+            ignore=self.ignore_index
         )

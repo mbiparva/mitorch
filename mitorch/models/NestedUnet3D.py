@@ -7,8 +7,9 @@
 import torch
 import torch.nn as nn
 from .build import MODEL_REGISTRY
-from mitorch.utils.models import pad_if_necessary, pad_if_necessary_all
+from utils.models import pad_if_necessary_all
 from models.Unet3D import Unet3D, Encoder as Unet3DEncoder, ParamUpSamplingBlock, LocalizationBlock, is_3d
+import models.Unet3D
 
 
 IS_3D = True
@@ -52,7 +53,7 @@ class DeepAggregationBlock(nn.Module):
         self.localization = LocalizationBlock(localization_input_multiplier * out_channels, out_channels)
 
     def forward(self, x_in):
-        assert len(x_in) == self.num_in_modal + 1 and isinstance(x_in, (tuple, list))
+        assert len(x_in) == self.num_in_modal and isinstance(x_in, (tuple, list))
 
         x_in_skip, x_in_downsized = x_in[:-1], x_in[-1]  # the last one is the immediate one
 
@@ -68,7 +69,6 @@ class DeepAggregationBlock(nn.Module):
 class Encoder(Unet3DEncoder):
     def __init__(self, cfg):
         super().__init__(cfg)
-        self.cfg = cfg.clone()
 
 
 class Decoder(nn.Module):
@@ -85,16 +85,19 @@ class Decoder(nn.Module):
     def get_layer_name(self, i, j, postfix):
         return 'decoder_layer{}_{}'.format(self.get_layer_number(i, j), postfix)
 
-    def _create_net(self):
-        self.enco_depth = self.cfg.MODEL.ENCO_DEPTH - 1  # the for loop begins from 0 ends at d-1
-        for i in range(self.enco_depth):
-            in_channels = out_channels = self.cfg.MODEL.N_BASE_FILTERS * 2 ** i
-            for j in range(1, self.enco_depth-i):  # 0_j is the encoding layer
-                ij_num_in_modal = min(
-                    j - i,
-                    self.cfg.MODEL.SETTINGS.N_HOP_DENSE_SKIP_CONNECTION
+    @staticmethod
+    def get_ij_num_in_model(j, n_hop):
+        return min(
+                    j,
+                    n_hop,
                 ) + 1  # + 1 is for the downsized input.
 
+    def _create_net(self):
+        for i in range(self.cfg.MODEL.ENCO_DEPTH-1):
+            out_channels = self.cfg.MODEL.N_BASE_FILTERS * 2 ** i
+            in_channels = out_channels * 2
+            for j in range(1, self.cfg.MODEL.ENCO_DEPTH-i):  # 0_j is the encoding layer at depth j
+                ij_num_in_modal = self.get_ij_num_in_model(j, self.cfg.MODEL.SETTINGS.N_HOP_DENSE_SKIP_CONNECTION)
                 self.add_module(
                     self.get_layer_name(i, j, 'deep_aggregation'),
                     DeepAggregationBlock(in_channels, out_channels,
@@ -102,6 +105,7 @@ class Decoder(nn.Module):
                 )
 
     def fetch_in_modal(self, outputs, layer_coord, ij_num_in_modal):
+        ij_num_in_modal -= 1  # skip the one from the level below, it is added separately
         i, j = layer_coord
         return [
             outputs[self.get_layer_number(i, j-k-1)]
@@ -112,17 +116,20 @@ class Decoder(nn.Module):
 
     def forward(self, x_input):
         outputs = dict()
-        for j in range(self.enco_depth):
-            for i in range(self.enco_depth-j):
+        for j in range(self.cfg.MODEL.ENCO_DEPTH):
+            for i in range(self.cfg.MODEL.ENCO_DEPTH-j):
                 if j == 0:
                     outputs[self.get_layer_number(i, j)] = x_input[i]
                     continue
-                ij_num_in_modal = min(j - i, self.cfg.MODEL.SETTINGS.N_HOP_DENSE_SKIP_CONNECTION)
+                ij_num_in_modal = self.get_ij_num_in_model(j, self.cfg.MODEL.SETTINGS.N_HOP_DENSE_SKIP_CONNECTION)
                 x = self.fetch_in_modal(outputs, (i, j), ij_num_in_modal)
                 x = getattr(self, self.get_layer_name(i, j, 'deep_aggregation'))(x)
                 outputs[self.get_layer_number(i, j)] = x
 
-        return outputs
+        return {
+            j: outputs[self.get_layer_number(0, j)]
+            for j in range(1, self.cfg.MODEL.ENCO_DEPTH)
+        }  # only return those for predictions
 
 
 class SegHead(nn.Module):
@@ -139,18 +146,22 @@ class SegHead(nn.Module):
     def _create_net(self):
         in_channels = self.cfg.MODEL.N_BASE_FILTERS * 2 ** 0  # it is always row 0
 
-        lower_bound = 1 if self.cfg.MODEL.SETTINGS.DEEP_SUPERVISION else self.enco_depth - 1
-        for j in range(lower_bound, self.enco_depth):
+        self.lower_bound = 1 if self.cfg.MODEL.SETTINGS.DEEP_SUPERVISION else self.cfg.MODEL.ENCO_DEPTH - 1
+        for j in range(self.lower_bound, self.cfg.MODEL.ENCO_DEPTH):
             self.add_module(
                 self.get_layer_name(j, 'conv'),
-                nn.Conv3d(in_channels, self.cfg.MODEL.NUM_CLASSES, kernel_size=is_3d((1, 1, 1))),  # TODO check is_3d
+                nn.Conv3d(in_channels, self.cfg.MODEL.NUM_CLASSES, kernel_size=is_3d((1, 1, 1))),
             )
 
     def forward(self, x_input):
         x = list()
-        lower_bound = 1 if self.cfg.MODEL.SETTINGS.DEEP_SUPERVISION else self.enco_depth - 1
-        for j in range(lower_bound, self.enco_depth):
-            x.append(getattr(self, self.get_layer_name(j, 'conv'))(x_input[self.get_layer_number(0, j)]))
+        for j in range(self.lower_bound, self.cfg.MODEL.ENCO_DEPTH):
+            layer_j = getattr(self, self.get_layer_name(j, 'conv'))
+            input_j = x_input[j]
+
+            x_j = layer_j(input_j)
+
+            x.append(x_j)
 
         if self.cfg.MODEL.LOSS_FUNC in ('DiceLoss', 'WeightedHausdorffLoss', 'FocalLoss'):
             x = [nn.Sigmoid()(i) for i in x]
@@ -166,6 +177,7 @@ class NestedUnet3D(Unet3D):
     def set_processing_mode(self):
         global IS_3D
         IS_3D = self.cfg.MODEL.PROCESSING_MODE == '3d'
+        super().set_processing_mode()
 
     def _create_net(self):
         self.Encoder = Encoder(self.cfg)

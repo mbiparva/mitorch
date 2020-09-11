@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 from .build import MODEL_REGISTRY
 from .weight_init_helper import init_weights
-from mitorch.utils.models import pad_if_necessary
+from utils.models import pad_if_necessary
 
 IS_3D = True
 
@@ -242,13 +242,21 @@ class SegHead(nn.Module):
 class Unet3D(nn.Module):
     def __init__(self, cfg):
         super().__init__()
-        self.cfg = cfg.clone()
+
+        self.cfg = self.set_model_settings(cfg).clone()
 
         self.set_processing_mode()
 
         self._create_net()
 
         self.init_weights()
+
+    @staticmethod
+    def set_model_settings(cfg):
+        if 'SETTINGS' in cfg.MODEL:
+            cfg.MODEL.SETTINGS = dict(cfg.MODEL.SETTINGS)[cfg.MODEL.MODEL_NAME]
+
+        return cfg
 
     def set_processing_mode(self):
         global IS_3D
