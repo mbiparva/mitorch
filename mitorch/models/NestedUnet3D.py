@@ -18,7 +18,7 @@ IS_3D = True
 class ModulationBlock(nn.Module):
     def __init__(self, modulation_type):
         super().__init__()
-        assert modulation_type in ('additive', 'multiplicative', 'concatenation')
+        assert modulation_type in ('additive', 'multiplicative', 'mean', 'concatenation')
         self.modulation_type = modulation_type
 
     def forward(self, x):
@@ -28,6 +28,9 @@ class ModulationBlock(nn.Module):
         elif self.modulation_type == 'multiplicative':
             x = torch.stack(x, dim=1)
             x = torch.prod(x, dim=1)
+        elif self.modulation_type == 'mean':
+            x = torch.stack(x, dim=1)
+            x = torch.mean(x, dim=1)
         elif self.modulation_type == 'concatenation':
             x = torch.cat(x, dim=1)
         else:
@@ -101,6 +104,7 @@ class Decoder(nn.Module):
                 self.add_module(
                     self.get_layer_name(i, j, 'deep_aggregation'),
                     DeepAggregationBlock(in_channels, out_channels,
+                                         modulation_type=self.cfg.MODEL.SETTINGS.MODULATION_TYPE,
                                          num_in_modal=ij_num_in_modal, scale_factor=(2, 2, 2)),
                 )
 

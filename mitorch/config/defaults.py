@@ -36,7 +36,7 @@ _C.PROJECT.MODELS_DIR = os.path.abspath(os.path.join(_C.PROJECT.ROOT_DIR, 'lib',
 _C.PROJECT.EXPERIMENT_DIR = os.path.abspath(os.path.join(_C.PROJECT.ROOT_DIR, 'experiments'))
 
 # Set meters to use for experimental evaluation
-_C.PROJECT.METERS = ['loss', 'dice_coeff', 'jaccard_ind', 'hausdorff_dist']
+_C.PROJECT.METERS = ['loss', 'dice_coeff', 'jaccard_ind', 'hausdorff_dist']  # TODO add F1 (Precision & Recall)
 
 # Training, Validation, and Test Split Ratio
 _C.PROJECT.TVSR = 0.80
@@ -56,7 +56,7 @@ _C.TRAIN.ENABLE = True
 _C.TRAIN.HPO = (False, True)[0]
 
 # Dataset.
-_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb', 'TRAP', 'CAPTURE')[3]
+_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb', 'TRAP', 'CAPTURE')[4]
 
 # Input Modalities
 _C.TRAIN.IN_MOD = {
@@ -223,8 +223,9 @@ _C.MODEL.INPUT_CHANNELS = (len(_C.TEST.IN_MOD) - 1) if _C.TEST.ENABLE else (len(
 _C.MODEL.SETTINGS = tuple({
     'Unet3D': CfgNode({}),
     'NestedUnet3D': CfgNode({
-        'DEEP_SUPERVISION': (False, True)[0],
+        'DEEP_SUPERVISION': (False, True)[1],
         'N_HOP_DENSE_SKIP_CONNECTION': 2,  # must be > 0, 1 means no dense-skip-connections
+        'MODULATION_TYPE': ('additive', 'multiplicative', 'mean', 'concatenation')[3],
     }),
 }.items())
 

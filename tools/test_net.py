@@ -116,7 +116,7 @@ def test(cfg):
             # ('fl', 'T1acq_nu_FL.nii.gz'),
             # ('annot', 'wmh_seg.nii.gz'),
         ]
-        test_set = TestSet(cfg, 'test', transformations)
+        test_set = TestSet(cfg, 'test', transformations)  # TODO extend it to load WMHC subjects
     else:
         test_set = build_dataset(cfg.TEST.DATASET, cfg, 'test', transformations)
 
