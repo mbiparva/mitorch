@@ -159,17 +159,56 @@ class AutoPatching(ABC, data.Dataset):
 
             assert annot.shape == (depth, height, width)
 
-            for p in self.grid_generator(depth, height, width):
+            parallel = False
+            PARALLEL_JOBS = 2  # self.cfg.DATA_LOADER.NUM_WORKERS
+
+            def par_job(
+                    p_in, u_in, v_in, processed_path_in, u_path_in, block_size_in, annot_in,
+                    gen_patch_path_in, load_extract_save_patch_in
+            ):
                 # save them in their corresponding directories.
-                print(f'{u}: processing the patch @ {p}')
+                print(f'{u_in}: processing the patch @ {p_in}')
 
-                p_path = self.gen_patch_path(p, processed_path)
+                p_path_in = gen_patch_path_in(p_in, processed_path_in)
 
-                if os.path.exists(p_path):
-                    print(f'{p_path} exits and skipped.')
-                    continue
+                if os.path.exists(p_path_in):
+                    print(f'{p_path_in} exits and skipped.')
+                    return False
 
-                self.load_extract_save_patch(p, v, p_path, u_path, annot)
+                load_extract_save_patch_in(p_in, v_in, p_path_in, u_path_in, annot_in, block_size_in)
+                return True
+
+            if parallel:
+                grid_generator_list = [p for p in self.grid_generator(depth, height, width)]
+                par_outputs = np.array(
+                    Parallel(n_jobs=PARALLEL_JOBS, require='sharedmem')(
+                        delayed(par_job)(*p) for p in zip(
+                            grid_generator_list,
+                            [u]*len(grid_generator_list),
+                            [v]*len(grid_generator_list),
+                            [processed_path]*len(grid_generator_list),
+                            [u_path]*len(grid_generator_list),
+                            [self.block_size]*len(grid_generator_list),
+                            [self.load_annot]*len(grid_generator_list),
+                            [self.gen_patch_path]*len(grid_generator_list),
+                            [self.load_extract_save_patch]*len(grid_generator_list),
+                        )
+                    )
+                )
+                processed_patches = sum(par_outputs)
+                print(f'*** {u}: {processed_patches}|{len(grid_generator_list)} processed.')
+            else:
+                for p in self.grid_generator(depth, height, width):
+                    # save them in their corresponding directories.
+                    print(f'{u}: processing the patch @ {p}')
+
+                    p_path = self.gen_patch_path(p, processed_path)
+
+                    if os.path.exists(p_path):
+                        print(f'{p_path} exits and skipped.')
+                        continue
+
+                    self.load_extract_save_patch(p, v, p_path, u_path, annot, self.block_size)
 
     @staticmethod
     def get_volume_size(base_path, channel_dicts):
@@ -184,7 +223,11 @@ class AutoPatching(ABC, data.Dataset):
             shutil.rmtree(os.path.join(processed_dir, f))
 
     def image_annot_ready(self):
-        return len(os.listdir(os.path.join(self.dataset_path, 'processed'))) > 0
+        raw_dir = os.listdir(os.path.join(self.dataset_path, 'raw'))
+        processed_dir = os.listdir(os.path.join(self.dataset_path, 'processed'))
+        ready = len(raw_dir) == len(processed_dir)
+
+        return ready
 
     def grid_generator(self, depth, height, width):
         stride = self.block_size - self.stride_size
@@ -211,18 +254,22 @@ class AutoPatching(ABC, data.Dataset):
         return patch_path
 
     # noinspection PyTypeChecker
-    def load_extract_save_patch(self, p, s_files, patch_path, raw_path, annot):
+    @staticmethod
+    def load_extract_save_patch(p, s_files, patch_path, raw_path, annot, block_size):
+        if callable(annot):
+            annot = annot(raw_path)
+
         d, h, w = p
         crop_box = (
             w,
             h,
-            w + self.block_size,
-            h + self.block_size,
+            w + block_size,
+            h + block_size,
         )
 
         s_images = defaultdict(list)
         for u, v in s_files.items():
-            for i in v[d: d + self.block_size]:
+            for i in v[d: d + block_size]:
                 i_path = os.path.join(raw_path, u, i)
                 s_images[u].append(np.asanyarray(Image.open(i_path).crop(box=crop_box)))
 
@@ -230,7 +277,7 @@ class AutoPatching(ABC, data.Dataset):
         for u, v in s_images.items():
             s_images[u] = np.stack(v)
 
-        annot_cropped = annot[d: d + self.block_size, h: h + self.block_size, w: w + self.block_size]
+        annot_cropped = annot[d: d + block_size, h: h + block_size, w: w + block_size]
 
         s_images = np.stack(list(s_images.values())+[annot_cropped])  # CxZxHxW --- annot is always the last
 
