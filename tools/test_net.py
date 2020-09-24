@@ -81,7 +81,9 @@ def test(cfg):
         device = torch.device('cpu')
 
     # (1) setup data root
-    assert cfg.TEST.CHECKPOINT_FILE_PATH and len(cfg.TEST.CHECKPOINT_FILE_PATH), 'TEST.CHECKPOINT_FILE_PATH not set'
+    assert cfg.TEST.CHECKPOINT_FILE_PATH and \
+        len(cfg.TEST.CHECKPOINT_FILE_PATH) and \
+        os.path.exists(cfg.TEST.CHECKPOINT_FILE_PATH), 'TEST.CHECKPOINT_FILE_PATH not set'
 
     # (2) define data pipeline
     eval_pred_flag = True
@@ -99,9 +101,13 @@ def test(cfg):
     ])
     # Define any test dataset with annotation as known dataset otherwise call TestSet
     if len(cfg.TEST.DATA_PATH):
-        assert not cfg.WMH.ENABLE, 'batch or single mode is undefined for WMH Segmentation'
+        if cfg.WMH.ENABLE and not cfg.WMH.HFB_GT:
+            assert cfg.WMH.HFB_CHECKPOINT and \
+                len(cfg.WMH.HFB_CHECKPOINT) and \
+                os.path.exists(cfg.WMH.HFB_CHECKPOINT), 'WMH.HFB_CHECKPOINT not set'
+
         print('you chose {} mode'.format(('single', 'batch')[cfg.TEST.BATCH_MODE]))
-        eval_pred_flag = False
+        eval_pred_flag = (False, True)[1]
         save_pred_flag = True
 
         os.rmdir(cfg.OUTPUT_DIR)  # it is useless, we use hpo_output_dir instead
@@ -109,14 +115,17 @@ def test(cfg):
         cfg = init_cfg(cfg)
 
         cfg.TEST.IN_MOD = [  # TODO if needed, we can add this to the input arguments
-            ('t1', 'T1_nu.img'),
-            ('fl', 'T1acq_nu_FL.img'),
+            # ('t1', 'T1_nu.img'),
+            # ('fl', 'T1acq_nu_FL.img'),
             # ('annot', 'T1acq_nu_HfBd.img'),
             # ('t1', 'T1_nu.nii.gz'),  # wmh test cases
             # ('fl', 'T1acq_nu_FL.nii.gz'),
             # ('annot', 'wmh_seg.nii.gz'),
+            ('t1', 'T1.nii.gz'),  # wmh challenge test cases
+            ('fl', 'FLAIR.nii.gz'),
+            ('annot', 'wmh.nii.gz'),
         ]
-        test_set = TestSet(cfg, 'test', transformations)  # TODO extend it to load WMHC subjects
+        test_set = TestSet(cfg, 'test', transformations, prefix_name=False if cfg.WMH.ENABLE else True)
     else:
         test_set = build_dataset(cfg.TEST.DATASET, cfg, 'test', transformations)
 

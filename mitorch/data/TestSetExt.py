@@ -11,9 +11,9 @@ from data.SRIBILSet import SRIBILBase
 
 
 class TestSet(SRIBILBase):
-    def __init__(self, cfg, mode, transform):
+    def __init__(self, cfg, mode, transform, prefix_name):
         super().__init__(cfg, mode, transform)
-        self.prefix_name = True
+        self.prefix_name = prefix_name
 
     def index_samples(self):
         return [self.cfg.TEST.DATA_PATH] if not self.cfg.TEST.BATCH_MODE else [
@@ -64,10 +64,15 @@ class TestSet(SRIBILBase):
                 assert v.shape[-1] == 1
                 in_pipe_data[u] = in_pipe_data[u].squeeze(-1)
 
-        in_pipe_meta = self.run_sanity_checks(in_pipe_meta)
-        in_pipe_meta['sample_path'] = sample_path
+        try:
+            in_pipe_meta = self.run_sanity_checks(in_pipe_meta)
 
-        image_tensor, annot_tensor = self.get_data_tensor(in_pipe_data)
+            in_pipe_meta['sample_path'] = sample_path
+
+            image_tensor, annot_tensor = self.get_data_tensor(in_pipe_data)
+        except Exception as e:
+            print('exception {} raised in the dataloader getitem function for {}'.format(e, sample_path))
+            raise e
 
         image_tensor = torch.stack(image_tensor, dim=-1)  # D x H x W x C
         annot_tensor = annot_tensor.unsqueeze(dim=0)

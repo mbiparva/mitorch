@@ -243,7 +243,7 @@ class Unet3D(nn.Module):
     def __init__(self, cfg):
         super().__init__()
 
-        self.cfg = self.set_model_settings(cfg).clone()
+        self.cfg = self.set_model_settings(cfg.clone())
 
         self.set_processing_mode()
 
@@ -253,8 +253,10 @@ class Unet3D(nn.Module):
 
     @staticmethod
     def set_model_settings(cfg):
-        if 'SETTINGS' in cfg.MODEL:
-            cfg.MODEL.SETTINGS = dict(cfg.MODEL.SETTINGS)[cfg.MODEL.MODEL_NAME]
+        if 'SETTINGS' in cfg.MODEL and isinstance(cfg.MODEL.SETTINGS, tuple):
+            cfg_MODEL_SETTINGS = dict(cfg.MODEL.SETTINGS)
+            cfg.MODEL.SETTINGS = cfg_MODEL_SETTINGS[cfg.MODEL.MODEL_NAME] \
+                if cfg.MODEL.MODEL_NAME in cfg_MODEL_SETTINGS else cfg_MODEL_SETTINGS
 
         return cfg
 

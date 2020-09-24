@@ -113,24 +113,9 @@ class NetWrapperWMH(NetWrapper):
         self.net_core = build_model(self.cfg, device)
 
     def _create_net_hfb(self, device):
-        # # REMOVE IT
-        # N_BASE_FILTERS = self.cfg.MODEL.N_BASE_FILTERS
-        # ENCO_DEPTH = self.cfg.MODEL.ENCO_DEPTH
-        # DROPOUT_RATE = self.cfg.MODEL.DROPOUT_RATE
-        # self.cfg.MODEL.N_BASE_FILTERS = 16
-        # self.cfg.MODEL.ENCO_DEPTH = 5
-        # self.cfg.MODEL.DROPOUT_RATE = 0.25
-        # # REMOVE IT
-
         self.net_core_hfb = build_model(self.cfg, device)
         self.load_checkpoint_hfb(self.cfg.WMH.HFB_CHECKPOINT)
         self.net_core_hfb.eval()
-
-        # # REMOVE IT
-        # self.cfg.MODEL.N_BASE_FILTERS = N_BASE_FILTERS
-        # self.cfg.MODEL.ENCO_DEPTH = ENCO_DEPTH
-        # self.cfg.MODEL.DROPOUT_RATE = DROPOUT_RATE
-        # # REMOVE IT
 
     def load_checkpoint_hfb(self, ckpnt_path):
         checkops.load_checkpoint(ckpnt_path, self.net_core_hfb, data_parallel=self.cfg.NUM_GPUS > 1)
