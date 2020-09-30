@@ -13,7 +13,7 @@ import torch
 
 from data.data_container import DataContainer
 from utils.meters import TVTMeter
-from utils.metrics import dice_coefficient_metric, jaccard_index_metric, hausdorff_distance_metric
+import utils.metrics as metrics
 
 
 class BatchBase(ABC):
@@ -77,14 +77,21 @@ class BatchBase(ABC):
 
     def evaluate(self, p, a, meters):
         BINARIZE_THRESHOLD = 0.5
+
         if isinstance(p, (tuple, list)):  # Deep_supervision returns outputs at multiple levels
             p = torch.mean(torch.stack(p), dim=0)
+
         if self.cfg.MODEL.LOSS_FUNC == 'CrossEntropyLoss':
             p, a = self.cel_prep(p, a)
+
         p = self.binarize(p, binarize_threshold=BINARIZE_THRESHOLD)
-        meters['dice_coeff'] = dice_coefficient_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX)
-        meters['jaccard_ind'] = jaccard_index_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX)
-        meters['hausdorff_dist'] = hausdorff_distance_metric(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX)
+
+        for m in self.cfg.PROJECT.METERS:
+            if m == 'loss':
+                continue
+
+            metric_function = getattr(metrics, m)
+            meters[m] = metric_function(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX)
 
     @abstractmethod
     def batch_main(self, net, x, annotation):
