@@ -36,7 +36,7 @@ _C.PROJECT.MODELS_DIR = os.path.abspath(os.path.join(_C.PROJECT.ROOT_DIR, 'lib',
 _C.PROJECT.EXPERIMENT_DIR = os.path.abspath(os.path.join(_C.PROJECT.ROOT_DIR, 'experiments'))
 
 # Set meters to use for experimental evaluation
-_C.PROJECT.METERS = ['loss', 'dice_coeff', 'jaccard_ind', 'hausdorff_dist', 'f1']
+_C.PROJECT.METERS = ['loss', 'dice_coefficient', 'jaccard_index', 'hausdorff_distance', 'f1']
 
 # Training, Validation, and Test Split Ratio
 _C.PROJECT.TVSR = 0.80
@@ -56,7 +56,7 @@ _C.TRAIN.ENABLE = True
 _C.TRAIN.HPO = (False, True)[0]
 
 # Dataset.
-_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb', 'TRAP', 'CAPTURE')[3]
+_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb', 'TRAP', 'CAPTURE', 'TRACING')[3]
 
 # Input Modalities
 _C.TRAIN.IN_MOD = {
@@ -78,6 +78,7 @@ _C.TRAIN.IN_MOD = {
         ],
     'TRAP': [[], [], []],  # just to imitate the typical behaviour for INPUT_CHANNELS
     'CAPTURE': [[], []],
+    'TRACING': [[], []],
 }[_C.TRAIN.DATASET]
 
 if socket.gethostname() == 'cerveau.sri.utoronto.ca':
@@ -392,7 +393,7 @@ _C.WMH.RESIZING_PADDING = (False, True)[0]
 _C.NVT = CfgNode()
 
 # Whether NVT is enabled
-_C.NVT.ENABLE = True if _C.TRAIN.DATASET in ('TRAP', 'CAPTURE') else False
+_C.NVT.ENABLE = True if _C.TRAIN.DATASET in ('TRAP', 'CAPTURE', 'TRACING') else False
 
 _C.NVT.NUM_MULTI_PATCHES = 1
 

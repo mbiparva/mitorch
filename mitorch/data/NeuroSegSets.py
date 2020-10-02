@@ -143,7 +143,7 @@ class AutoPatching(ABC, data.Dataset):
 
     @staticmethod
     @abstractmethod
-    def load_annot(basename_path):
+    def load_annot(basename_path, image_shape):
         raise NotImplementedError
 
     def load_patch_save(self):
@@ -153,11 +153,9 @@ class AutoPatching(ABC, data.Dataset):
             if not os.path.exists(processed_path):
                 os.mkdir(processed_path)
 
-            annot = self.load_annot(u_path)
-
             depth, height, width = self.get_volume_size(u_path, v)
 
-            assert annot.shape == (depth, height, width)
+            annot = self.load_annot(u_path, (depth, height, width))
 
             parallel = False
             PARALLEL_JOBS = 2  # self.cfg.DATA_LOADER.NUM_WORKERS
@@ -417,9 +415,12 @@ class TRAP(AutoPatching):
         return output_file_list
 
     @staticmethod
-    def load_annot(basename_path):
+    def load_annot(basename_path, image_shape):
         annot_file = os.path.join(basename_path, 'seg_bin_cfos.tif')
-        return tiff.imread(annot_file)
+        annot_image = tiff.imread(annot_file)
+        assert annot_image.shape == image_shape
+
+        return annot_image
 
 
 @DATASET_REGISTRY.register()
@@ -439,6 +440,66 @@ class CAPTURE(AutoPatching):
         return output_file_list
 
     @staticmethod
-    def load_annot(basename_path):
+    def load_annot(basename_path, image_shape):
         annot_file = os.path.join(basename_path, 'segmentation_green_virus', 'seg_bin_virus.tif')
-        return tiff.imread(annot_file)
+        annot_image = tiff.imread(annot_file)
+        assert annot_image.shape == image_shape
+
+        return annot_image
+
+
+@DATASET_REGISTRY.register()
+class TRACING(AutoPatching):
+    """
+    This overloads the Autopatching class to generate patches for labeling/ground-truth generation.
+    It does not load any annotations.
+    """
+    def __init__(self, *args, **kwargs):
+        args[0].NVT.PATCH_SELECTION_POLICY = False
+        super().__init__(*args, **kwargs)
+        raise Exception('patches are generated, training is not defined for tracing without annotations')
+
+    def is_data_dir(self, sample_dir_name):
+        return True  # define the rule if there is any
+
+    def list_files(self, s_path):
+        output_file_list = dict()
+        for i in os.listdir(s_path):
+            i_path = os.path.join(s_path, i)
+            if not os.path.isdir(i_path):
+                continue
+            output_file_list[i] = self.load_seq_image_files(i_path)
+
+        return output_file_list
+
+    @staticmethod
+    def load_annot(basename_path, image_shape):
+        return None
+
+    # noinspection PyTypeChecker
+    @staticmethod
+    def load_extract_save_patch(p, s_files, patch_path, raw_path, annot, block_size):
+        assert annot is None, "don't expect annot for TRACING"
+        d, h, w = p
+        crop_box = (
+            w,
+            h,
+            w + block_size,
+            h + block_size,
+        )
+
+        s_images = defaultdict(list)
+        for u, v in s_files.items():
+            for i in v[d: d + block_size]:
+                i_path = os.path.join(raw_path, u, i)
+                s_images[u].append(np.asanyarray(Image.open(i_path).crop(box=crop_box)))
+
+        # merge sheets into one numpy 3D array
+        for u, v in s_images.items():
+            s_images[u] = np.stack(v)
+
+        s_images = np.stack(list(s_images.values())+[])  # CxZxHxW --- annot is neglected
+
+        s_images = s_images.transpose(1, 0, 2, 3)  # ZxCxHxW
+
+        tiff.imwrite(patch_path, s_images, **{'bigtiff': False, 'imagej': True, 'metadata': {'axes': 'ZCYX'}})

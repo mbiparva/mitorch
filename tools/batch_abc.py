@@ -90,7 +90,7 @@ class BatchBase(ABC):
             if m == 'loss':
                 continue
 
-            metric_function = getattr(metrics, m)
+            metric_function = getattr(metrics, f'{m}_metric')
             meters[m] = metric_function(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX)
 
     @abstractmethod

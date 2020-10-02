@@ -47,7 +47,10 @@ class EpochLoop:
     def setup_tb_logger(self):
         self.tb_logger_writer = SummaryWriter(self.cfg.OUTPUT_DIR)
         with open(os.path.join(self.cfg.OUTPUT_DIR, 'cfg.yml'), 'w') as outfile:
-            self.cfg.dump(stream=outfile)
+            # pyyaml crashes on CfgNodes in tuples so I will narrow it down to the net name
+            cfg = self.cfg.clone()
+            cfg.MODEL.SETTINGS = dict(cfg.MODEL.SETTINGS)[cfg.MODEL.MODEL_NAME]
+            cfg.dump(stream=outfile)
 
     def tb_logger_update(self, e, worker):
         if e == 0 and self.tb_logger_writer is None:
