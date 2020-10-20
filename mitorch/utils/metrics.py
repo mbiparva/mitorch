@@ -115,10 +115,18 @@ def f1_metric(p, a, ignore_index):
             p,
             a,
         ).item()
-
     else:
-        return f1_score(
-            a.detach().cpu().numpy(),
-            p.detach().cpu().numpy(),
-            average='weighted'
-        )
+        BINARY = (False, True)[1]
+        if not BINARY:
+            return f1_score(
+                a.detach().cpu().numpy(),
+                p.detach().cpu().numpy(),
+                average='weighted'
+            )
+        else:
+            return f1_score(  # only report F1 on the positive label (foreground)
+                a.detach().cpu().numpy(),
+                p.detach().cpu().numpy(),
+                average='binary',
+                pos_label=1,
+            )

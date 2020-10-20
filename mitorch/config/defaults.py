@@ -23,6 +23,12 @@ _C = CfgNode()
 # -----------------------------------------------------------------------------
 _C.PROJECT = CfgNode()
 
+# Project Name
+_C.PROJECT.NAME = ''
+
+# Project Description
+_C.PROJECT.DESCRIPTION = ''
+
 # Root directory of project
 _C.PROJECT.ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
