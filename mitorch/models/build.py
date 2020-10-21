@@ -10,6 +10,7 @@
 
 import torch
 from fvcore.common.registry import Registry
+from torch import nn
 
 MODEL_REGISTRY = Registry("MODEL")
 MODEL_REGISTRY.__doc__ = """
@@ -34,15 +35,19 @@ def build_model(cfg, cur_device):
     # Construct the model
     name = cfg.MODEL.MODEL_NAME
     model = MODEL_REGISTRY.get(name)(cfg)
-    # Determine the GPU used by the current process | instead we pass the current device
-    # cur_device = torch.cuda.current_device()
+
+    if torch.cuda.device_count() > 1 and cfg.DATA_PARALLEL:
+        print("Let's use", torch.cuda.device_count(), "GPUs!")
+        model = nn.DataParallel(model)
+
     # Transfer the model to the current GPU device
     model = model.cuda(device=cur_device)
-    # Use multi-process data parallel model in the multi-gpu setting
-    if cfg.NUM_GPUS > 1:
-        # Make model replica operate on the current device
-        model = torch.nn.parallel.DistributedDataParallel(
-            module=model, device_ids=[cur_device], output_device=cur_device
-        )
-        raise NotImplementedError('Check it before use it')
+
+    # # Use single-process data parallel model in the multi-gpu setting
+    # if cfg.NUM_GPUS > 1:
+    #     # Make model replica operate on the current device
+    #     model = torch.nn.parallel.DistributedDataParallel(
+    #         module=model, device_ids=[cur_device], output_device=cur_device
+    #     )
+
     return model

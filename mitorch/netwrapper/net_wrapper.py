@@ -15,6 +15,7 @@ import utils.checkpoint as checkops
 from netwrapper.optimizer import construct_optimizer, construct_scheduler
 from netwrapper.build import build_loss
 from data.functional_mitorch import resize, pad
+from torch.cuda.amp import GradScaler
 
 
 class NetWrapper(nn.Module):
@@ -34,6 +35,9 @@ class NetWrapper(nn.Module):
 
     def _create_net(self, device):
         self.net_core = build_model(self.cfg, device)  # this moves to device memory too
+
+        if self.cfg.AMP:
+            self.grad_scaler = GradScaler()
 
     def _create_criterion(self, name=None):
         return build_loss(self.cfg, name)
@@ -92,6 +96,13 @@ class NetWrapper(nn.Module):
         loss = self.compute_loss(p, a)
 
         if step:
+            if self.cfg.AMP:
+                self.grad_scaler.scale(loss).backward()
+                self.grad_scaler.step(self.optimizer)
+                self.grad_scaler.update()
+
+                return loss.item()
+
             loss.backward()
             self.optimizer.step()
             self.optimizer.zero_grad()
@@ -131,7 +142,9 @@ class NetWrapperWMH(NetWrapper):
 
     def forward(self, x, return_input=False):
         assert self.cfg.MODEL.PROCESSING_MODE == '3d', '2d processing is not addressed for WMH and HFB'
+
         x, annotation = self.hfb_extract(x)
+
         pred = self.net_core(x)
 
         if return_input:

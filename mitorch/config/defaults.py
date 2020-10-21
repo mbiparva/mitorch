@@ -320,11 +320,14 @@ _C.SOLVER.SCHEDULER_TYPE = ('step', 'step_restart', 'multi', 'lambda', 'plateau'
 # Misc options
 # ---------------------------------------------------------------------------- #
 
-# Number of GPUs to use (applies to both training and testing). 0 Means don't use GPU.
-_C.NUM_GPUS = 1
-
 # Default GPU device id
 _C.GPU_ID = 0
+
+# Whether to use auto-mixed-precision (amp)
+_C.AMP = (False, True)[0]
+
+# Whether to use auto-mixed-precision (amp)
+_C.DATA_PARALLEL = (False, True)[1]  # uses all gpus on the device
 
 # Note that non-determinism may still be present due to non-deterministic
 # operator implementations in GPU operator libraries.

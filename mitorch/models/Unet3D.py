@@ -11,6 +11,7 @@ import torch.nn as nn
 from .build import MODEL_REGISTRY
 from .weight_init_helper import init_weights
 from utils.models import pad_if_necessary
+from torch.cuda.amp import autocast
 
 IS_3D = True
 
@@ -272,8 +273,14 @@ class Unet3D(nn.Module):
     def init_weights(self):
         init_weights(self, self.cfg.MODEL.FC_INIT_STD)
 
-    def forward(self, x):
+    def forward_core(self, x):
         x = self.Encoder(x)
         x = self.Decoder(x)
         x = self.SegHead(x)
         return x
+
+    def forward(self, x):
+        if self.cfg.AMP:
+            with autocast():
+                return self.forward_core(x)
+        return self.forward_core(x)
