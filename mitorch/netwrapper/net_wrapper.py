@@ -9,7 +9,7 @@ import os
 import torch
 import torch.nn as nn
 import numpy as np
-
+from torch.cuda.amp import autocast
 from models.build import build_model
 import utils.checkpoint as checkops
 from netwrapper.optimizer import construct_optimizer, construct_scheduler
@@ -36,6 +36,7 @@ class NetWrapper(nn.Module):
     def _create_net(self, device):
         self.net_core = build_model(self.cfg, device)  # this moves to device memory too
 
+        self.grad_scaler = None
         if self.cfg.AMP:
             self.grad_scaler = GradScaler()
 
@@ -62,7 +63,8 @@ class NetWrapper(nn.Module):
             self.net_core,
             self.optimizer,
             cur_epoch,
-            self.cfg
+            self.cfg,
+            scaler=self.grad_scaler,
         )
 
     def load_checkpoint(self, ckpnt_path):
@@ -70,7 +72,8 @@ class NetWrapper(nn.Module):
             ckpnt_path,
             self.net_wrapper.net_core,
             self.cfg.DISTRIBUTED_DATA_PARALLEL,
-            self.net_wrapper.optimizer
+            self.net_wrapper.optimizer,
+            scaler=self.grad_scaler,
         )
 
     def forward(self, x):
@@ -78,16 +81,23 @@ class NetWrapper(nn.Module):
 
         return x
 
-    def compute_loss(self, p, a):
-        loss = torch.tensor([0], dtype=torch.float, device=p[0].device)
-        a = [a] * len(p)
-        for p_i, a_i in zip(p, a):
-            loss += self.criterion(p_i, a_i)
-            # loss += self.criterion_aux(p_i, a_i)
-            if self.cfg.MODEL.LOSS_AUG_WHL:
-                loss += 10.0 * self.criterion_aux(p_i, a_i)
+    def compute_loss_core(self, p, a):
+        with autocast():
+            loss = torch.tensor([0], dtype=torch.float, device=p[0].device)
+            a = [a] * len(p)
+            for p_i, a_i in zip(p, a):
+                loss += self.criterion(p_i, a_i)
+                # loss += self.criterion_aux(p_i, a_i)
+                if self.cfg.MODEL.LOSS_AUG_WHL:
+                    loss += 10.0 * self.criterion_aux(p_i, a_i)
 
         return loss
+
+    def compute_loss(self, p, a):
+        if self.cfg.AMP:
+            with autocast():
+                return self.compute_loss_core(p, a)
+        return self.compute_loss_core(p, a)
 
     def loss_update(self, p, a, step=True):
         if not isinstance(p, (tuple, list)):
@@ -100,6 +110,7 @@ class NetWrapper(nn.Module):
                 self.grad_scaler.scale(loss).backward()
                 self.grad_scaler.step(self.optimizer)
                 self.grad_scaler.update()
+                self.optimizer.zero_grad()
 
                 return loss.item()
 
@@ -130,7 +141,7 @@ class NetWrapperWMH(NetWrapper):
 
     def load_checkpoint_hfb(self, ckpnt_path):
         checkops.load_checkpoint(ckpnt_path, self.net_core_hfb,
-                                 data_parallel=self.cfg.DISTRIBUTED_DATA_PARALLEL)
+                                 distributed_data_parallel=self.cfg.DISTRIBUTED_DATA_PARALLEL)
 
     def load_checkpoint(self, ckpnt_path):
         self.load_checkpoint_hfb(self.cfg.WMH.HFB_CHECKPOINT)

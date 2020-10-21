@@ -327,7 +327,7 @@ _C.USE_GPUS = (False, True)[1]
 _C.GPU_ID = 0
 
 # Whether to use auto-mixed-precision (amp)
-_C.AMP = _C.USE_GPUS and (False, True)[0]
+_C.AMP = _C.USE_GPUS and (False, True)[1]
 
 # Whether to use DataParallel in PyTorch
 _C.DATA_PARALLEL = _C.USE_GPUS and (False, True)[0]  # uses all gpus on the device
@@ -443,7 +443,7 @@ def _assert_and_infer_cfg(cfg):
     if 'N_HOP_DENSE_SKIP_CONNECTION' in cfg.MODEL.SETTINGS:
         assert cfg.MODEL.SETTINGS.N_HOP_DENSE_SKIP_CONNECTION > 0
 
-    assert not cfg.DATA_PARALLEL == cfg.DISTRIBUTED_DATA_PARALLEL, 'either use DP or DDP in PyTorch'
+    assert not (cfg.DATA_PARALLEL and cfg.DISTRIBUTED_DATA_PARALLEL), 'either use DP or DDP in PyTorch'
 
     return cfg
 

@@ -145,7 +145,7 @@ def test(cfg):
     else:
         net_wrapper = NetWrapperHFB(device, cfg)
 
-    checkops.load_checkpoint(cfg.TEST.CHECKPOINT_FILE_PATH, net_wrapper.net_core, data_parallel=False)
+    checkops.load_checkpoint(cfg.TEST.CHECKPOINT_FILE_PATH, net_wrapper.net_core, distributed_data_parallel=False)
     net_wrapper.net_core.eval()
 
     # (4) loop over samples
