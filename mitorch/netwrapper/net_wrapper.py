@@ -69,7 +69,7 @@ class NetWrapper(nn.Module):
         return checkops.load_checkpoint(
             ckpnt_path,
             self.net_wrapper.net_core,
-            self.cfg.NUM_GPUS > 1,
+            self.cfg.DISTRIBUTED_DATA_PARALLEL,
             self.net_wrapper.optimizer
         )
 
@@ -129,14 +129,15 @@ class NetWrapperWMH(NetWrapper):
         self.net_core_hfb.eval()
 
     def load_checkpoint_hfb(self, ckpnt_path):
-        checkops.load_checkpoint(ckpnt_path, self.net_core_hfb, data_parallel=self.cfg.NUM_GPUS > 1)
+        checkops.load_checkpoint(ckpnt_path, self.net_core_hfb,
+                                 data_parallel=self.cfg.DISTRIBUTED_DATA_PARALLEL)
 
     def load_checkpoint(self, ckpnt_path):
         self.load_checkpoint_hfb(self.cfg.WMH.HFB_CHECKPOINT)
         return checkops.load_checkpoint(
             ckpnt_path,
             self.net_wrapper.net_core,
-            self.cfg.NUM_GPUS > 1,
+            self.cfg.DISTRIBUTED_DATA_PARALLEL,
             self.net_wrapper.optimizer
         )
 

@@ -320,14 +320,20 @@ _C.SOLVER.SCHEDULER_TYPE = ('step', 'step_restart', 'multi', 'lambda', 'plateau'
 # Misc options
 # ---------------------------------------------------------------------------- #
 
+# Use GPUs
+_C.USE_GPUS = (False, True)[1]
+
 # Default GPU device id
 _C.GPU_ID = 0
 
 # Whether to use auto-mixed-precision (amp)
-_C.AMP = (False, True)[0]
+_C.AMP = _C.USE_GPUS and (False, True)[0]
 
-# Whether to use auto-mixed-precision (amp)
-_C.DATA_PARALLEL = (False, True)[1]  # uses all gpus on the device
+# Whether to use DataParallel in PyTorch
+_C.DATA_PARALLEL = _C.USE_GPUS and (False, True)[0]  # uses all gpus on the device
+
+# Whether to use DistributedDataParallel in PyTorch
+_C.DISTRIBUTED_DATA_PARALLEL = _C.USE_GPUS and (False, True)[0]  # uses all gpus on the device
 
 # Note that non-determinism may still be present due to non-deterministic
 # operator implementations in GPU operator libraries.
@@ -436,6 +442,8 @@ def _assert_and_infer_cfg(cfg):
     # TODO add assertion respectively
     if 'N_HOP_DENSE_SKIP_CONNECTION' in cfg.MODEL.SETTINGS:
         assert cfg.MODEL.SETTINGS.N_HOP_DENSE_SKIP_CONNECTION > 0
+
+    assert not cfg.DATA_PARALLEL == cfg.DISTRIBUTED_DATA_PARALLEL, 'either use DP or DDP in PyTorch'
 
     return cfg
 

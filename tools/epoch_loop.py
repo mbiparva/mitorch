@@ -36,7 +36,7 @@ class EpochLoop:
 
     def setup_gpu(self):
         cuda_device_id = self.cfg.GPU_ID
-        if self.cfg.NUM_GPUS > 0 and torch.cuda.is_available():
+        if self.cfg.USE_GPUS and torch.cuda.is_available():
             self.device = torch.device('cuda:{}'.format(cuda_device_id))
             print('cuda available')
             print('device count is', torch.cuda.device_count())
