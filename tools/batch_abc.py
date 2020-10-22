@@ -55,6 +55,8 @@ class BatchBase(ABC):
         assert annotation.size(1) == 1
         if self.cfg.MODEL.LOSS_FUNC == 'CrossEntropyLoss':
             annotation = annotation.squeeze(dim=1).long()
+        if self.cfg.AMP:
+            annotation = annotation.to(dtype=torch.float16)
         return annotation
 
     @staticmethod

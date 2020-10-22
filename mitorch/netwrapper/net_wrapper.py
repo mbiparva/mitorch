@@ -9,13 +9,18 @@ import os
 import torch
 import torch.nn as nn
 import numpy as np
-from torch.cuda.amp import autocast
 from models.build import build_model
 import utils.checkpoint as checkops
 from netwrapper.optimizer import construct_optimizer, construct_scheduler
 from netwrapper.build import build_loss
 from data.functional_mitorch import resize, pad
-from torch.cuda.amp import GradScaler
+try:
+    from torch.cuda.amp import autocast
+    from torch.cuda.amp import GradScaler
+    AMP_SUPPORTED = True
+except ImportError:
+    AMP_SUPPORTED = False
+    print('AMP is not supported in this environment')
 
 
 class NetWrapper(nn.Module):
@@ -82,14 +87,13 @@ class NetWrapper(nn.Module):
         return x
 
     def compute_loss_core(self, p, a):
-        with autocast():
-            loss = torch.tensor([0], dtype=torch.float, device=p[0].device)
-            a = [a] * len(p)
-            for p_i, a_i in zip(p, a):
-                loss += self.criterion(p_i, a_i)
-                # loss += self.criterion_aux(p_i, a_i)
-                if self.cfg.MODEL.LOSS_AUG_WHL:
-                    loss += 10.0 * self.criterion_aux(p_i, a_i)
+        loss = torch.tensor([0], dtype=torch.float, device=p[0].device)
+        a = [a] * len(p)
+        for p_i, a_i in zip(p, a):
+            loss += self.criterion(p_i, a_i)
+            # loss += self.criterion_aux(p_i, a_i)
+            if self.cfg.MODEL.LOSS_AUG_WHL:
+                loss += 10.0 * self.criterion_aux(p_i, a_i)
 
         return loss
 

@@ -11,7 +11,10 @@ import torch.nn as nn
 from .build import MODEL_REGISTRY
 from .weight_init_helper import init_weights
 from utils.models import pad_if_necessary
-from torch.cuda.amp import autocast
+try:
+    from torch.cuda.amp import autocast
+except ImportError:
+    pass
 
 IS_3D = True
 

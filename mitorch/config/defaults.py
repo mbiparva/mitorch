@@ -327,7 +327,7 @@ _C.USE_GPUS = (False, True)[1]
 _C.GPU_ID = 0
 
 # Whether to use auto-mixed-precision (amp)
-_C.AMP = _C.USE_GPUS and (False, True)[1]
+_C.AMP = _C.USE_GPUS and (False, True)[0]
 
 # Whether to use DataParallel in PyTorch
 _C.DATA_PARALLEL = _C.USE_GPUS and (False, True)[0]  # uses all gpus on the device
