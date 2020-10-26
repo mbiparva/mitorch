@@ -82,7 +82,7 @@ class NetWrapper(nn.Module):
         )
 
     def forward(self, x):
-        x = self.net_core(x)
+        x = self.net_core.forward(x)
 
         return x
 

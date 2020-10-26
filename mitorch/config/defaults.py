@@ -100,7 +100,7 @@ _C.TRAIN.SHUFFLE = True
 _C.TRAIN.EVAL_PERIOD = 1
 
 # Save model checkpoint every checkpoint period epochs. < 1 will deactivate
-_C.TRAIN.CHECKPOINT_PERIOD = 20
+_C.TRAIN.CHECKPOINT_PERIOD = 0
 
 # Resume training from the latest checkpoint in the output directory.
 _C.TRAIN.AUTO_RESUME = True

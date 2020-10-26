@@ -10,6 +10,7 @@ import time
 from abc import ABC, abstractmethod
 import datetime
 import torch
+import subprocess
 
 from data.data_container import DataContainer
 from utils.meters import TVTMeter
@@ -125,6 +126,8 @@ class BatchBase(ABC):
 
         self.meters.iter_tic()
         for cur_iter, (image, annotation, meta) in enumerate(self.data_container.dataloader):
+            # if cur_iter % 5 == 0:
+            #     subprocess.call(['nvidia-smi'])
 
             image = image.to(self.device, non_blocking=True)
             annotation = annotation.to(self.device, non_blocking=True)

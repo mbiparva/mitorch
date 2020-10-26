@@ -36,6 +36,7 @@ def build_model(cfg, cur_device):
     if torch.cuda.device_count() > 1 and cfg.DATA_PARALLEL:
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         model = nn.DataParallel(model)
+        print(model.device_ids)
 
     # Transfer the model to the current GPU device
     model = model.cuda(device=cur_device)
