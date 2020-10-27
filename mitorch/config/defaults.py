@@ -305,13 +305,13 @@ _C.SOLVER.NESTEROV = False
 # L2 regularization.
 _C.SOLVER.WEIGHT_DECAY = 1e-5
 
-# TODO add warup and scheduler hypers here
+# TODO add warm-up and scheduler hypers here
 
 # Optimization method.
 _C.SOLVER.OPTIMIZING_METHOD = ('sgd', 'adadelta', 'adagrad', 'rmsprop', 'adam')[4]
 
 # Enable Scheduler
-_C.SOLVER.SCHEDULER_MODE = True
+_C.SOLVER.SCHEDULER_MODE = False
 
 # Set the type of scheduler
 _C.SOLVER.SCHEDULER_TYPE = ('step', 'step_restart', 'multi', 'lambda', 'plateau', 'cosine')[-2]

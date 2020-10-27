@@ -74,9 +74,11 @@ hp_set = [
             'name': 'MODEL.DROPOUT_RATE',
             'type': 'choice',
             'values': [
-                0.25,
+                0.10,
+                0.30,
                 0.50,
-                0.75,
+                0.70,
+                0.90,
             ],
         },
     ],

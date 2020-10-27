@@ -11,7 +11,7 @@ from config.defaults import init_cfg
 from utils.hpo import *
 import train_net_hpo
 
-EXP_SEL = 7
+EXP_SEL = 8
 
 hp_set = {
     0: {
@@ -110,6 +110,11 @@ hp_set = {
         #     0, 100, 200, 400, 800
         #     16000, 32000, 64000, 128000, 256000, 512000
         # ),
+    },
+    8: {
+        'DATA.CROP_SIZE': (
+            16, 32, 64, 80, 96
+        ),
     },
 }[EXP_SEL]
 
