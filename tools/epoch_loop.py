@@ -17,7 +17,7 @@ from evaluator import Evaluator
 import utils.logging as logging
 import utils.misc as misc
 import utils.checkpoint as checkops
-
+import utils.distributed as du
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from netwrapper.net_wrapper import NetWrapperHFB, NetWrapperWMH
@@ -36,7 +36,8 @@ class EpochLoop:
 
     def setup_gpu(self):
         cuda_device_id = self.cfg.GPU_ID
-        if self.cfg.USE_GPUS and torch.cuda.is_available():
+        torch.cuda.set_device(cuda_device_id)
+        if self.cfg.USE_GPU and torch.cuda.is_available():
             self.device = torch.device('cuda:{}'.format(cuda_device_id))
             print('cuda available')
             print('device count is', torch.cuda.device_count())
@@ -53,13 +54,16 @@ class EpochLoop:
             cfg.dump(stream=outfile)
 
     def tb_logger_update(self, e, worker):
-        if e == 0 and self.tb_logger_writer is None:
-            self.setup_tb_logger()
+        if not (self.cfg.DDP and self.cfg.DDP_CFG.RANK):  # no ddp or rank zero
+            if e == 0 and self.tb_logger_writer is None:
+                self.setup_tb_logger()
         worker.tb_logger_update(self.tb_logger_writer, e)
 
     def save_checkpoint(self, cur_epoch):
         # TODO add if it is the best, save it separately too
         if checkops.is_checkpoint_epoch(cur_epoch, self.cfg.TRAIN.CHECKPOINT_PERIOD):
+            if self.cfg.DDP and self.cfg.RANK:
+                return
             self.net_wrapper.save_checkpoint(self.cfg.OUTPUT_DIR, cur_epoch)
 
     def load_checkpoint(self):
@@ -74,6 +78,8 @@ class EpochLoop:
             start_epoch = checkpoint_epoch + 1
         else:
             start_epoch = 0
+
+        du.synchronize()
 
         return start_epoch
 
@@ -91,6 +97,9 @@ class EpochLoop:
     def trainer_epoch_loop(self, start_epoch):
         for cur_epoch in range(start_epoch, self.cfg.SOLVER.MAX_EPOCH):
             self.trainer.set_net_mode(self.net_wrapper.net_core)
+
+            if self.cfg.DDP:
+                self.trainer.data_container.sampler.set_epoch(cur_epoch)
 
             self.trainer.meters.reset()
 
@@ -113,7 +122,6 @@ class EpochLoop:
 
         self.evaluator.batch_loop(self.net_wrapper, start_epoch)
 
-        # Log epoch stats. For the moment, valid and test are the same. For multi-view, multi-crops, modify it later.
         self.evaluator.meters.log_epoch_stats(start_epoch, 'valid')
 
         self.tb_logger_update(start_epoch, self.evaluator)
@@ -124,11 +132,14 @@ class EpochLoop:
 
         socket_name = socket.gethostname()
         logging.setup_logging(
-            filepath=self.cfg.OUTPUT_DIR if 'scinet' in socket_name or 'computecanada' in socket_name else None
+            output_dir=self.cfg.OUTPUT_DIR if 'scinet' in socket_name or 'computecanada' in socket_name else None
         )
 
         logger.info("Train with config:")
         logger.info(pprint.pformat(self.cfg))
+        if self.cfg.DDP:
+            logger.info('DDP is on. It is DDP config is:')
+            logger.info(pprint.pformat(self.cfg.DDP_CFG))
 
     def create_sets(self):
         self.trainer = Trainer(self.cfg, self.device) if self.cfg.TRAIN.ENABLE else None
@@ -147,7 +158,7 @@ class EpochLoop:
             self.trainer_epoch_loop(start_epoch)
         elif self.cfg.VALID.ENABLE:
             self.evaluator_epoch_loop(0)
-        elif self.cfg.TESTING:  # Test mode is only different from valid once data is loaded
+        elif self.cfg.TESTING:
             raise NotImplementedError('TESTING mode is not implemented yet')
         else:
             raise NotImplementedError('One of {TRAINING, VALIDATING, TESTING} must be set to True')

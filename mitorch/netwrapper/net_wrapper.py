@@ -76,7 +76,7 @@ class NetWrapper(nn.Module):
         return checkops.load_checkpoint(
             ckpnt_path,
             self.net_wrapper.net_core,
-            self.cfg.DISTRIBUTED_DATA_PARALLEL,
+            self.cfg.DDP,
             self.net_wrapper.optimizer,
             scaler=self.grad_scaler,
         )
@@ -145,14 +145,14 @@ class NetWrapperWMH(NetWrapper):
 
     def load_checkpoint_hfb(self, ckpnt_path):
         checkops.load_checkpoint(ckpnt_path, self.net_core_hfb,
-                                 distributed_data_parallel=self.cfg.DISTRIBUTED_DATA_PARALLEL)
+                                 distributed_data_parallel=self.cfg.DDP)
 
     def load_checkpoint(self, ckpnt_path):
         self.load_checkpoint_hfb(self.cfg.WMH.HFB_CHECKPOINT)
         return checkops.load_checkpoint(
             ckpnt_path,
             self.net_wrapper.net_core,
-            self.cfg.DISTRIBUTED_DATA_PARALLEL,
+            self.cfg.DDP,
             self.net_wrapper.optimizer
         )
 

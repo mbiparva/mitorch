@@ -9,11 +9,23 @@
 #  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
 import _init_lib_path
+import os
 import argparse
 from config.defaults import get_cfg
 from test_net import test
 from train_net import train as train_single
 from train_net_hpo import hpo_main as train_hpo
+import torch.distributed as dist
+
+
+def set_ddp_args(cfg):
+    cfg.LOCAL_RANK = int(os.environ['LOCAL_RANK'])
+    cfg.RANK = int(dist.get_rank())
+    cfg.WORLD_SIZE = int(dist.get_world_size())
+    # cfg.RANK = int(os.environ['RANK'])
+    # cfg.WORLD_SIZE = int(os.environ['WORLD_SIZE'])
+
+    cfg.GPU_ID = cfg.LOCAL_RANK
 
 
 def parse_args():
@@ -62,6 +74,9 @@ def load_config(args):
     # Inherit parameters from args.
     if hasattr(args, "output_dir"):
         cfg.OUTPUT_DIR = args.output_dir
+
+    if cfg.DDP:
+        set_ddp_args(cfg)
 
     return cfg
 

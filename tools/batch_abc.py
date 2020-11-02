@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 import datetime
 import torch
 import subprocess
-
+import utils.distributed as du
 from data.data_container import DataContainer
 from utils.meters import TVTMeter
 import utils.metrics as metrics
@@ -36,12 +36,15 @@ class BatchBase(ABC):
             len(self.data_container.dataloader),
             self.cfg,
             self.cfg.PROJECT.METERS,
+            self.mode,
         )
 
     def create_dataset(self):
         self.data_container = DataContainer(self.mode, self.cfg)
 
     def tb_logger_update(self, logger_writer, e):
+        if logger_writer is None:  # workers
+            return
         for k, m_avg in self.meters.get_avg_for_tb():
             logger_writer.add_scalar('{}/{}'.format(self.mode, k), m_avg, e)
 
@@ -78,6 +81,24 @@ class BatchBase(ABC):
 
         return p
 
+    def ddp_reduce_meters(self, meters):
+        # pack
+        meters_tensor, meters_keys = list(), list()
+        for k, v in meters.items():
+            meters_tensor.append(k)
+            meters_keys.append(v)
+        meters_tensor = [torch.tensor(meters_tensor)]
+
+        # gather
+        meters_tensor_gathered = du.all_reduce(meters_tensor, average=True)
+
+        # unpack
+        meters_tensor_gathered = meters_tensor_gathered[0]
+
+        # updated
+        for k, v in zip(meters_keys, meters_tensor_gathered.tolist()):
+            meters[k] = v
+
     def evaluate(self, p, a, meters):
         BINARIZE_THRESHOLD = 0.5
 
@@ -95,6 +116,10 @@ class BatchBase(ABC):
 
             metric_function = getattr(metrics, f'{m}_metric')
             meters[m] = metric_function(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX)
+
+        # do all_reduce (sum) to sync meters across processes
+        if self.cfg.DDP:
+            self.ddp_reduce_meters(meters)
 
     @abstractmethod
     def batch_main(self, net, x, annotation):
@@ -127,7 +152,11 @@ class BatchBase(ABC):
         self.meters.iter_tic()
         for cur_iter, (image, annotation, meta) in enumerate(self.data_container.dataloader):
             if cur_epoch == 0 and cur_iter % 50 == 0:
-                subprocess.call(['nvidia-smi'])
+                if self.cfg.DDP:
+                    if not self.cfg.DDP_CFG.RANK:
+                        subprocess.call(['nvidia-smi'])
+                else:
+                    subprocess.call(['nvidia-smi'])
 
             image = image.to(self.device, non_blocking=True)
             annotation = annotation.to(self.device, non_blocking=True)

@@ -95,7 +95,7 @@ class TVTMeter(object):
     Measure training, validation, and testing stats.
     """
 
-    def __init__(self, epoch_iters, cfg, meter_names):
+    def __init__(self, epoch_iters, cfg, meter_names, mode):
         """
         Args:
             epoch_iters (int): the overall number of iterations of one epoch.
@@ -104,13 +104,17 @@ class TVTMeter(object):
         assert isinstance(meter_names, (tuple, list)) and len(meter_names) > 0
         assert all([isinstance(i, str) for i in meter_names])
         assert 'loss' in meter_names, 'loss is forgotten in the meter names'
+        assert mode in ('train', 'valid', 'test'), 'mode is undefined'
         self.meter_names = meter_names
-        self._cfg = cfg
+        self.mode = mode
+        self.log_period = cfg.LOG_PERIOD
         self.epoch_iters = epoch_iters
-        self.MAX_EPOCH = cfg.SOLVER.MAX_EPOCH * epoch_iters
+        self.max_epoch = cfg.SOLVER.MAX_EPOCH if self.mode == 'train' else 1
+        self.max_epoch_iterations = self.max_epoch * epoch_iters
         self.iter_timer = Timer()
         self.lr = None
         self.num_samples = 0
+        self._cfg = cfg
 
         self.create_meters()
 
@@ -132,7 +136,7 @@ class TVTMeter(object):
     def create_meters(self):
         for m in self.meter_names:
             # Current minibatch errors (smoothed over a window).
-            self.meter_setter(m, 'mb', ScalarMeter(self._cfg.LOG_PERIOD))
+            self.meter_setter(m, 'mb', ScalarMeter(self.log_period))
             # Epoch stats
             self.meter_setter(m, 'ep', AverageMeter())
 
@@ -185,22 +189,23 @@ class TVTMeter(object):
             cur_iter (int): the number of current iteration.
             mode (str): the mode currently in it.
         """
-        if (cur_iter + 1) % self._cfg.LOG_PERIOD != 0:
+        if (cur_iter + 1) % self.log_period != 0:
             return
         eta_sec = self.iter_timer.seconds() * (
-            self.MAX_EPOCH - (cur_epoch * self.epoch_iters + cur_iter + 1)
+                self.max_epoch_iterations - (cur_epoch * self.epoch_iters + cur_iter + 1)
         )
         eta = str(datetime.timedelta(seconds=int(eta_sec)))
         mem_usage = misc.gpu_mem_usage()
         stats = {
             "_type": mode,
-            "epoch": "{}/{}".format(cur_epoch + 1, self._cfg.SOLVER.MAX_EPOCH),
+            "epoch": "{}/{}".format(cur_epoch + 1, self.max_epoch),
             "iter": "{}/{}".format(cur_iter + 1, self.epoch_iters),
             "time_diff": self.iter_timer.seconds(),
             "eta": eta,
             "lr": self.lr,
             "mem": int(np.ceil(mem_usage)),
         }
+
         for u in self.meter_names:
             stats['{}_{}'.format(u, 'mb')] = float(self.meter_getter(u, 'mb').get_win_median())
             stats['{}_{}'.format(u, 'ep')] = float(self.meter_getter(u, 'ep').avg)
@@ -215,13 +220,13 @@ class TVTMeter(object):
             mode (str): the mode currently in it.
         """
         eta_sec = self.iter_timer.seconds() * (
-            self.MAX_EPOCH - (cur_epoch + 1) * self.epoch_iters
+                self.max_epoch_iterations - (cur_epoch + 1) * self.epoch_iters
         )
         eta = str(datetime.timedelta(seconds=int(eta_sec)))
         mem_usage = misc.gpu_mem_usage()
         stats = {
             "_type": "{}_epoch".format(mode),
-            "epoch": "{}/{}".format(cur_epoch + 1, self._cfg.SOLVER.MAX_EPOCH),
+            "epoch": "{}/{}".format(cur_epoch + 1, self.max_epoch),
             "time_diff": self.iter_timer.seconds(),
             "eta": eta,
             "lr": self.lr,
@@ -233,6 +238,7 @@ class TVTMeter(object):
         logging.log_json_stats(stats)
 
     def get_avg_for_tb(self):  # This functions prepares and returns for Tensorboard logging
+        meter_values = list()
         for u in self.meter_names:
             yield '{}_{}'.format(u, 'ep'), self.meter_getter(u, 'ep').avg
 

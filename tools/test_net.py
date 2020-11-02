@@ -72,7 +72,7 @@ def test(cfg):
     torch.manual_seed(cfg.RNG_SEED)
     cuda_device_id = cfg.GPU_ID
     torch.cuda.set_device(cuda_device_id)
-    if cfg.USE_GPUS and torch.cuda.is_available():
+    if cfg.USE_GPU and torch.cuda.is_available():
         device = torch.device('cuda:{}'.format(cuda_device_id))
         print('cuda available')
         print('device count is', torch.cuda.device_count())

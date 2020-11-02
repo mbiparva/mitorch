@@ -35,7 +35,7 @@ def ds_worker_init_fn(worker_id):
 class DataContainer:
     def __init__(self, mode, cfg):
         self.cfg = cfg
-        self.dataset, self.dataloader = None, None
+        self.dataset, self.dataloader, self.sampler = None, None, None
         self.mode = mode
 
         self.dataset_name, self.dl_params = self.init_dl_params()
@@ -266,8 +266,19 @@ class DataContainer:
         else:
             self.data_split()
 
+        if self.cfg.DDP:
+            self.sampler = torch.utils.data.distributed.DistributedSampler(
+                self.dataset,
+                num_replicas=self.cfg.DDP_CFG.WORLD_SIZE,
+                rank=self.cfg.DDP_CFG.RANK,
+                shuffle=self.dl_params['shuffle'],
+                seed=self.cfg.RNG_SEED,
+            )
+            self.dl_params['shuffle'] = False
+
     def create_dataloader(self):
         self.dataloader = DataLoader(self.dataset,
+                                     sampler=self.sampler,
                                      num_workers=self.cfg.DATA_LOADER.NUM_WORKERS,
                                      pin_memory=self.cfg.DATA_LOADER.PIN_MEMORY,
                                      worker_init_fn=ds_worker_init_fn,

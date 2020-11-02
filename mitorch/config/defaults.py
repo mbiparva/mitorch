@@ -321,19 +321,19 @@ _C.SOLVER.SCHEDULER_TYPE = ('step', 'step_restart', 'multi', 'lambda', 'plateau'
 # ---------------------------------------------------------------------------- #
 
 # Use GPUs
-_C.USE_GPUS = (False, True)[1]
+_C.USE_GPU = (False, True)[1]
 
 # Default GPU device id
 _C.GPU_ID = 0
 
 # Whether to use auto-mixed-precision (amp)
-_C.AMP = _C.USE_GPUS and (False, True)[0]
+_C.AMP = _C.USE_GPU and (False, True)[0]
 
 # Whether to use DataParallel in PyTorch
-_C.DATA_PARALLEL = _C.USE_GPUS and (False, True)[0]  # uses all gpus on the device
+_C.DP = _C.USE_GPU and (False, True)[0]  # uses all gpus on the device
 
 # Whether to use DistributedDataParallel in PyTorch
-_C.DISTRIBUTED_DATA_PARALLEL = _C.USE_GPUS and (False, True)[0]  # uses all gpus on the device
+_C.DDP = _C.USE_GPU and (False, True)[0]  # uses all gpus on the device
 
 # Note that non-determinism may still be present due to non-deterministic
 # operator implementations in GPU operator libraries.
@@ -341,6 +341,27 @@ _C.RNG_SEED = 110
 
 # Log period in iters.
 _C.LOG_PERIOD = 2
+
+
+# ---------------------------------------------------------------------------- #
+# DDP options
+# ---------------------------------------------------------------------------- #
+_C.DDP_CFG = CfgNode()
+
+# Global rank of the process
+_C.DDP_CFG.RANK = None
+
+# Local rank of the process
+_C.DDP_CFG.LOCAL_RANK = None
+
+# World size of the DDP
+_C.DDP_CFG.WORLD_SIZE = None
+
+# Number of nodes
+_C.DDP_CFG.NNODES = None
+
+# Number of processes per node == number of GPUs per node
+_C.DDP_CFG.NPROC_PER_NODE = None
 
 
 # ---------------------------------------------------------------------------- #
@@ -443,7 +464,7 @@ def _assert_and_infer_cfg(cfg):
     if 'N_HOP_DENSE_SKIP_CONNECTION' in cfg.MODEL.SETTINGS:
         assert cfg.MODEL.SETTINGS.N_HOP_DENSE_SKIP_CONNECTION > 0
 
-    assert not (cfg.DATA_PARALLEL and cfg.DISTRIBUTED_DATA_PARALLEL), 'either use DP or DDP in PyTorch'
+    assert not (cfg.DP and cfg.DDP), 'either use DP or DDP in PyTorch'
 
     return cfg
 

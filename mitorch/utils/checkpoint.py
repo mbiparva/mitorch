@@ -105,7 +105,7 @@ def save_checkpoint(path_to_ckpnt, model, optimizer, epoch, cfg, scaler=None):
     # Ensure that the checkpoint dir exists.
     os.makedirs(get_checkpoint_dir(path_to_ckpnt), exist_ok=True)
     # Omit the DDP wrapper in the multi-gpu setting.
-    sd = model.module.state_dict() if cfg.DISTRIBUTED_DATA_PARALLEL else model.state_dict()
+    sd = model.module.state_dict() if cfg.DDP else model.state_dict()
     cfg = cfg.clone()
     cfg.MODEL.SETTINGS = dict(cfg.MODEL.SETTINGS)[cfg.MODEL.MODEL_NAME]
     # Record the state.

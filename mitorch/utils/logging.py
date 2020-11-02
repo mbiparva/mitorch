@@ -13,6 +13,7 @@ import logging
 import sys
 import simplejson
 import os
+import utils.distributed as du
 
 
 def _suppress_print():
@@ -26,7 +27,32 @@ def _suppress_print():
     builtins.print = print_pass
 
 
-def setup_logging(filepath=None):
+# def setup_logging(filepath=None):
+#     """
+#     Sets up the logging for multiple processes. Only enable the logging for the
+#     master process, and suppress logging for the non-master processes.
+#     """
+#     # Set up logging format.
+#     _FORMAT = "[%(levelname)s: %(filename)s: %(lineno)4d]: %(message)s"
+#
+#     # Enable logging for the master process.
+#     logging.root.handlers = []
+#     if filepath is not None:
+#         logging.basicConfig(
+#             filename=os.path.join(filepath, 'stdout.log'),
+#             filemode='w',
+#             level=logging.INFO,
+#             format=_FORMAT,
+#         )
+#     else:
+#         logging.basicConfig(
+#             level=logging.INFO,
+#             format=_FORMAT,
+#             stream=sys.stdout
+#         )
+
+
+def setup_logging(output_dir=None):
     """
     Sets up the logging for multiple processes. Only enable the logging for the
     master process, and suppress logging for the non-master processes.
@@ -34,19 +60,31 @@ def setup_logging(filepath=None):
     # Set up logging format.
     _FORMAT = "[%(levelname)s: %(filename)s: %(lineno)4d]: %(message)s"
 
-    # Enable logging for the master process.
-    logging.root.handlers = []
-    if filepath is not None:
-        logging.basicConfig(
-            filename=os.path.join(filepath, 'stdout.log'),
-            filemode='w',
-            level=logging.INFO, format=_FORMAT,
-        )
+    if du.is_root_proc():
+        # Enable logging for the master process.
+        logging.root.handlers = []
     else:
-        logging.basicConfig(
-            level=logging.INFO, format=_FORMAT,
-            stream=sys.stdout
-        )
+        # Suppress logging for non-master processes.
+        _suppress_print()
+
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    logger.propagate = False
+    plain_formatter = logging.Formatter(_FORMAT, datefmt="%m/%d %H:%M:%S")
+
+    if du.is_root_proc():
+        if output_dir is not None:
+            filename = os.path.join(output_dir, "stdout.log")
+            fh = logging.FileHandler(filename)
+            fh.setLevel(logging.DEBUG)
+            fh.setFormatter(plain_formatter)
+            logger.addHandler(fh)
+
+        if output_dir is None:
+            ch = logging.StreamHandler(stream=sys.stdout)
+            ch.setLevel(logging.DEBUG)
+            ch.setFormatter(plain_formatter)
+            logger.addHandler(ch)
 
 
 def get_logger(name):
