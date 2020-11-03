@@ -258,13 +258,13 @@ class DataContainer:
 
         self.dataset = build_dataset(self.dataset_name, self.cfg, self.mode, transformations)
 
-        if self.cfg.NVT.ENABLE and self.cfg.NVT.REPEAT_DATASET > 1:
-            self.dataset = ConcatDataset([self.dataset]*self.cfg.NVT.REPEAT_DATASET)
-
         if self.cfg.TRAIN and self.cfg.TRAIN.DATASET == 'SRIBIL' and self.cfg.PROJECT.PA_INDICES:
             self.data_split_pa_ind()
         else:
             self.data_split()
+
+        if self.mode == 'train' and self.cfg.NVT.ENABLE and self.cfg.NVT.REPEAT_DATASET > 1:
+            self.dataset = ConcatDataset([self.dataset]*self.cfg.NVT.REPEAT_DATASET)
 
         if self.cfg.DDP:
             try:  # torch 1.5.0 on mist has issue with seed, remove it later

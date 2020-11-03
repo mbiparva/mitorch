@@ -81,6 +81,8 @@ def load_config(args):
             cfg = init_cfg(cfg)
         else:
             cfg.OUTPUT_DIR = ''
+    else:
+        cfg = init_cfg(cfg)
 
     return cfg
 
@@ -90,8 +92,6 @@ def ddp_init(cfg):
         dist.init_process_group(
             backend='nccl', init_method='env://', world_size=cfg.DDP_CFG.WORLD_SIZE, rank=cfg.DDP_CFG.RANK
         )
-        # if cfg.DDP_CFG.RANK:
-        #     os.rmdir(cfg.OUTPUT_DIR)  # it is useless, the master process takes care of it
 
 
 def main():
