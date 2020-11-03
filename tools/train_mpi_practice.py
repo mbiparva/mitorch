@@ -64,10 +64,20 @@ def train(args):
     # Wrap the model
     model = nn.parallel.DistributedDataParallel(model, device_ids=[gpu])
     # Data loading code
-    train_dataset = torchvision.datasets.MNIST(root='./data',
-                                               train=True,
-                                               transform=transforms.ToTensor(),
-                                               download=True)
+    if not rank:
+        print('I am root process loading dataset first')
+        train_dataset = torchvision.datasets.MNIST(root='./data',
+                                                   train=True,
+                                                   transform=transforms.ToTensor(),
+                                                   download=True)
+    dist.barrier()
+    if rank:
+        print('I am root process loading dataset first')
+        train_dataset = torchvision.datasets.MNIST(root='./data',
+                                                   train=True,
+                                                   transform=transforms.ToTensor(),
+                                                   download=True)
+    dist.barrier()
     train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset,
                                                                     num_replicas=world_size,
                                                                     rank=rank)

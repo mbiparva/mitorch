@@ -36,6 +36,12 @@ def build_model(cfg, cur_device):
     name = cfg.MODEL.MODEL_NAME
     model = MODEL_REGISTRY.get(name)(cfg)
 
+    if cfg.USE_GPU:
+        # Transfer the model to the current GPU device
+        model = model.cuda(device=cur_device)
+    else:
+        logger.info('Using CPU for the network operations')
+
     if torch.cuda.device_count() > 1 and cfg.DP:
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         model = nn.DataParallel(model)
@@ -45,10 +51,5 @@ def build_model(cfg, cur_device):
         model = torch.nn.parallel.DistributedDataParallel(
             module=model, device_ids=[cur_device], output_device=cur_device
         )
-    elif cfg.USE_GPU:
-        # Transfer the model to the current GPU device
-        model = model.cuda(device=cur_device)
-    else:
-        logger.info('Using CPU for the network operations')
 
     return model

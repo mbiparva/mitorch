@@ -85,9 +85,10 @@ class BatchBase(ABC):
         # pack
         meters_tensor, meters_keys = list(), list()
         for k, v in meters.items():
-            meters_tensor.append(k)
-            meters_keys.append(v)
-        meters_tensor = [torch.tensor(meters_tensor)]
+            meters_keys.append(k)
+            meters_tensor.append(v)
+        meters_tensor = torch.tensor(meters_tensor)
+        meters_tensor = [meters_tensor.to(self.device)]
 
         # gather
         meters_tensor_gathered = du.all_reduce(meters_tensor, average=True)

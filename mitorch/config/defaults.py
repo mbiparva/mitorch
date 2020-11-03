@@ -349,19 +349,19 @@ _C.LOG_PERIOD = 2
 _C.DDP_CFG = CfgNode()
 
 # Global rank of the process
-_C.DDP_CFG.RANK = None
+_C.DDP_CFG.RANK = -1
 
 # Local rank of the process
-_C.DDP_CFG.LOCAL_RANK = None
+_C.DDP_CFG.LOCAL_RANK = -1
 
 # World size of the DDP
-_C.DDP_CFG.WORLD_SIZE = None
+_C.DDP_CFG.WORLD_SIZE = -1
 
 # Number of nodes
-_C.DDP_CFG.NNODES = None
+_C.DDP_CFG.NNODES = -1
 
 # Number of processes per node == number of GPUs per node
-_C.DDP_CFG.NPROC_PER_NODE = None
+_C.DDP_CFG.NPROC_PER_NODE = -1
 
 
 # ---------------------------------------------------------------------------- #

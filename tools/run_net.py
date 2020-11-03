@@ -19,13 +19,13 @@ import torch.distributed as dist
 
 
 def set_ddp_args(cfg):
-    cfg.LOCAL_RANK = int(os.environ['LOCAL_RANK'])
-    cfg.RANK = int(dist.get_rank())
-    cfg.WORLD_SIZE = int(dist.get_world_size())
-    # cfg.RANK = int(os.environ['RANK'])
-    # cfg.WORLD_SIZE = int(os.environ['WORLD_SIZE'])
+    cfg.DDP_CFG.LOCAL_RANK = int(os.environ['LOCAL_RANK'])
+    cfg.DDP_CFG.RANK = int(os.environ['RANK'])
+    cfg.DDP_CFG.WORLD_SIZE = int(os.environ['WORLD_SIZE'])
+    # cfg.DDP_CFG.RANK = int(dist.get_rank())
+    # cfg.DDP_CFG.WORLD_SIZE = int(dist.get_world_size())
 
-    cfg.GPU_ID = cfg.LOCAL_RANK
+    cfg.GPU_ID = cfg.DDP_CFG.LOCAL_RANK
 
 
 def parse_args():
@@ -87,6 +87,12 @@ def main():
     """
     args = parse_args()
     cfg = load_config(args)
+
+    # DDP init and cfg update
+    if cfg.DDP:
+        dist.init_process_group(
+            backend='nccl', init_method='env://', world_size=cfg.DDP_CFG.WORLD_SIZE, rank=cfg.DDP_CFG.RANK
+        )
 
     # Perform testing.
     if cfg.TEST.ENABLE:

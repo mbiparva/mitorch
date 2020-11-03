@@ -4,7 +4,7 @@ DATA:
   CROP_SIZE: 64  # (64, 64, 64)
 DATA_LOADER:
   PIN_MEMORY: false
-  NUM_WORKERS: 8
+  NUM_WORKERS: 2
 LOG_PERIOD: 1
 NVT:
   NUM_MULTI_PATCHES: 16  # 32/8
@@ -33,8 +33,8 @@ SOLVER:
 #  NESTEROV: false
   SCHEDULER_MODE: false
 
-USE_GPUS: true
+USE_GPU: true
 GPU_ID: 0
 AMP: false
-DATA_PARALLEL: false
-DISTRIBUTED_DATA_PARALLEL: false
+DP: false
+DDP: false
