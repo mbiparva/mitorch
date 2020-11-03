@@ -125,7 +125,7 @@ class NVTTransformations(BaseTransformations):
 
         # --- TAIL ---
         transformations_tail = [
-            # tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
+            tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
         ]
 
         return torch_tf.Compose(

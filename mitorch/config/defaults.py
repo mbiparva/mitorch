@@ -469,11 +469,12 @@ def _assert_and_infer_cfg(cfg):
     return cfg
 
 
-def get_cfg():
+def get_cfg(delayed_init=False):
     """
     Get a copy of the default config.
     """
     cfg = _C.clone()
-    cfg = init_cfg(cfg)
+    if not delayed_init:  # needed for DDP
+        cfg = init_cfg(cfg)
     cfg = _assert_and_infer_cfg(cfg)
     return cfg

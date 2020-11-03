@@ -267,14 +267,23 @@ class DataContainer:
             self.data_split()
 
         if self.cfg.DDP:
-            self.sampler = torch.utils.data.distributed.DistributedSampler(
-                self.dataset,
-                num_replicas=self.cfg.DDP_CFG.WORLD_SIZE,
-                rank=self.cfg.DDP_CFG.RANK,
-                shuffle=self.dl_params['shuffle'],
-                seed=self.cfg.RNG_SEED,
-            )
-            self.dl_params['shuffle'] = False
+            try:  # torch 1.5.0 on mist has issue with seed, remove it later
+                self.sampler = torch.utils.data.distributed.DistributedSampler(
+                    self.dataset,
+                    num_replicas=self.cfg.DDP_CFG.WORLD_SIZE,
+                    rank=self.cfg.DDP_CFG.RANK,
+                    shuffle=self.dl_params['shuffle'],
+                    seed=self.cfg.RNG_SEED,
+                )
+            except Exception:
+                self.sampler = torch.utils.data.distributed.DistributedSampler(
+                    self.dataset,
+                    num_replicas=self.cfg.DDP_CFG.WORLD_SIZE,
+                    rank=self.cfg.DDP_CFG.RANK,
+                    shuffle=self.dl_params['shuffle'],
+                )
+            finally:
+                self.dl_params['shuffle'] = False
 
     def create_dataloader(self):
         self.dataloader = DataLoader(self.dataset,

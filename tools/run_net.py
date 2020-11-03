@@ -11,7 +11,7 @@
 import _init_lib_path
 import os
 import argparse
-from config.defaults import get_cfg
+from config.defaults import get_cfg, init_cfg
 from test_net import test
 from train_net import train as train_single
 from train_net_hpo import hpo_main as train_hpo
@@ -63,7 +63,7 @@ def load_config(args):
             `init_method`, `cfg_file`, and `opts`.
     """
     # Setup cfg.
-    cfg = get_cfg()
+    cfg = get_cfg(delayed_init=True)
     # Load config from cfg.
     if args.cfg_file is not None:
         cfg.merge_from_file(args.cfg_file)
@@ -77,8 +77,21 @@ def load_config(args):
 
     if cfg.DDP:
         set_ddp_args(cfg)
+        if not cfg.DDP_CFG.RANK:
+            cfg = init_cfg(cfg)
+        else:
+            cfg.OUTPUT_DIR = ''
 
     return cfg
+
+
+def ddp_init(cfg):
+    if cfg.DDP:
+        dist.init_process_group(
+            backend='nccl', init_method='env://', world_size=cfg.DDP_CFG.WORLD_SIZE, rank=cfg.DDP_CFG.RANK
+        )
+        # if cfg.DDP_CFG.RANK:
+        #     os.rmdir(cfg.OUTPUT_DIR)  # it is useless, the master process takes care of it
 
 
 def main():
@@ -88,11 +101,8 @@ def main():
     args = parse_args()
     cfg = load_config(args)
 
-    # DDP init and cfg update
-    if cfg.DDP:
-        dist.init_process_group(
-            backend='nccl', init_method='env://', world_size=cfg.DDP_CFG.WORLD_SIZE, rank=cfg.DDP_CFG.RANK
-        )
+    # DDP initialization
+    ddp_init(cfg)
 
     # Perform testing.
     if cfg.TEST.ENABLE:
