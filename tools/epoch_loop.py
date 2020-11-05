@@ -163,7 +163,8 @@ class EpochLoop:
         else:
             raise NotImplementedError('One of {TRAINING, VALIDATING, TESTING} must be set to True')
 
-        self.tb_logger_writer.close()
+        if not (self.cfg.DDP and self.cfg.DDP_CFG.RANK):
+            self.tb_logger_writer.close()
 
     def main(self):
         self.main_setup()

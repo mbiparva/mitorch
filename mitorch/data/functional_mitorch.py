@@ -193,7 +193,7 @@ def normalize_minmax(volume, max_div, inplace=False):
     volume_reshaped = volume.reshape(volume.size(0), -1)
     minimum = volume_reshaped.min(1)[0]
     volume.sub_(minimum[:, None, None, None])
-    maximum = volume_reshaped.max(1)[0]
+    maximum = volume_reshaped.max(1)[0] - minimum
     maximum[maximum < 1.0] = 1.0
     if max_div and not (maximum == 1.0).all():
         volume.div_(maximum[:, None, None, None])
