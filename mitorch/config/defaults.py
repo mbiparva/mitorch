@@ -277,9 +277,10 @@ _C.DATA.EXP = CfgNode()
 _C.DATA.EXP.HEAD_ORI = (0, 1)[0]
 _C.DATA.EXP.HEAD_RES = (0, 1)[0]
 _C.DATA.EXP.BODY_CRO = (0, 1, 2, 3)[0]
-_C.DATA.EXP.BODY_FLI = (0, 1)[0]
+_C.DATA.EXP.BODY_FLI = (0, 1, 2, 3, 4)[0]
 _C.DATA.EXP.INTENSITY = (False, True)[0]
-_C.DATA.EXP.INTENSITY_SEL = (0, 1, 2, 3, 4, 5, 6, 7, 8)[1]
+_C.DATA.EXP.INTENSITY_SEL = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)[1]
+_C.DATA.EXP.TAIL_NORM = (0, 1, 2)[0]
 
 
 # ---------------------------------------------------------------------------- #
@@ -431,15 +432,15 @@ _C.NVT = CfgNode()
 # Whether NVT is enabled
 _C.NVT.ENABLE = True if _C.TRAIN.DATASET in ('TRAP', 'CAPTURE', 'TRACING') else False
 
-_C.NVT.NUM_MULTI_PATCHES = 1
+_C.NVT.NUM_MULTI_PATCHES = 16
 
-_C.NVT.PATCH_SELECTION_POLICY = (False, True)[0]
+_C.NVT.PATCH_SELECTION_POLICY = (False, True)[1]
 
 _C.NVT.ENFORCE_SELECTION_POLICY = (False, True)[0]
 
-_C.NVT.SELECTION_LB = 0
+_C.NVT.SELECTION_LB = 16000
 
-_C.NVT.RANDOM_CROP_NUM_ATTEMPS = 20
+_C.NVT.RANDOM_CROP_NUM_ATTEMPS = 500
 _C.NVT.RANDOM_CROP_THRESHOLD = 0
 
 _C.NVT.REPEAT_DATASET = 0  # < 2 is off

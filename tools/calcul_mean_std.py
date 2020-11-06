@@ -13,7 +13,8 @@ import data.transforms_mitorch as tf
 from torchvision.transforms import Compose
 from data.build import build_dataset
 from tqdm import tqdm
-from data.VolSet import collate_fn
+from data.VolSet import collate_fn as collate_fn_vol
+from data.NeuroSegSets import collate_fn as collate_fn_pat
 
 
 def run_calcul(in_dataloader):
@@ -42,8 +43,10 @@ def round_tensor(x):
 
 if __name__ == '__main__':
     transforms = Compose([
-            tf.ToTensorImageVolume(),
-            tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
+        tf.RandomCropImageVolumeConditional(cfg.DATA.CROP_SIZE, prand=True,
+                                            num_attemps=cfg.NVT.RANDOM_CROP_NUM_ATTEMPS,
+                                            threshold=cfg.NVT.RANDOM_CROP_THRESHOLD),
+        # tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
     ])
     dataset = build_dataset(
         cfg.TRAIN.DATASET,
@@ -55,10 +58,10 @@ if __name__ == '__main__':
         dataset,
         batch_size=1,
         shuffle=False,
-        num_workers=16,
+        num_workers=8,
         pin_memory=True,
         drop_last=True,
-        collate_fn=collate_fn,
+        collate_fn=collate_fn_pat,
     )
 
     mean_ds, std_ds, minimum_ds, maximum_ds = run_calcul(dataloader)
@@ -71,7 +74,7 @@ if __name__ == '__main__':
     #       '{:<10}:'.format('std:'), round_tensor(std_ds), '\n',
     #       '{:<10}:'.format('minimum:'), round_tensor(minimum_ds), '\n',
     #       '{:<10}:'.format('maximum:'), round_tensor(maximum_ds))
-    print('*** Check dataset for the order of T1 and Flair. (default is this order)')
+    # print('*** Check dataset for the order of T1 and Flair. (default is this order)')
 
 # WMH-C
 # mean      : [255.89, 131.65]
@@ -118,3 +121,18 @@ if __name__ == '__main__':
 #  std:      : [0.03302580118179321, 0.02068150043487549]
 #  minimum:  : [0.0, 0.0]
 #  maximum:  : [1.0, 1.0]
+
+# NVT
+# with MinMax, 16000, 16 patches
+#  mean      : [0.028548698872327805, 0.12191379070281982]
+#  std:      : [0.03772956132888794, 0.061269789934158325]
+
+# no selection
+#  mean      : [0.20209592580795288, 0.28169071674346924]
+#  std:      : [0.017290744930505753, 0.06943022459745407]
+
+# without MinMax, 16000, 16 patches
+#  mean      : [256.42889404296875, 380.6856689453125]
+#  std:      : [64.1461410522461, 78.29484558105469]
+
+

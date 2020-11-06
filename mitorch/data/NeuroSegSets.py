@@ -49,7 +49,6 @@ def collate_fn(batch):
 class AutoPatching(ABC, data.Dataset):
     def __init__(self, cfg, mode, transform, **kwargs):
         super().__init__(**kwargs)
-        self.num_patches = kwargs.get('num_patches', 1024)
         self.force_image_patching = kwargs.get('force_image_patching', False)
         self.block_size = kwargs.get('block_size', 512)
         self.stride_size = kwargs.get('stride', 64 // 2)  # half of the input size to the networks
