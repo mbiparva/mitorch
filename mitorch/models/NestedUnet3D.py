@@ -9,7 +9,6 @@ import torch.nn as nn
 from .build import MODEL_REGISTRY
 from utils.models import pad_if_necessary_all
 from models.Unet3D import Unet3D, Encoder as Unet3DEncoder, ParamUpSamplingBlock, LocalizationBlock, is_3d
-import models.Unet3D
 
 
 IS_3D = True
