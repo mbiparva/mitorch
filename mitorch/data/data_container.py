@@ -93,13 +93,13 @@ class DataContainer:
                 #                                 uni_scale=self.cfg.DATA.UNI_SCALE),
                 # tf.RandomFlipImageVolume(dim=-1),
 
-                # tf.RandomBrightness(value=0.0, prand=True, channel_wise=True),
-                # tf.RandomContrast(value=0.0, prand=True, channel_wise=True),
-                # tf.RandomGamma(value=0.0, prand=True, channel_wise=True),
+                # tf.RandomBrightness(value=0.1, prand=True, channel_wise=True),
+                # tf.RandomContrast(value=0.1, prand=True, channel_wise=True),
+                # tf.RandomGamma(value=0.1, prand=True, channel_wise=True),
                 # tf.LogCorrection(inverse=(False, True)[1], channel_wise=True),
                 # tf.SigmoidCorrection(inverse=(False, True)[1], channel_wise=True),
                 # tf.HistEqual(num_bins=256, channel_wise=True),
-                # tf.AdditiveNoise(sigma=0.0, noise_type=('gaussian', 'rician', 'rayleigh')[0], randomize_type=False,
+                # tf.AdditiveNoise(sigma=0.1, noise_type=('gaussian', 'rician', 'rayleigh')[0], randomize_type=False,
                 #                  out_of_bound_mode=('normalize', 'clamp')[1], prand=True, channel_wise=True),
             ]
         elif self.mode in ('valid', 'test'):
@@ -219,9 +219,9 @@ class DataContainer:
             )[self.cfg.DATA.EXP.BODY_FLI] + (
                 [],
                 [[
-                    tf.RandomBrightness(value=0.0, prand=True, channel_wise=True),
-                    tf.RandomContrast(value=0.0, prand=True, channel_wise=True),
-                    tf.RandomGamma(value=0.0, prand=True, channel_wise=True),
+                    tf.RandomBrightness(value=0.1, prand=True, channel_wise=True),
+                    tf.RandomContrast(value=0.1, prand=True, channel_wise=True),
+                    tf.RandomGamma(value=0.1, prand=True, channel_wise=True),
                     tf.LogCorrection(inverse=False, channel_wise=True),
                     tf.LogCorrection(inverse=True, channel_wise=True),
                     tf.SigmoidCorrection(inverse=False, channel_wise=True),
@@ -229,11 +229,11 @@ class DataContainer:
                     tf.HistEqual(num_bins=128, channel_wise=True),
                     tf.HistEqual(num_bins=256, channel_wise=True),
                     tf.HistEqual(num_bins=512, channel_wise=True),
-                    tf.AdditiveNoise(sigma=0.0, noise_type='gaussian', randomize_type=False,
+                    tf.AdditiveNoise(sigma=0.1, noise_type='gaussian', randomize_type=False,
                                      out_of_bound_mode=('normalize', 'clamp')[1], prand=True, channel_wise=True),
-                    tf.AdditiveNoise(sigma=0.0, noise_type='rician', randomize_type=False,
+                    tf.AdditiveNoise(sigma=0.1, noise_type='rician', randomize_type=False,
                                      out_of_bound_mode=('normalize', 'clamp')[1], prand=True, channel_wise=True),
-                    tf.AdditiveNoise(sigma=0.0, noise_type='rayleigh', randomize_type=False,
+                    tf.AdditiveNoise(sigma=0.1, noise_type='rayleigh', randomize_type=False,
                                      out_of_bound_mode=('normalize', 'clamp')[1], prand=True, channel_wise=True),
                 ][self.cfg.DATA.EXP.INTENSITY_SEL]]
             )[self.cfg.DATA.EXP.INTENSITY]

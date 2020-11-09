@@ -263,7 +263,8 @@ hp_set = [
             'name': 'SOLVER.OPTIMIZING_METHOD',
             'type': 'choice',
             'values': [
-                'sgd', 'adadelta', 'adagrad', 'rmsprop', 'adam',
+                # 'sgd', 'adadelta', 'adagrad', 'rmsprop', 'adam',
+                'sgd', 'adam',
             ],
         },
         {
@@ -280,13 +281,13 @@ hp_set = [
                 1e-2, 1e-3, 1e-4, 1e-5,
             ],
         },
-        {
-            'name': 'SOLVER.NESTEROV',
-            'type': 'choice',
-            'values': [
-                False, True,
-            ],
-        },
+        # {
+        #     'name': 'SOLVER.NESTEROV',
+        #     'type': 'choice',
+        #     'values': [
+        #         False, True,
+        #     ],
+        # },
         {
             'name': 'MODEL.DROPOUT_RATE',
             'type': 'choice',
@@ -333,7 +334,7 @@ hp_set = [
             'name': 'MODEL.LOSS_FUNC',
             'type': 'choice',
             'values': [
-                'CrossEntropyLoss', 'DiceLoss', 'FocalLoss', 'LovaszLoss'
+                'CrossEntropyLoss', 'DiceLoss',  # 'FocalLoss', 'LovaszLoss'
             ],
         }
     ],

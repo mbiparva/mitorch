@@ -8,7 +8,7 @@
 """Utility function for weight initialization"""
 
 import torch.nn as nn
-from fvcore.nn.weight_init import c2_msra_fill
+# from fvcore.nn.weight_init import c2_msra_fill
 
 
 def init_weights(model, fc_init_std=0.01):
@@ -27,7 +27,12 @@ def init_weights(model, fc_init_std=0.01):
             performance on imagenet classification."
             arXiv preprint arXiv:1502.01852 (2015)}
             """
-            c2_msra_fill(m)
+            c2_msra_fill(m, nonlinearity=('relu', 'leaky_relu')[0])
+            # c2_xavier_fill(m)
+            # nn.init.xavier_normal_(m.weight)
+            # nn.init.xavier_uniform_(m.weight)
+            # if m.bias is not None:  # pyre-ignore
+            #     nn.init.constant_(m.bias, 0)
         elif isinstance(m, nn.BatchNorm3d) or isinstance(m, nn.InstanceNorm3d):
             m.weight.data.fill_(1.0)
             m.bias.data.zero_()
@@ -35,3 +40,33 @@ def init_weights(model, fc_init_std=0.01):
             # TODO check to see if this is effective in this architecture since the final is a conv3d
             m.weight.data.normal_(mean=0.0, std=fc_init_std)
             m.bias.data.zero_()
+
+
+def c2_xavier_fill(module: nn.Module) -> None:
+    """
+    Initialize `module.weight` using the "XavierFill" implemented in Caffe2.
+    Also initializes `module.bias` to 0.
+
+    Args:
+        module (torch.nn.Module): module to initialize.
+    """
+    # Caffe2 implementation of XavierFill in fact
+    # corresponds to kaiming_uniform_ in PyTorch
+    nn.init.kaiming_uniform_(module.weight, a=1)  # pyre-ignore
+    if module.bias is not None:  # pyre-ignore
+        nn.init.constant_(module.bias, 0)
+
+
+def c2_msra_fill(module: nn.Module, nonlinearity: str = "relu") -> None:
+    """
+    Initialize `module.weight` using the "MSRAFill" implemented in Caffe2.
+    Also initializes `module.bias` to 0.
+
+    Args:
+        module (torch.nn.Module): module to initialize.
+        nonlinearity (str): nonlinearity.
+    """
+    # pyre-ignore
+    nn.init.kaiming_normal_(module.weight, mode="fan_out", nonlinearity=nonlinearity)
+    if module.bias is not None:  # pyre-ignore
+        nn.init.constant_(module.bias, 0)
