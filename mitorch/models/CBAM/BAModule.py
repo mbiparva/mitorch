@@ -23,6 +23,7 @@ class MLPModule(nn.Sequential):
     def __init__(self, in_channels, out_channels):
         super().__init__(
             nn.Linear(in_channels, out_channels),
+            nn.BatchNorm1d(num_features=out_channels),
             nn.ReLU,
             nn.Linear(out_channels, in_channels),
         )
@@ -32,9 +33,8 @@ class ChannelAttentionModule(nn.Module):
     def __init__(self, gate_channels, self_attention_attr):
         super().__init__()
         self.gate_channels = gate_channels
-        self.pooling_types = self_attention_attr.CHANNEL_POOLING_TYPES
-        assert isinstance(self.pooling_types, (tuple, list)) and len(self.pooling_types) > 0
-        assert all([True if p in ('max', 'average', 'pa', 'lse') else False for p in self.pooling_type]), 'p undefined'
+        self.pooling_type = self_attention_attr.BAM_CHANNEL_POOLING_TYPE
+        assert self.pooling_type in ('max', 'average', 'pa', 'lse'), 'p is undefined'
         self.reduction_ratio = self_attention_attr.REDUCTION_RATIO
 
         self._create_net()
@@ -44,9 +44,6 @@ class ChannelAttentionModule(nn.Module):
             in_channels=self.gate_channels,
             out_channels=self.gate_channels // self.reduction_ratio
         )
-        self.modulation_layer = ModulationBlock(modulation_type='sum')  # TODO could type other types
-        self.attention_normalization = nn.Sigmoid()
-        self.final_modulation_layer = ModulationBlock(modulation_type='multiplicative')
 
     def forward_pooling(self, pooling_type, x):
         B, C, D, H, W = x.shape
@@ -67,108 +64,105 @@ class ChannelAttentionModule(nn.Module):
             raise NotImplementedError()
 
         x = x.view(B, -1)
+
         x = self.mlp_layer(x)
 
         return x
 
     def forward(self, x):
-        B, C, D, H, W = x.shape
+        x_out = self.forward_pooling(self.pooling_type, x)
 
-        attention_maps = list()
-        for p in self.pooling_types:
-            x_out = self.forward_pooling(p, x)
-            attention_maps.append(x_out)
-
-        x_out = self.modulation_layer(attention_maps) if len(attention_maps) > 1 else attention_maps[0]
-
-        x_out = self.attention_normalization(x_out)
-        x_out = x_out.view(B, C, 1, 1, 1).expand_as(x)
-
-        x_out = self.final_modulation_layer((x, x_out))
+        x_out = x_out.expand_as(x)
 
         return x_out
 
 
-class ChannelPoolingLayer(nn.Module):
-    def __init__(self, pooling_type):
-        super().__init__()
-        assert pooling_type in ('max', 'average'), 'pooling type is undefined'
-
-        self._create_net(pooling_type)
-
-    def _create_net(self, pooling_type):
-        if pooling_type == 'max':
-            self.pooling_layer = nn.AdaptiveMaxPool2d((1, None))
-        else:
-            self.pooling_layer = nn.AdaptiveAvgPool2d((1, None))
-
-    def forward(self, x: torch.Tensor):
-        B, C, D, H, W = x.shape
-        x = x.view(B, C, -1)
-        x = self.pooling_layer(x)
-        x = x.view(B, C, D, H, W)
-
-        return x
-
-
-class ChannelPoolingBlock(nn.Module):
-    def __init__(self, self_attention_attr):
-        super().__init__()
-        self.pooling_type = self_attention_attr.SPATIAL_POOLING_TYPE
-        assert self.pooling_type in ('max', 'average', 'max_average'), 'pooling type is undefined'
-
-        self._create_net()
-
-    def _create_net(self):
-        self.max_pooling = ChannelPoolingLayer('max')
-        self.avg_pooling = ChannelPoolingLayer('average')
-        self.modulation_layer = ModulationBlock(modulation_type='concatenation')  # TODO could type other types
-        if self.pooling_type == 'max' or self.pooling_type == 'average':
-            self.out_channels = 1
-        else:
-            self.out_channels = 2
-
-    def forward(self, x):
-        if self.pooling_type == 'max':
-            return self.max_pooling(x)
-        elif self.pooling_type == 'average':
-            return self.avg_pooling(x)
-        else:
-            x_max = self.max_pooling(x)
-            x_avg = self.avg_pooling(x)
-
-            return self.modulation_layer((x_max, x_avg))
-
-
 class SpatialAttentionModule(nn.Module):
-    def __init__(self, self_attention_attr):
+    def __init__(self, gate_channels, self_attention_attr):
         super().__init__()
+        self.gate_channels = gate_channels
         self.kernel_size = tuple([self_attention_attr.SPATIAL_KERNEL_SIZE] * 3)
+        self.num_conv_blocks = self_attention_attr.BAM_NUM_CONV_BLOCKS
+        self.dilation = tuple([self_attention_attr.BAM_DILATION] * 3)
+        self.reduction_ratio = self_attention_attr.REDUCTION_RATIO
 
         self._create_net(self_attention_attr)
 
+    @staticmethod
+    def get_layer_name(i, postfix=''):
+        return 'bam_sam_layer{:03}{}'.format(i, postfix)
+
     def _create_net(self, self_attention_attr):
-        self.channel_pooling_layer = ChannelPoolingBlock(self_attention_attr)
-        in_channels, out_channels = self.channel_pooling_layer.out_channels, 1
-        CONV_ONLY = (False, True)[0]
-        if CONV_ONLY:
-            self.spatial_conv_layer = nn.Conv3d(in_channels, out_channels,
-                                                kernel_size=self.kernel_size,
-                                                padding=tuple((torch.tensor(self.kernel_size) // 2).tolist()),
-                                                bias=False)
-        else:
-            self.spatial_conv_layer = BasicBlock(in_channels, out_channels, kernel_size=self.kernel_size)
-        self.attention_normalization = nn.Sigmoid()
-        self.modulation_layer = ModulationBlock(modulation_type='multiplicative')
+        in_channels, out_channels = self.gate_channels, self.gate_channels // self.reduction_ratio
+        self.conv_layers = nn.Sequential()
+        self.conv_layers.add_module(
+            'base',
+            BasicBlock(
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=(1, 1, 1),
+            )
+        )
+
+        for i in range(self.num_conv_blocks):
+            self.add_module(
+                self.get_layer_name(i),
+                BasicBlock(
+                    in_channels=out_channels,
+                    out_channels=out_channels,
+                    kernel_size=self.kernel_size,
+                    dilation=self.dilation,
+                )
+            )
+
+        self.conv_layers.add_module(
+            'last',
+            nn.Conv3d(
+                in_channels=out_channels,
+                out_channels=1,
+                kernel_size=(1, 1, 1),
+                bias=False,
+            )
+        )
 
     def forward(self, x):
-        x_attention_map = self.channel_pooling_layer(x)
+        x_out = self.conv_layers(x)
 
-        x_attention_map = self.spatial_conv_layer(x_attention_map)
+        x_out = x_out.expand_as(x)
 
-        x_attention_map = self.attention_normalization(x_attention_map)
+        return x_out
 
-        x = self.modulation_layer((x, x_attention_map))
+
+class ModulationAggregationBlock(nn.Module):
+    def __init__(self, gate_channels, modulation_type, concat_reduction_factor=2, conv_only=True):
+        super().__init__()
+        self.gate_channels = gate_channels
+        self.modulation_type = modulation_type
+        self.concat_reduction_factor = concat_reduction_factor
+        self.conv_only = conv_only
+
+        self._create_net()
+
+    def _create_conv(self, in_channels, out_channels):
+        if self.conv_only:
+            return nn.Conv3d(in_channels, out_channels, kernel_size=(1, 1, 1), bias=False)
+        else:
+            return BasicBlock(in_channels, out_channels, kernel_size=(1, 1, 1))
+
+    def _create_concat_squeeze(self):
+        in_channels, out_channels = self.concat_reduction_factor * self.gate_channels, self.gate_channels
+
+        return self._create_conv(in_channels, out_channels)
+
+    def _create_net(self):
+        self.attention_modulation = ModulationBlock(self.modulation_type)
+        if self.modulation_type == 'concatenation':
+            self.concat_reduc_conv_layer = self._create_concat_squeeze()
+
+    def forward(self, x):
+        x = self.attention_modulation(x)
+        if self.modulation_type == 'concatenation':
+            x = self.concat_reduc_conv_layer(x)
 
         return x
 
@@ -178,49 +172,56 @@ class BAMBlock(nn.Module):
         super().__init__()
         self.gate_channels = gate_channels
         self.channel, self.spatial = self_attention_attr.CHANNEL, self_attention_attr.SPATIAL
-        self.modulation_type = self_attention_attr.MODULATION_TYPE
+        self.cm_modulation_type = self_attention_attr.BAM_CROSS_MODAL_MODULATION_TYPE
+        self.ref_modulation_type = self_attention_attr.BAM_REF_MODULATION_TYPE
+        self.residual = self_attention_attr.BAM_RESIDUAL
         assert self.channel or self.spatial, 'either modalities must be on'
 
         self._create_net(self_attention_attr)
 
-    def _create_concat_squeeze(self):
-        if self.channel or self.spatial:
-            concat_reduction_factor = 2
-        elif self.channel and self.spatial:
-            concat_reduction_factor = 3
+    @staticmethod
+    def _create_conv(in_channels, out_channels, conv_only=True):
+        if conv_only:
+            return nn.Conv3d(in_channels, out_channels, kernel_size=(1, 1, 1), bias=False)
         else:
-            concat_reduction_factor = 3
-        assert concat_reduction_factor
+            return BasicBlock(in_channels, out_channels, kernel_size=(1, 1, 1))
+
+    def _create_concat_squeeze(self):
+        concat_reduction_factor = 2
 
         in_channels, out_channels = concat_reduction_factor * self.gate_channels, self.gate_channels
 
-        CONV_ONLY = (False, True)[0]
-        if CONV_ONLY:
-            self.concat_reduc_conv_layer = nn.Conv3d(in_channels, out_channels, kernel_size=(1, 1, 1), bias=False)
-        else:
-            self.concat_reduc_conv_layer = BasicBlock(in_channels, out_channels, kernel_size=(1, 1, 1))
+        CONV_ONLY = (False, True)[1]
+        return self._create_conv(in_channels, out_channels, conv_only=CONV_ONLY)
 
     def _create_net(self, self_attention_attr):
         if self.channel:
             self.channel_attention_layer = ChannelAttentionModule(self.gate_channels, self_attention_attr)
-            self.channel_attention_modulation = ModulationBlock(self.modulation_type)
         if self.spatial:
-            self.spatial_attention_layer = SpatialAttentionModule(self_attention_attr)
-            self.spatial_attention_modulation = ModulationBlock(self.modulation_type)
+            self.spatial_attention_layer = SpatialAttentionModule(self.gate_channels, self_attention_attr)
 
-        self.type_concat = self.modulation_type == 'concatenation'
-        if self.type_concat:
-            self._create_concat_squeeze()
+        if self.channel is self.spatial is True:
+            self.cm_att_mod_agg = ModulationAggregationBlock(self.gate_channels, self.cm_modulation_type)
+
+        self.attention_normalization = nn.Sigmoid()
+
+        self.ref_att_mod_agg = ModulationAggregationBlock(self.gate_channels, self.ref_modulation_type)
 
     def forward(self, x):
-        if self.channel:
-            x_channel_attention_map = self.channel_attention_layer(x)
-            x = self.channel_attention_modulation((x, x_channel_attention_map))
-        if self.spatial:
-            x_spatial_attention_map = self.spatial_attention_layer(x)
-            x = self.spatial_attention_modulation((x, x_spatial_attention_map))
+        x_channel_attention_map, x_spatial_attention_map, x_attention_map = None, None, None
 
-        if self.type_concat:
-            x = self.concat_reduc_conv_layer(x)
+        if self.channel:
+            x_channel_attention_map = x_attention_map = self.channel_attention_layer(x)
+        if self.spatial:
+            x_spatial_attention_map = x_attention_map = self.spatial_attention_layer(x)
+
+        if self.channel is self.spatial is True:
+            x_attention_map = self.cm_att_mod_agg((x_channel_attention_map, x_spatial_attention_map))
+
+        x_attention_map = self.attention_normalization(x_attention_map)
+
+        x_attention_map = self.ref_att_mod_agg((x, x_attention_map))
+
+        x = (x + x_attention_map) if self.residual else x
 
         return x

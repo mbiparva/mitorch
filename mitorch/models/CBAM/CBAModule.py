@@ -32,7 +32,7 @@ class ChannelAttentionModule(nn.Module):
     def __init__(self, gate_channels, self_attention_attr):
         super().__init__()
         self.gate_channels = gate_channels
-        self.pooling_types = self_attention_attr.CHANNEL_POOLING_TYPES
+        self.pooling_types = self_attention_attr.CBAM_CHANNEL_POOLING_TYPES
         assert isinstance(self.pooling_types, (tuple, list)) and len(self.pooling_types) > 0
         assert all([True if p in ('max', 'average', 'pa', 'lse') else False for p in self.pooling_type]), 'p undefined'
         self.reduction_ratio = self_attention_attr.REDUCTION_RATIO
@@ -178,7 +178,7 @@ class CBAMBlock(nn.Module):
         super().__init__()
         self.gate_channels = gate_channels
         self.channel, self.spatial = self_attention_attr.CHANNEL, self_attention_attr.SPATIAL
-        self.modulation_type = self_attention_attr.MODULATION_TYPE
+        self.modulation_type = self_attention_attr.CBAM_REF_MODULATION_TYPE
         assert self.channel or self.spatial, 'either modalities must be on'
 
         self._create_net(self_attention_attr)
