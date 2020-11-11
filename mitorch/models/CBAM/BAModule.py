@@ -33,7 +33,7 @@ class ChannelAttentionModule(nn.Module):
     def __init__(self, gate_channels, self_attention_attr):
         super().__init__()
         self.gate_channels = gate_channels
-        self.pooling_type = self_attention_attr.BAM_CHANNEL_POOLING_TYPE
+        self.pooling_type = self_attention_attr.CHANNEL_POOLING_TYPE
         assert self.pooling_type in ('max', 'average', 'pa', 'lse'), 'p is undefined'
         self.reduction_ratio = self_attention_attr.REDUCTION_RATIO
 
@@ -82,8 +82,8 @@ class SpatialAttentionModule(nn.Module):
         super().__init__()
         self.gate_channels = gate_channels
         self.kernel_size = tuple([self_attention_attr.SPATIAL_KERNEL_SIZE] * 3)
-        self.num_conv_blocks = self_attention_attr.BAM_NUM_CONV_BLOCKS
-        self.dilation = tuple([self_attention_attr.BAM_DILATION] * 3)
+        self.num_conv_blocks = self_attention_attr.NUM_CONV_BLOCKS
+        self.dilation = tuple([self_attention_attr.DILATION] * 3)
         self.reduction_ratio = self_attention_attr.REDUCTION_RATIO
 
         self._create_net(self_attention_attr)
@@ -172,9 +172,9 @@ class BAMBlock(nn.Module):
         super().__init__()
         self.gate_channels = gate_channels
         self.channel, self.spatial = self_attention_attr.CHANNEL, self_attention_attr.SPATIAL
-        self.cm_modulation_type = self_attention_attr.BAM_CROSS_MODAL_MODULATION_TYPE
-        self.ref_modulation_type = self_attention_attr.BAM_REF_MODULATION_TYPE
-        self.residual = self_attention_attr.BAM_RESIDUAL
+        self.cm_modulation_type = self_attention_attr.CROSS_MODAL_MODULATION_TYPE
+        self.ref_modulation_type = self_attention_attr.REF_MODULATION_TYPE
+        self.residual = self_attention_attr.RESIDUAL
         assert self.channel or self.spatial, 'either modalities must be on'
 
         self._create_net(self_attention_attr)

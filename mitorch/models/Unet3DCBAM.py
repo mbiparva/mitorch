@@ -68,13 +68,13 @@ class Encoder(Unet3DEncoder):
             self.add_module(
                 self.get_layer_name(i),
                 CompoundBlock(i, in_channels, out_channels, stride=self.stride, dilation=self.dilation, p=self.p,
-                              self_attention=i in self.cfg.MODEL.SETTINGS.CBAM_BLOCKS,
-                              self_attention_attr=self.cfg.MODEL.SETTINGS),
+                              self_attention=i in self.cfg.MODEL.SETTINGS.CBAM.BLOCKS,
+                              self_attention_attr=self.cfg.MODEL.SETTINGS.CBAM),
             )
-            if i in self.cfg.MODEL.SETTINGS.BAM_BLOCKS:
+            if i in self.cfg.MODEL.SETTINGS.BAM.BLOCKS:
                 self.add_module(
                     self.get_layer_name(i, postfix='_BAM'),
-                    BAMBlock(out_channels, self_attention_attr=self.cfg.MODEL.SETTINGS),
+                    BAMBlock(out_channels, self_attention_attr=self.cfg.MODEL.SETTINGS.BAM),
                 )
 
             in_channels = out_channels
@@ -83,7 +83,7 @@ class Encoder(Unet3DEncoder):
         outputs = list()
         for i in range(self.cfg.MODEL.ENCO_DEPTH):
             x = getattr(self, self.get_layer_name(i))(x)
-            if i in self.cfg.MODEL.SETTINGS.BAM_BLOCKS:
+            if i in self.cfg.MODEL.SETTINGS.BAM.BLOCKS:
                 x = getattr(self, self.get_layer_name(i, '_BAM'))(x)
             outputs.append(x)
         return outputs

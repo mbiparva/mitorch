@@ -7,13 +7,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from models.build import MODEL_REGISTRY
-from models.weight_init_helper import init_weights
-from utils.models import pad_if_necessary
-from utils.models import pad_if_necessary_all
-from models.Unet3D import Encoder as Unet3DEncoder, Decoder as Unet3DDecoder, SegHead as Unet3DSegHead
-from models.Unet3D import Unet3D, BasicBlock, ContextBlock, is_3d
 from models.NestedUnet3D import ModulationBlock
+from models.CBAM.BAModule import ModulationAggregationBlock
 
 
 IS_3D = True
@@ -32,10 +27,12 @@ class ChannelAttentionModule(nn.Module):
     def __init__(self, gate_channels, self_attention_attr):
         super().__init__()
         self.gate_channels = gate_channels
-        self.pooling_types = self_attention_attr.CBAM_CHANNEL_POOLING_TYPES
+        self.pooling_types = self_attention_attr.CHANNEL_POOLING_TYPES
         assert isinstance(self.pooling_types, (tuple, list)) and len(self.pooling_types) > 0
         assert all([True if p in ('max', 'average', 'pa', 'lse') else False for p in self.pooling_type]), 'p undefined'
         self.reduction_ratio = self_attention_attr.REDUCTION_RATIO
+        self.modulation_type = self_attention_attr.CHANNEL_TYPES_MODULATION_TYPE
+        self.final_modulation_type = self_attention_attr.ATTENTION_MODULATION_TYPE
 
         self._create_net()
 
@@ -44,9 +41,17 @@ class ChannelAttentionModule(nn.Module):
             in_channels=self.gate_channels,
             out_channels=self.gate_channels // self.reduction_ratio
         )
-        self.modulation_layer = ModulationBlock(modulation_type='sum')  # TODO could type other types
+        self.modulation_layer = ModulationAggregationBlock(
+            gate_channels=self.gate_channels,
+            modulation_type=self.modulation_type
+        )
+
         self.attention_normalization = nn.Sigmoid()
-        self.final_modulation_layer = ModulationBlock(modulation_type='multiplicative')
+
+        self.final_modulation_layer = ModulationAggregationBlock(
+            gate_channels=self.gate_channels,
+            modulation_type=self.final_modulation_type
+        )
 
     def forward_pooling(self, pooling_type, x):
         B, C, D, H, W = x.shape
@@ -67,6 +72,7 @@ class ChannelAttentionModule(nn.Module):
             raise NotImplementedError()
 
         x = x.view(B, -1)
+
         x = self.mlp_layer(x)
 
         return x
@@ -79,10 +85,13 @@ class ChannelAttentionModule(nn.Module):
             x_out = self.forward_pooling(p, x)
             attention_maps.append(x_out)
 
+        attention_maps = [i.view(B, C, 1, 1, 1) for i in attention_maps]
+
         x_out = self.modulation_layer(attention_maps) if len(attention_maps) > 1 else attention_maps[0]
 
         x_out = self.attention_normalization(x_out)
-        x_out = x_out.view(B, C, 1, 1, 1).expand_as(x)
+
+        x_out = x_out.expand_as(x)
 
         x_out = self.final_modulation_layer((x, x_out))
 
@@ -116,17 +125,17 @@ class ChannelPoolingBlock(nn.Module):
         super().__init__()
         self.pooling_type = self_attention_attr.SPATIAL_POOLING_TYPE
         assert self.pooling_type in ('max', 'average', 'max_average'), 'pooling type is undefined'
+        self.modulation_type = self_attention_attr.CHANNEL_POOLING_MODULATION_TYPE
 
         self._create_net()
 
     def _create_net(self):
         self.max_pooling = ChannelPoolingLayer('max')
         self.avg_pooling = ChannelPoolingLayer('average')
-        self.modulation_layer = ModulationBlock(modulation_type='concatenation')  # TODO could type other types
-        if self.pooling_type == 'max' or self.pooling_type == 'average':
-            self.out_channels = 1
-        else:
-            self.out_channels = 2
+        self.modulation_layer = ModulationAggregationBlock(
+            gate_channels=1,
+            modulation_type=self.modulation_type
+        )
 
     def forward(self, x):
         if self.pooling_type == 'max':
@@ -141,30 +150,26 @@ class ChannelPoolingBlock(nn.Module):
 
 
 class SpatialAttentionModule(nn.Module):
-    def __init__(self, self_attention_attr):
+    def __init__(self, gate_channels, self_attention_attr):
         super().__init__()
+        self.gate_channels = gate_channels
         self.kernel_size = tuple([self_attention_attr.SPATIAL_KERNEL_SIZE] * 3)
+        self.modulation_type = self_attention_attr.ATTENTION_MODULATION_TYPE
 
         self._create_net(self_attention_attr)
 
     def _create_net(self, self_attention_attr):
-        self.channel_pooling_layer = ChannelPoolingBlock(self_attention_attr)
-        in_channels, out_channels = self.channel_pooling_layer.out_channels, 1
-        CONV_ONLY = (False, True)[0]
-        if CONV_ONLY:
-            self.spatial_conv_layer = nn.Conv3d(in_channels, out_channels,
-                                                kernel_size=self.kernel_size,
-                                                padding=tuple((torch.tensor(self.kernel_size) // 2).tolist()),
-                                                bias=False)
-        else:
-            self.spatial_conv_layer = BasicBlock(in_channels, out_channels, kernel_size=self.kernel_size)
+        self.pooling_modulation_aggregation_layer = ChannelPoolingBlock(self_attention_attr)
+
         self.attention_normalization = nn.Sigmoid()
-        self.modulation_layer = ModulationBlock(modulation_type='multiplicative')
+
+        self.modulation_layer = ModulationAggregationBlock(
+            gate_channels=self.gate_channels,
+            modulation_type=self.modulation_type
+        )
 
     def forward(self, x):
-        x_attention_map = self.channel_pooling_layer(x)
-
-        x_attention_map = self.spatial_conv_layer(x_attention_map)
+        x_attention_map = self.pooling_modulation_aggregation_layer(x)
 
         x_attention_map = self.attention_normalization(x_attention_map)
 
@@ -178,39 +183,28 @@ class CBAMBlock(nn.Module):
         super().__init__()
         self.gate_channels = gate_channels
         self.channel, self.spatial = self_attention_attr.CHANNEL, self_attention_attr.SPATIAL
-        self.modulation_type = self_attention_attr.CBAM_REF_MODULATION_TYPE
+        self.modulation_type = self_attention_attr.REF_MODULATION_TYPE
         assert self.channel or self.spatial, 'either modalities must be on'
 
         self._create_net(self_attention_attr)
 
-    def _create_concat_squeeze(self):
-        if self.channel or self.spatial:
-            concat_reduction_factor = 2
-        elif self.channel and self.spatial:
-            concat_reduction_factor = 3
-        else:
-            concat_reduction_factor = 3
-        assert concat_reduction_factor
-
-        in_channels, out_channels = concat_reduction_factor * self.gate_channels, self.gate_channels
-
-        CONV_ONLY = (False, True)[0]
-        if CONV_ONLY:
-            self.concat_reduc_conv_layer = nn.Conv3d(in_channels, out_channels, kernel_size=(1, 1, 1), bias=False)
-        else:
-            self.concat_reduc_conv_layer = BasicBlock(in_channels, out_channels, kernel_size=(1, 1, 1))
-
     def _create_net(self, self_attention_attr):
         if self.channel:
             self.channel_attention_layer = ChannelAttentionModule(self.gate_channels, self_attention_attr)
-            self.channel_attention_modulation = ModulationBlock(self.modulation_type)
+            self.channel_attention_modulation = ModulationAggregationBlock(
+                gate_channels=self.gate_channels,
+                modulation_type=self.modulation_type,
+                concat_reduction_factor=2,
+            )
         if self.spatial:
-            self.spatial_attention_layer = SpatialAttentionModule(self_attention_attr)
-            self.spatial_attention_modulation = ModulationBlock(self.modulation_type)
-
-        self.type_concat = self.modulation_type == 'concatenation'
-        if self.type_concat:
-            self._create_concat_squeeze()
+            # in case both are true and concatenation inplace, we want to differ reduction to the end of spatial
+            self.channel_attention_modulation = ModulationBlock(self.modulation_type)
+            self.spatial_attention_layer = SpatialAttentionModule(self.gate_channels, self_attention_attr)
+            self.spatial_attention_modulation = ModulationAggregationBlock(
+                gate_channels=self.gate_channels,
+                modulation_type=self.modulation_type,
+                concat_reduction_factor=3 if self.channel and self.spatial else 2,
+            )
 
     def forward(self, x):
         if self.channel:
@@ -219,8 +213,5 @@ class CBAMBlock(nn.Module):
         if self.spatial:
             x_spatial_attention_map = self.spatial_attention_layer(x)
             x = self.spatial_attention_modulation((x, x_spatial_attention_map))
-
-        if self.type_concat:
-            x = self.concat_reduc_conv_layer(x)
 
         return x
