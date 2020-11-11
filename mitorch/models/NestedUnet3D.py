@@ -17,7 +17,7 @@ IS_3D = True
 class ModulationBlock(nn.Module):
     def __init__(self, modulation_type):
         super().__init__()
-        assert modulation_type in ('additive', 'multiplicative', 'mean', 'concatenation')
+        assert modulation_type in ('additive', 'multiplicative', 'mean', 'concatenation', 'bypass')
         self.modulation_type = modulation_type
 
     def forward(self, x):
@@ -32,6 +32,8 @@ class ModulationBlock(nn.Module):
             x = torch.mean(x, dim=1)
         elif self.modulation_type == 'concatenation':
             x = torch.cat(x, dim=1)
+        elif self.modulation_type == 'bypass':
+            x = x[-1]
         else:
             raise NotImplementedError
 

@@ -330,13 +330,13 @@ hp_set = [
                 2000, 4000, 8000, 16000, 32000, 64000, 128000, 256000, 512000
             ],
         },
-        {
-            'name': 'MODEL.LOSS_FUNC',
-            'type': 'choice',
-            'values': [
-                'CrossEntropyLoss', 'DiceLoss',  # 'FocalLoss', 'LovaszLoss'
-            ],
-        }
+        # {
+        #     'name': 'MODEL.LOSS_FUNC',
+        #     'type': 'choice',
+        #     'values': [
+        #         'CrossEntropyLoss', 'DiceLoss',  # 'FocalLoss', 'LovaszLoss'
+        #     ],
+        # }
     ],
 ][EXP_SEL]
 
