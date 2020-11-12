@@ -240,7 +240,7 @@ _C.MODEL.SETTINGS = tuple({
         'MODULATION_TYPE': ('additive', 'multiplicative', 'mean', 'concatenation')[3],
     }),
     'Unet3DCBAM': CfgNode({
-        'CBAM': CfgNode({
+        'GAM': CfgNode({
             'BLOCKS': [3, 4],
             'REDUCTION_RATIO': 16,
             'RESIDUAL_RELATIVE': ('before', 'after')[0],
@@ -254,7 +254,7 @@ _C.MODEL.SETTINGS = tuple({
             'SPATIAL': (False, True)[1],
             'SPATIAL_KERNEL_SIZE': 3,
         }),
-        'BAM': CfgNode({
+        'LAM': CfgNode({
             'BLOCKS': [3, 4],
             'REDUCTION_RATIO': 16,
             'CROSS_MODAL_MODULATION_TYPE': ('additive', 'multiplicative', 'mean', 'concatenation')[0],
@@ -268,11 +268,22 @@ _C.MODEL.SETTINGS = tuple({
             'SPATIAL_KERNEL_SIZE': 3,
         }),
     }),
-    # 'DAUnet3D': CfgNode({
-    #   'DEEP_SUPERVISION': (False, True)[1],
-    #   'N_HOP_DENSE_SKIP_CONNECTION': 2,  # must be > 0, 1 means no dense-skip-connections
-    #   'MODULATION_TYPE': ('additive', 'multiplicative', 'mean', 'concatenation')[3],
-    # }),
+    'DAUnet3D': CfgNode({
+        'GAM': CfgNode({
+            'BLOCKS': [-1],  # switches off Global Attention Module for DANet
+        }),
+        'LAM': CfgNode({
+            'BLOCKS': [3, 4],
+            'REDUCTION_RATIO': 4,
+            'INTERNAL_MODULATION_TYPE': ('additive', 'multiplicative', 'mean', 'concatenation')[0],
+            'CROSS_MODAL_MODULATION_TYPE': ('additive', 'multiplicative', 'mean', 'concatenation')[0],
+            'REF_MODULATION_TYPE': ('additive', 'multiplicative', 'mean', 'concatenation')[1],
+            'RESIDUAL': (False, True)[1],
+            'CHANNEL': (False, True)[1],
+            'SPATIAL': (False, True)[1],
+            'KERNEL_SIZE': 3,
+        }),
+    }),
 }.items())
 
 

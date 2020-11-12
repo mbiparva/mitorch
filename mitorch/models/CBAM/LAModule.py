@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from models.NestedUnet3D import ModulationBlock
-from models.CBAM.BAModule import ModulationAggregationBlock
+from models.CBAM.GAModule import ModulationAggregationBlock
 
 
 IS_3D = True
@@ -178,7 +178,7 @@ class SpatialAttentionModule(nn.Module):
         return x
 
 
-class CBAMBlock(nn.Module):
+class LAMBlock(nn.Module):
     def __init__(self, gate_channels, self_attention_attr):
         super().__init__()
         self.gate_channels = gate_channels

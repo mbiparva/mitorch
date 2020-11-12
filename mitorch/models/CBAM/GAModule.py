@@ -167,7 +167,7 @@ class ModulationAggregationBlock(nn.Module):
         return x
 
 
-class BAMBlock(nn.Module):
+class GAMBlock(nn.Module):
     def __init__(self, gate_channels, self_attention_attr):
         super().__init__()
         self.gate_channels = gate_channels
@@ -178,21 +178,6 @@ class BAMBlock(nn.Module):
         assert self.channel or self.spatial, 'either modalities must be on'
 
         self._create_net(self_attention_attr)
-
-    @staticmethod
-    def _create_conv(in_channels, out_channels, conv_only=True):
-        if conv_only:
-            return nn.Conv3d(in_channels, out_channels, kernel_size=(1, 1, 1), bias=False)
-        else:
-            return BasicBlock(in_channels, out_channels, kernel_size=(1, 1, 1))
-
-    def _create_concat_squeeze(self):
-        concat_reduction_factor = 2
-
-        in_channels, out_channels = concat_reduction_factor * self.gate_channels, self.gate_channels
-
-        CONV_ONLY = (False, True)[1]
-        return self._create_conv(in_channels, out_channels, conv_only=CONV_ONLY)
 
     def _create_net(self, self_attention_attr):
         if self.channel:

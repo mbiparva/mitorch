@@ -5,4 +5,3 @@
 #  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
 from .LAModule import LAMBlock
-from .GAModule import GAMBlock

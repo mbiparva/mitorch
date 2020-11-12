@@ -16,17 +16,19 @@ from utils.models import pad_if_necessary_all
 from models.Unet3D import Encoder as Unet3DEncoder, Decoder as Unet3DDecoder, SegHead as Unet3DSegHead
 from models.Unet3D import Unet3D, BasicBlock, ContextBlock, is_3d
 from models.NestedUnet3D import ModulationBlock
-from models.CBAM import CBAMBlock, BAMBlock
+from models.CBAM import GAMBlock, LAMBlock
 import models.CBAM
 
 IS_3D = True
 
 
 class CompoundBlock(nn.Module):
-    def __init__(self, i, in_channels, out_channels, stride, dilation, p, self_attention, self_attention_attr):
+    def __init__(self, i, in_channels, out_channels, stride, dilation, p, self_attention, self_attention_attr,
+                 self_attention_block):
         super().__init__()
         self.self_attention = self_attention
         self.residual_relative = self_attention_attr.RESIDUAL_RELATIVE
+        self.self_attention_block = self_attention_block
 
         self._create_net(i, in_channels, out_channels, stride, dilation, p, self_attention_attr)
 
@@ -40,7 +42,7 @@ class CompoundBlock(nn.Module):
         self.context_layer = ContextBlock(out_channels, out_channels, dilation=dilation, p=p)
 
         if self.self_attention:
-            self.self_attention_layer = CBAMBlock(out_channels, self_attention_attr)
+            self.self_attention_layer = self.self_attention_block(out_channels, self_attention_attr)
 
     def forward(self, x):
         x_input = self.input_layer(x)
@@ -54,12 +56,13 @@ class CompoundBlock(nn.Module):
 
 
 class Encoder(Unet3DEncoder):
-    def __init__(self, cfg):
+    def __init__(self, cfg, local_sab):
+        self.local_sab = local_sab
         super().__init__(cfg)
 
     @staticmethod
     def get_layer_name(i, postfix=''):
-        return 'decoder_layer{:03}{}'.format(i, postfix)
+        return 'encoder_layer{:03}{}'.format(i, postfix)
 
     def _create_net(self):
         in_channels = self.cfg.MODEL.INPUT_CHANNELS
@@ -68,13 +71,15 @@ class Encoder(Unet3DEncoder):
             self.add_module(
                 self.get_layer_name(i),
                 CompoundBlock(i, in_channels, out_channels, stride=self.stride, dilation=self.dilation, p=self.p,
-                              self_attention=i in self.cfg.MODEL.SETTINGS.CBAM.BLOCKS,
-                              self_attention_attr=self.cfg.MODEL.SETTINGS.CBAM),
+                              self_attention=i in self.cfg.MODEL.SETTINGS.LAM.BLOCKS,
+                              self_attention_attr=self.cfg.MODEL.SETTINGS.LAM,
+                              self_attention_block=self.local_sab,
+                              ),
             )
-            if i in self.cfg.MODEL.SETTINGS.BAM.BLOCKS:
+            if i in self.cfg.MODEL.SETTINGS.LAM.BLOCKS:
                 self.add_module(
-                    self.get_layer_name(i, postfix='_BAM'),
-                    BAMBlock(out_channels, self_attention_attr=self.cfg.MODEL.SETTINGS.BAM),
+                    self.get_layer_name(i, postfix='_GAM'),
+                    GAMBlock(out_channels, self_attention_attr=self.cfg.MODEL.SETTINGS.GAM),
                 )
 
             in_channels = out_channels
@@ -83,8 +88,8 @@ class Encoder(Unet3DEncoder):
         outputs = list()
         for i in range(self.cfg.MODEL.ENCO_DEPTH):
             x = getattr(self, self.get_layer_name(i))(x)
-            if i in self.cfg.MODEL.SETTINGS.BAM.BLOCKS:
-                x = getattr(self, self.get_layer_name(i, '_BAM'))(x)
+            if i in self.cfg.MODEL.SETTINGS.LAM.BLOCKS:
+                x = getattr(self, self.get_layer_name(i, '_GAM'))(x)
             outputs.append(x)
         return outputs
 
@@ -116,10 +121,10 @@ class Unet3DCBAM(Unet3D):
     def set_processing_mode(self):
         global IS_3D
         IS_3D = self.cfg.MODEL.PROCESSING_MODE == '3d'
-        models.CBAM.CBAModule.IS_3D = models.CBAM.BAModule.IS_3D = IS_3D
+        models.CBAM.GAModule.IS_3D = models.CBAM.LAModule.IS_3D = IS_3D
         super().set_processing_mode()
 
     def _create_net(self):
-        self.Encoder = Encoder(self.cfg)
+        self.Encoder = Encoder(self.cfg, local_sab=LAMBlock)
         self.Decoder = Decoder(self.cfg)
         self.SegHead = SegHead(self.cfg)

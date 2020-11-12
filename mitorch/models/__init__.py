@@ -10,3 +10,4 @@ from .build import MODEL_REGISTRY, build_model
 from .Unet3D import Unet3D
 from .NestedUnet3D import NestedUnet3D
 from .Unet3DCBAM import Unet3DCBAM
+from .DAUNet3D import DAUnet3D
