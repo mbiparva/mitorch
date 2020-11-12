@@ -20,6 +20,37 @@ from models.CBAM.GAModule import ModulationAggregationBlock
 IS_3D = True
 
 
+class AttentionModule(nn.Module):
+    def __init__(self, gate_channels, self_attention_attr, attention_modality):
+        super().__init__()
+        self.gate_channels = gate_channels
+        self.input_reduction_ratio = self_attention_attr.INPUT_REDUCTION_RATIO
+        self.kernel_size = tuple([self_attention_attr.KERNEL_SIZE] * 3)
+
+        self._create_net(self_attention_attr, attention_modality)
+
+    def _create_net(self, self_attention_attr, attention_modality):
+        in_channels, out_channels = self.gate_channels, self.gate_channels // self.reduction_ratio
+        self.pre_attention_conv_layer = BasicBlock(in_channels=in_channels, out_channels=out_channels,
+                                                   kernel_size=self.kernel_size)
+        self.attention_block = attention_modality(self.gate_channels, self_attention_attr)
+        self.post_attention_conv_layer = BasicBlock(in_channels=in_channels, out_channels=out_channels,
+                                                    kernel_size=self.kernel_size)
+
+        self.last_conv_layer = nn.Conv3d(in_channels=in_channels, out_channels=out_channels, kernel_size=(1, 1, 1))
+
+    def forward(self, x):
+        x = self.pre_attention_conv_layer(x)
+
+        x = self.attention_block(x)
+
+        x = self.post_attention_conv_layer(x)
+
+        x = self.last_conv_layer(x)
+
+        return x
+
+
 class LAMBlock(nn.Module):
     def __init__(self, gate_channels, self_attention_attr):
         super().__init__()
@@ -34,9 +65,11 @@ class LAMBlock(nn.Module):
 
     def _create_net(self, self_attention_attr):
         if self.channel:
-            self.channel_attention_layer = ChannelAttentionModule(self.gate_channels, self_attention_attr)
+            self.channel_attention_layer = AttentionModule(self.gate_channels, self_attention_attr,
+                                                           ChannelAttentionModule)
         if self.spatial:
-            self.spatial_attention_layer = SpatialAttentionModule(self.gate_channels, self_attention_attr)
+            self.spatial_attention_layer = AttentionModule(self.gate_channels, self_attention_attr,
+                                                           SpatialAttentionModule)
 
         if self.channel is self.spatial is True:
             self.cm_att_mod_agg = ModulationAggregationBlock(self.gate_channels, self.cm_modulation_type)

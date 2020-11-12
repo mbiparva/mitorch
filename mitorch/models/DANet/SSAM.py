@@ -14,59 +14,61 @@ from utils.models import pad_if_necessary_all
 from models.Unet3D import Encoder as Unet3DEncoder, Decoder as Unet3DDecoder, SegHead as Unet3DSegHead
 from models.Unet3D import Unet3D, BasicBlock, ContextBlock, is_3d
 from models.NestedUnet3D import ModulationBlock
+from models.CBAM.GAModule import ModulationAggregationBlock
+from torch.nn import Parameter
 
 
 class SpatialAttentionModule(nn.Module):
     def __init__(self, gate_channels, self_attention_attr):
         super().__init__()
         self.gate_channels = gate_channels
-        self.kernel_size = tuple([self_attention_attr.KERNEL_SIZE] * 3)
-        self.input_reduction_ratio = self_attention_attr.INPUT_REDUCTION_RATIO
-        self.middle_reduction_ratio = self_attention_attr.MIDDLE_REDUCTION_RATIO
+        self.reduction_ratio = self_attention_attr.MIDDLE_REDUCTION_RATIO
         self.modulation_type = self_attention_attr.INTERNAL_MODULATION_TYPE
 
         self._create_net(self_attention_attr)
 
-    @staticmethod
-    def get_layer_name(i, postfix=''):
-        return 'bam_sam_layer{:03}{}'.format(i, postfix)
-
     def _create_net(self, self_attention_attr):
         in_channels, out_channels = self.gate_channels, self.gate_channels // self.reduction_ratio
-        self.conv_layers = nn.Sequential()
-        self.conv_layers.add_module(
-            'base',
-            BasicBlock(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                kernel_size=(1, 1, 1),
-            )
-        )
 
-        for i in range(self.num_conv_blocks):
-            self.add_module(
-                self.get_layer_name(i),
-                BasicBlock(
-                    in_channels=out_channels,
-                    out_channels=out_channels,
-                    kernel_size=self.kernel_size,
-                    dilation=self.dilation,
-                )
-            )
+        self.query_conv_layer = nn.Conv3d(in_channels=in_channels, out_channels=out_channels, kernel_size=(1, 1, 1))
 
-        self.conv_layers.add_module(
-            'last',
-            nn.Conv3d(
-                in_channels=out_channels,
-                out_channels=1,
-                kernel_size=(1, 1, 1),
-                bias=False,
-            )
+        self.key_conv_layer = nn.Conv3d(in_channels=in_channels, out_channels=out_channels, kernel_size=(1, 1, 1))
+
+        self.value_conv_layer = nn.Conv3d(in_channels=in_channels, out_channels=in_channels, kernel_size=(1, 1, 1))
+
+        self.gamma = Parameter(torch.zeros(1))
+
+        self.attention_normalization = nn.Softmax(dim=-1)
+
+        self.modulation_layer = ModulationAggregationBlock(
+            gate_channels=self.gate_channels,
+            modulation_type=self.modulation_type
         )
 
     def forward(self, x):
-        x_out = self.conv_layers(x)
+        B, C, D, H, W = x.shape
 
-        x_out = x_out.expand_as(x)
+        x_query = self.query_conv_layer(x)
+        x_query = x_query.view(B, C, -1).permute(0, 2, 1)
+
+        x_key = self.key_conv_layer(x)
+        x_key = x_key.view(B, C, -1)
+
+        x_energy = torch.bmm(x_query, x_key)
+
+        x_attention = self.attention_normalization(x_energy)
+
+        x_attention = x_attention.permute(0, 2, 1)  # why? paper does not explain!
+
+        x_value = self.value_conv_layer(x)
+        x_value = x_value.view(B, C, -1)
+
+        x_out = torch.bmm(x_value, x_attention)
+
+        x_out = x_out.view(B, C, D, H, W)
+
+        x_out = self.gamma * x_out
+
+        x_out = self.modulation_layer((x, x_out))
 
         return x_out
