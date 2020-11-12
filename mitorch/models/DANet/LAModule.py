@@ -41,7 +41,8 @@ class LAMBlock(nn.Module):
         if self.channel is self.spatial is True:
             self.cm_att_mod_agg = ModulationAggregationBlock(self.gate_channels, self.cm_modulation_type)
 
-        self.attention_normalization = nn.Sigmoid()
+        self.attention_final_conv_layer = nn.Conv3d(in_channels=self.gate_channels, out_channels=self.gate_channels,
+                                                    kernel_size=(1, 1, 1), bias=False)
 
         self.ref_att_mod_agg = ModulationAggregationBlock(self.gate_channels, self.ref_modulation_type)
 
@@ -56,7 +57,7 @@ class LAMBlock(nn.Module):
         if self.channel is self.spatial is True:
             x_attention_map = self.cm_att_mod_agg((x_channel_attention_map, x_spatial_attention_map))
 
-        x_attention_map = self.attention_normalization(x_attention_map)
+        x_attention_map = self.attention_final_conv_layer(x_attention_map)
 
         x_attention_map = self.ref_att_mod_agg((x, x_attention_map))
 

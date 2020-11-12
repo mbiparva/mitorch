@@ -21,9 +21,9 @@ class SpatialAttentionModule(nn.Module):
         super().__init__()
         self.gate_channels = gate_channels
         self.kernel_size = tuple([self_attention_attr.KERNEL_SIZE] * 3)
-        self.num_conv_blocks = self_attention_attr.NUM_CONV_BLOCKS
-        self.dilation = tuple([self_attention_attr.DILATION] * 3)
-        self.reduction_ratio = self_attention_attr.REDUCTION_RATIO
+        self.input_reduction_ratio = self_attention_attr.INPUT_REDUCTION_RATIO
+        self.middle_reduction_ratio = self_attention_attr.MIDDLE_REDUCTION_RATIO
+        self.modulation_type = self_attention_attr.INTERNAL_MODULATION_TYPE
 
         self._create_net(self_attention_attr)
 

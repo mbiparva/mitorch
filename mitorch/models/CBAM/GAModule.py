@@ -117,12 +117,7 @@ class SpatialAttentionModule(nn.Module):
 
         self.conv_layers.add_module(
             'last',
-            nn.Conv3d(
-                in_channels=out_channels,
-                out_channels=1,
-                kernel_size=(1, 1, 1),
-                bias=False,
-            )
+            nn.Conv3d(in_channels=out_channels, out_channels=1, kernel_size=(1, 1, 1), bias=False)
         )
 
     def forward(self, x):

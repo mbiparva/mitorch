@@ -274,7 +274,8 @@ _C.MODEL.SETTINGS = tuple({
         }),
         'LAM': CfgNode({
             'BLOCKS': [3, 4],
-            'REDUCTION_RATIO': 4,
+            'INPUT_REDUCTION_RATIO': 4,
+            'MIDDLE_REDUCTION_RATIO': 8,
             'INTERNAL_MODULATION_TYPE': ('additive', 'multiplicative', 'mean', 'concatenation')[0],
             'CROSS_MODAL_MODULATION_TYPE': ('additive', 'multiplicative', 'mean', 'concatenation')[0],
             'REF_MODULATION_TYPE': ('additive', 'multiplicative', 'mean', 'concatenation')[1],
