@@ -35,6 +35,8 @@ def build_transformations(dataset_name, cfg, mode):
         name = 'WMHTransformations'
     elif dataset_name in ('TRAP', 'CAPTURE', 'TRACING'):
         name = 'NVTTransformations'
+    elif dataset_name in ('HPSubfield', ):
+        name = 'HPSFTransformations'
     else:
         raise NotImplementedError
     return TRANSFORMATION_REGISTRY.get(name)(cfg, mode)

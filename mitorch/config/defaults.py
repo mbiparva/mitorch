@@ -62,7 +62,7 @@ _C.TRAIN.ENABLE = True
 _C.TRAIN.HPO = (False, True)[0]
 
 # Dataset.
-_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb', 'TRAP', 'CAPTURE', 'TRACING')[3]
+_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb', 'TRAP', 'CAPTURE', 'TRACING', 'HPSubfield')[-1]
 
 # Input Modalities
 _C.TRAIN.IN_MOD = {
@@ -85,6 +85,11 @@ _C.TRAIN.IN_MOD = {
     'TRAP': [[], [], []],  # just to imitate the typical behaviour for INPUT_CHANNELS
     'CAPTURE': [[], []],
     'TRACING': [[], []],
+    'HPSubfield': [
+        ('t1', 't1.nii.gz'),
+        ('t2', 't2.nii.gz'),
+        ('annot', 'truth.nii.gz'),
+    ],
 }[_C.TRAIN.DATASET]
 
 if socket.gethostname() == 'cerveau.sri.utoronto.ca':
@@ -444,6 +449,15 @@ _C.NVT.RANDOM_CROP_NUM_ATTEMPS = 500
 _C.NVT.RANDOM_CROP_THRESHOLD = 0
 
 _C.NVT.REPEAT_DATASET = 0  # < 2 is off
+
+
+# # ---------------------------------------------------------------------------- #
+# # Neuron and Virus Tracing Segmentation options
+# # ---------------------------------------------------------------------------- #
+_C.HPSF = CfgNode()
+
+# Whether NVT is enabled
+_C.HPSF.ENABLE = True if _C.TRAIN.DATASET in ('HPSubfield', ) else False
 
 
 def init_cfg(cfg, parent_dir=''):

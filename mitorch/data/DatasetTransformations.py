@@ -135,3 +135,35 @@ class NVTTransformations(BaseTransformations):
         return torch_tf.Compose(
             transformations_body + transformations_tail
         )
+
+
+@TRANSFORMATION_REGISTRY.register()
+class HPSFTransformations(BaseTransformations):
+    def __init__(self, cfg, mode):
+        super().__init__(cfg, mode)
+
+    def create_transform(self):
+        # --- BODY ---
+        if self.mode == 'train':
+            transformations_body = [
+                tf.ToTensorImageVolume(),
+                tf.RandomOrientationTo('RPI'),
+                tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
+            ]
+        elif self.mode in ('valid', 'test'):
+            transformations_body = [
+                tf.ToTensorImageVolume(),
+                tf.RandomOrientationTo('RPI'),
+                tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
+            ]
+        else:
+            raise NotImplementedError
+
+        # --- TAIL ---
+        transformations_tail = [
+            tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
+        ]
+
+        return torch_tf.Compose(
+            transformations_body + transformations_tail
+        )

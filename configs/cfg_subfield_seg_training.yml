@@ -1,0 +1,39 @@
+TRAIN:
+  BATCH_SIZE: 1
+DATA_LOADER:
+  PIN_MEMORY: false
+  NUM_WORKERS: 4
+LOG_PERIOD: 1
+NVT:
+  NUM_MULTI_PATCHES: 16  # 32/8
+  PATCH_SELECTION_POLICY: true
+  SELECTION_LB: 16000  # CAPTURE: 2K/4K | TRAP: 128K
+  RANDOM_CROP_NUM_ATTEMPS: 500
+  RANDOM_CROP_THRESHOLD: 0
+  REPEAT_DATASET: 0
+MODEL:
+  LOSS_FUNC: 'DiceLoss'  # 'CrossEntropyLoss', 'DiceLoss', 'WeightedHausdorffLoss', 'FocalLoss', 'LovaszLoss'
+  LOSS_AUG_WHL: false
+#  WHL_NUM_DEPTH_SHEETS: 16  # (2, 4, 8, 16)
+#  WHL_SEG_THR: 0.5  # (0.12, 0.25, 0.5)
+  N_BASE_FILTERS: 16
+  ENCO_DEPTH: 5  # 5
+  NUM_PRED_LEVELS: 3  # 3 - max is ENCO_DEPTH - 1
+  DROPOUT_RATE: 0.30
+  MODEL_NAME: 'Unet3D' # 'Unet3D', 'NestedUnet3D'
+#  FC_INIT_STD: 0.01  # 0.01
+
+SOLVER:
+#  OPTIMIZING_METHOD: 'sgd'
+#  BASE_LR: 1e-2
+#  MOMENTUM: 0.9
+#  WEIGHT_DECAY: 1e-5
+#  MAX_EPOCH: 100
+#  NESTEROV: false
+  SCHEDULER_MODE: false
+
+USE_GPU: true
+GPU_ID: 0
+AMP: false
+DP: false
+DDP: false
