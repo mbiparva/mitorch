@@ -92,9 +92,6 @@ _C.TRAIN.IN_MOD = {
     ],
 }[_C.TRAIN.DATASET]
 
-if socket.gethostname() == 'cerveau.sri.utoronto.ca':
-    _C.PROJECT.DATASET_DIR = '/data2/projects/mitorch_datasets'
-
 # Total mini-batch size.
 _C.TRAIN.BATCH_SIZE = 1
 

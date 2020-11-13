@@ -77,15 +77,16 @@ class AutoPatching(ABC, data.Dataset):
         self.mode = mode
         self.transform = transform
         self.dataset_path = os.path.join(self.cfg.PROJECT.DATASET_DIR, self.__class__.__name__)
+        self.raw_dir_path = os.path.join(self.dataset_path, 'raw')
+        self.processed_dir_path = os.path.join(self.dataset_path, 'processed')
 
     def list_raw_dirs(self):
         dirs_dict = dict()
-        dataset_raw_path = os.path.join(self.dataset_path, 'raw')
-        for s in os.listdir(dataset_raw_path):
+        for s in os.listdir(self.raw_dir_path):
             if not self.is_data_dir(s):
                 continue
 
-            s_path = os.path.join(dataset_raw_path, s)
+            s_path = os.path.join(self.raw_dir_path, s)
 
             # (1) Index Files for all channels
             dirs_dict[s] = self.list_files(s_path)
@@ -97,16 +98,15 @@ class AutoPatching(ABC, data.Dataset):
 
     def list_pro_patches(self):
         patch_list = list()
-        dataset_pro_path = os.path.join(self.dataset_path, 'processed')
-        for s in os.listdir(dataset_pro_path):
+        for s in os.listdir(self.processed_dir_path):
             if not self.is_data_dir(s):
                 continue
 
-            s_path = os.path.join(dataset_pro_path, s)
+            s_path = os.path.join(self.processed_dir_path, s)
 
             # (1) Index Files for all patches
             patch_list.extend([
-                os.path.join(s_path, i) for i in sorted(os.listdir(s_path))
+                os.path.join(s, i) for i in sorted(os.listdir(s_path))
             ])
 
         return patch_list
@@ -147,14 +147,13 @@ class AutoPatching(ABC, data.Dataset):
 
     def load_patch_save(self):
         for u, v in self.dirs_dict.items():
-            u_path = os.path.join(self.dataset_path, 'raw', u)
-            processed_path = os.path.join(self.dataset_path, 'processed', u)
-            if not os.path.exists(processed_path):
-                os.mkdir(processed_path)
+            u_raw_path = os.path.join(self.raw_dir_path, u)
+            if not os.path.exists(self.processed_dir_path):
+                os.mkdir(self.processed_dir_path)
 
-            depth, height, width = self.get_volume_size(u_path, v)
+            depth, height, width = self.get_volume_size(u_raw_path, v)
 
-            annot = self.load_annot(u_path, (depth, height, width))
+            annot = self.load_annot(u_raw_path, (depth, height, width))
 
             parallel = False
             PARALLEL_JOBS = 2  # self.cfg.DATA_LOADER.NUM_WORKERS
@@ -183,8 +182,8 @@ class AutoPatching(ABC, data.Dataset):
                             grid_generator_list,
                             [u]*len(grid_generator_list),
                             [v]*len(grid_generator_list),
-                            [processed_path]*len(grid_generator_list),
-                            [u_path]*len(grid_generator_list),
+                            [self.processed_dir_path]*len(grid_generator_list),
+                            [u_raw_path]*len(grid_generator_list),
                             [self.block_size]*len(grid_generator_list),
                             [self.load_annot]*len(grid_generator_list),
                             [self.gen_patch_path]*len(grid_generator_list),
@@ -199,13 +198,13 @@ class AutoPatching(ABC, data.Dataset):
                     # save them in their corresponding directories.
                     print(f'{u}: processing the patch @ {p}')
 
-                    p_path = self.gen_patch_path(p, processed_path)
+                    p_path = self.gen_patch_path(p, self.processed_dir_path)
 
                     if os.path.exists(p_path):
                         print(f'{p_path} exits and skipped.')
                         continue
 
-                    self.load_extract_save_patch(p, v, p_path, u_path, annot, self.block_size)
+                    self.load_extract_save_patch(p, v, p_path, u_raw_path, annot, self.block_size)
 
     @staticmethod
     def get_volume_size(base_path, channel_dicts):
@@ -215,13 +214,12 @@ class AutoPatching(ABC, data.Dataset):
         return depth, height, width
 
     def clean_processed_dir(self):
-        processed_dir = os.path.join(self.dataset_path, 'processed')
-        for f in os.listdir(processed_dir):
-            shutil.rmtree(os.path.join(processed_dir, f))
+        for f in os.listdir(self.processed_dir_path):
+            shutil.rmtree(os.path.join(self.processed_dir_path, f))
 
     def image_annot_ready(self):
-        raw_dir = os.listdir(os.path.join(self.dataset_path, 'raw'))
-        processed_dir = os.listdir(os.path.join(self.dataset_path, 'processed'))
+        raw_dir = os.listdir(self.raw_dir_path)
+        processed_dir = os.listdir(self.processed_dir_path)
         ready = len(raw_dir) == len(processed_dir)
 
         return ready
@@ -283,7 +281,8 @@ class AutoPatching(ABC, data.Dataset):
         tiff.imwrite(patch_path, s_images, **{'bigtiff': False, 'imagej': True, 'metadata': {'axes': 'ZCYX'}})
 
     def __getitem__(self, index):
-        p_path = self.patch_list[index]
+        p = self.patch_list[index]
+        p_path = os.path.join(self.processed_dir_path, p)
         p_meta = {
             'sample_path': p_path
         }
@@ -343,8 +342,9 @@ class AutoPatching(ABC, data.Dataset):
         parallel = True
         PARALLEL_JOBS = self.cfg.DATA_LOADER.NUM_WORKERS
 
-        def par_job(p, cfg_nvt_selection_lb, annot_sanity_check):
-            patch_pj = annot_sanity_check(torch.tensor(tiff.imread(p)[:, -1, :, :].astype(np.float)))
+        def par_job(p, cfg_nvt_selection_lb, annot_sanity_check, processed_dir_path):
+            p_abs_path_ = os.path.join(processed_dir_path, p)
+            patch_pj = annot_sanity_check(torch.tensor(tiff.imread(p_abs_path_)[:, -1, :, :].astype(np.float)))
             patch_sum_pj = patch_pj.sum().int().item()
             if patch_sum_pj > cfg_nvt_selection_lb:
                 return p, patch_sum_pj
@@ -358,6 +358,7 @@ class AutoPatching(ABC, data.Dataset):
                         self.patch_list,
                         [self.cfg.NVT.SELECTION_LB] * len(self.patch_list),
                         [self.annot_sanity_check] * len(self.patch_list),
+                        [self.processed_dir_path] * len(self.patch_list),
                     )
                 )
             )
@@ -365,7 +366,8 @@ class AutoPatching(ABC, data.Dataset):
             patch_sums = [i[1] for i in par_outputs]
         else:
             for p in tqdm(self.patch_list):
-                patch = self.annot_sanity_check(torch.tensor(tiff.imread(p)[:, -1, :, :].astype(np.float)))
+                p_abs_path = os.path.join(self.processed_dir_path, p)
+                patch = self.annot_sanity_check(torch.tensor(tiff.imread(p_abs_path)[:, -1, :, :].astype(np.float)))
                 patch_sum = patch.sum().int().item()
                 patch_sums.append(patch_sum)
                 if patch_sum > self.cfg.NVT.SELECTION_LB:
