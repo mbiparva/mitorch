@@ -56,8 +56,10 @@ class BatchBase(ABC):
         return netwrapper.scheduler.get_last_lr() if self.cfg.SOLVER.SCHEDULER_MODE else self.cfg.SOLVER.BASE_LR
 
     def generate_gt(self, annotation):
-        assert annotation.size(1) == 1
+        if not self.cfg.HPSF.ENABLE:
+            assert annotation.size(1) == 1
         if self.cfg.MODEL.LOSS_FUNC == 'CrossEntropyLoss':
+            assert annotation.size(1) == 1
             annotation = annotation.squeeze(dim=1).long()
         if self.cfg.AMP:
             annotation = annotation.to(dtype=torch.float16)

@@ -878,3 +878,33 @@ class AdditiveNoise(Randomizable):
 
 # TODO Implement CropTightVolume based off of
 #  https://github.com/nilearn/nilearn/blob/c10248e43769f37eaea804f64d44a7816e3c6e03/nilearn/image/image.py
+
+class OneHotAnnot(Transformable):
+    def __init__(self, num_classes: int, dtype: torch.dtype = torch.float, dim: int = 0, ignore_background=True):
+        assert isinstance(num_classes, int), 'num_classes must be int'
+        assert isinstance(dim, int), 'dim must be int'
+        assert 1 < num_classes
+        assert 0 <= dim
+        assert isinstance(ignore_background, bool)
+
+        self.num_classes = num_classes
+        self.dtype = dtype
+        self.dim = dim
+        self.ignore_background = ignore_background
+
+        if self.ignore_background:
+            self.num_classes += 1  # background will be ignored later
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        return (
+            image,
+            F.one_hot(
+                labels=annot,
+                num_classes=self.num_classes,
+                dtype=self.dtype,
+                dim=self.dim,
+            ),
+            meta
+        )

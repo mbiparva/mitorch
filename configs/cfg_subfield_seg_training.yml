@@ -12,6 +12,7 @@ MODEL:
   NUM_PRED_LEVELS: 3  # 3 - max is ENCO_DEPTH - 1
   DROPOUT_RATE: 0.30
   MODEL_NAME: 'Unet3D' # 'Unet3D', 'NestedUnet3D'
+  NUM_CLASSES: 3
 SOLVER:
 #  OPTIMIZING_METHOD: 'sgd'
 #  BASE_LR: 1e-2

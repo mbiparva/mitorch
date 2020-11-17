@@ -24,3 +24,13 @@ class HPSubfield(SRIBILBase):
             for i in sorted(os.listdir(self.dataset_path))
             if re.search(r'^s\d\d$', i) is not None
         ]
+
+    @staticmethod
+    def curate_annotation(annot_tensor, ignore_index):
+        cat_labels = set(annot_tensor.unique(sorted=True).tolist())
+        known_labels = set(tuple([0, 1, 2, 3]))
+        assert cat_labels.issubset(known_labels), 'only expect labels of {} in annotations {}'.format(
+            known_labels,
+            cat_labels
+        )
+        return annot_tensor

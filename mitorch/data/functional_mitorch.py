@@ -383,3 +383,38 @@ def additive_noise(volume, sigma, noise_type='rician', out_of_bound_mode='normal
     volume = volume * vol_range + in_lower
 
     return volume
+
+
+def one_hot(labels: torch.Tensor, num_classes: int, dtype: torch.dtype, dim: int,
+            ignore_background=True):
+    """
+    This coverts a categorical annotation tensor to one-hot annotation tensor.
+    It is adapted from MONAI at the link below:
+
+    Reference:
+    https://github.com/Project-MONAI/MONAI/blob/09f39dcb84092b07cda480c99644f9f7f8cceab6/monai/networks/utils.py#L24
+
+    Args:
+        labels: the input label tensor to convert
+        num_classes: number of classes
+        dtype: dtype to return the output tensor
+        dim: where to put the new dimension for labels
+        ignore_background: drops the first sheet for background. Assumes the first index is background.
+
+    Returns: one-hot tensor
+    """
+    assert labels.dim() > 0, "labels should have dim of 1 or more."
+
+    shape_tensor = list(labels.shape)
+
+    assert shape_tensor[dim] == 1, "labels should have a channel with length equals to one."
+    shape_tensor[dim] = num_classes
+
+    labels_one_hot = torch.zeros(size=shape_tensor, dtype=dtype, device=labels.device)
+    labels = labels_one_hot.scatter_(dim=dim, index=labels.long(), value=1)
+
+    if ignore_background:
+        keep_ind = torch.tensor(range(1, num_classes))  # always assumes index 0 is background
+        labels = labels.index_select(dim=dim, index=keep_ind)
+
+    return labels

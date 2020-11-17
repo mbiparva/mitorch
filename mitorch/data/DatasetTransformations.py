@@ -146,12 +146,14 @@ class HPSFTransformations(BaseTransformations):
         # --- BODY ---
         if self.mode == 'train':
             transformations_body = [
+                tf.OneHotAnnot(self.cfg.MODEL.NUM_CLASSES),
                 tf.ToTensorImageVolume(),
                 tf.RandomOrientationTo('RPI'),
                 tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
             ]
         elif self.mode in ('valid', 'test'):
             transformations_body = [
+                tf.OneHotAnnot(self.cfg.MODEL.NUM_CLASSES),
                 tf.ToTensorImageVolume(),
                 tf.RandomOrientationTo('RPI'),
                 tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
