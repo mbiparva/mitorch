@@ -973,9 +973,6 @@ class PresetMotionArtifact(Transformable):
         return image, annot, meta
 
 
-# TODO Implement CropTightVolume based off of
-#  https://github.com/nilearn/nilearn/blob/c10248e43769f37eaea804f64d44a7816e3c6e03/nilearn/image/image.py
-
 class OneHotAnnot(Transformable):
     def __init__(self, num_classes: int, dtype: torch.dtype = torch.float, dim: int = 0, ignore_background=True):
         assert isinstance(num_classes, int), 'num_classes must be int'
@@ -1005,3 +1002,13 @@ class OneHotAnnot(Transformable):
             ),
             meta
         )
+
+# TODO Implement CropTightVolume based off of
+#  https://github.com/nilearn/nilearn/blob/c10248e43769f37eaea804f64d44a7816e3c6e03/nilearn/image/image.py
+
+# TODO add https://github.com/fepegar/torchio/blob/master/torchio/transforms/augmentation/intensity/random_bias_field.py
+# TODO add https://github.com/fepegar/torchio/blob/master/torchio/transforms/augmentation/intensity/random_blur.py
+# TODO add https://github.com/fepegar/torchio/blob/master/torchio/transforms/augmentation/intensity/random_ghosting.py
+# TODO add https://github.com/fepegar/torchio/blob/master/torchio/transforms/augmentation/intensity/random_motion.py
+# TODO add https://github.com/fepegar/torchio/blob/master/torchio/transforms/augmentation/intensity/random_spike.py
+# TODO add https://github.com/fepegar/torchio/blob/master/torchio/transforms/augmentation/intensity/random_swap.py
