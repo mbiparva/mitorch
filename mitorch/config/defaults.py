@@ -65,7 +65,7 @@ _C.TRAIN.HPO = (False, True)[0]
 _C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb', 'TRAP', 'CAPTURE', 'TRACING', 'HPSubfield')[1]
 
 # Input Modalities
-_C.TRAIN.IN_MOD = {
+_C.TRAIN.IN_MOD = tuple({
     'WMHSegmentationChallenge': [
         ('t1', 'T1.nii.gz'),
         ('fl', 'FLAIR.nii.gz'),
@@ -90,7 +90,7 @@ _C.TRAIN.IN_MOD = {
         ('t2', 't2.nii.gz'),
         ('annot', 'truth.nii.gz'),
     ],
-}
+}.items())
 
 # Total mini-batch size.
 _C.TRAIN.BATCH_SIZE = 1
@@ -135,7 +135,7 @@ _C.TEST.ENABLE = False
 _C.TEST.DATASET = ('SRIBILhfbTest', 'LEDUCQTest', 'PPMITest', 'SRIBILTest')[3]
 
 # Input Modalities
-_C.TEST.IN_MOD = {
+_C.TEST.IN_MOD = tuple({
     'SRIBILhfbTest': [
         ('t1', 'T1_nu.nii.gz'),
         ('fl', 'T1acq_nu_FL.nii.gz'),
@@ -159,7 +159,7 @@ _C.TEST.IN_MOD = {
         ('fl', 'T1acq_nu_FL.nii.gz'),
         ('annot', 'wmh_seg.nii.gz'),
     ],
-}
+}.items())
 
 # Total mini-batch size
 _C.TEST.BATCH_SIZE = 1
@@ -234,7 +234,7 @@ _C.MODEL.ENCO_DEPTH = 5
 _C.MODEL.NUM_PRED_LEVELS = 3
 
 # Number of input channels to the model
-_C.MODEL.INPUT_CHANNELS = (len(_C.TRAIN.IN_MOD) - 1, len(_C.TEST.IN_MOD) - 1)
+_C.MODEL.INPUT_CHANNELS = 0  # will set later in the init_dependencies
 
 # Model settings
 _C.MODEL.SETTINGS = tuple({
@@ -316,10 +316,10 @@ _C.DATA.CROP_SCALE = ((0.7, 1.0), (0.8, 1.0), (0.9, 1.0))[1]
 
 # The mean value of the volume raw voxels across the T1, FLAIR, T2 channels.
 # ATTENTION: Assumes the order of channels is always T1, FLAIR, T2.
-_C.DATA.MEAN = [0.058173052966594696, 0.044205766171216965, 0.04969067499041557][:_C.MODEL.INPUT_CHANNELS]  # [1:3]
+_C.DATA.MEAN = [0.058173052966594696, 0.044205766171216965, 0.04969067499041557]
 
 # The standard deviation value of the volume raw voxels across the above channels.
-_C.DATA.STD = [0.021794982254505157, 0.02334374189376831, 0.024663571268320084][:_C.MODEL.INPUT_CHANNELS]
+_C.DATA.STD = [0.021794982254505157, 0.02334374189376831, 0.024663571268320084]
 
 _C.DATA.PADDING_MODE = ('mean', 'median', 'min', 'max')[0]
 
@@ -512,10 +512,12 @@ _C.HPSF.ENABLE = _C.TRAIN.DATASET in ('HPSubfield', )
 
 
 def init_dependencies(cfg):
-    cfg.TRAIN.IN_MOD = _C.TRAIN.IN_MOD[_C.TRAIN.DATASET]
+    cfg.TRAIN.IN_MOD = dict(_C.TRAIN.IN_MOD)[cfg.TRAIN.DATASET]
 
-    cfg.TEST.IN_MOD = _C.TEST.IN_MOD[_C.TEST.DATASET]
-    cfg.MODEL.INPUT_CHANNELS = _C.MODEL.INPUT_CHANNELS[cfg.TEST.ENABLE is True]
+    cfg.TEST.IN_MOD = dict(_C.TEST.IN_MOD)[cfg.TEST.DATASET]
+
+    if cfg.MODEL.INPUT_CHANNELS <= 0:  # if not set in the yaml cfg file
+        cfg.MODEL.INPUT_CHANNELS = (len(cfg.TRAIN.IN_MOD) - 1, len(cfg.TEST.IN_MOD) - 1)[cfg.TEST.ENABLE is True]
 
     cfg.DATA.MEAN = _C.DATA.MEAN[:cfg.MODEL.INPUT_CHANNELS]
     cfg.DATA.STD = _C.DATA.MEAN[:cfg.MODEL.INPUT_CHANNELS]
