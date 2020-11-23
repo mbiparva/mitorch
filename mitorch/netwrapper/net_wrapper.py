@@ -134,8 +134,13 @@ class NetWrapperWMH(NetWrapper):
     def __init__(self, device, cfg):
         super().__init__(device, cfg)
 
+        # TODO create hfb transformations pipeline (Compose) here
+        # TODO then in the forward use it to pre-process x and annot
+        # TODO instead of doing it using monkey patching hard-coded here
+
     def _create_net(self, device):
-        self._create_net_hfb(device)
+        if not self.cfg.WMH.HFB_GT:
+            self._create_net_hfb(device)
         self.net_core = build_model(self.cfg, device)
 
     def _create_net_hfb(self, device):

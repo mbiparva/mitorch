@@ -91,11 +91,11 @@ PROJECT:
 #    - T1acq_nu_FL.img
 #  - - annot
 #    - T1acq_nu_HfBd.img
-#TRAIN:
+TRAIN:
 #  AUTO_RESUME: true
 #  BATCH_SIZE: 1
 #  CHECKPOINT_FILE_PATH: ''
-#  CHECKPOINT_PERIOD: 20
+  CHECKPOINT_PERIOD: 0  # 20
 #  DATASET: SRIBIL
 #  ENABLE: true
 #  EVAL_PERIOD: 1
@@ -117,7 +117,7 @@ WMH:
   PADDING_MODE: mean
   FILL: 0
   HFB_CHECKPOINT: /gpfs/fs0/scratch/m/mgoubran/mbiparva/wmh_pytorch/experiments/SRIBILhfb/20200612_134356_471570/checkpoints/checkpoint_epoch_00060.pyth
-  HFB_GT: false
+  HFB_GT: true
   CROPPING: true
   RESIZING_PADDING: false
   MAX_SIDE_SIZE: 160
