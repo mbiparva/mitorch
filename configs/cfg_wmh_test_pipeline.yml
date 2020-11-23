@@ -1,0 +1,50 @@
+WMH:
+  BINARIZE_THRESHOLD: 0.5
+  PADDING_MODE: mean
+  FILL: 0
+  HFB_GT: false
+  CROPPING: true
+  RESIZING_PADDING: false
+  MAX_SIDE_SIZE: 160
+TRAIN:
+  DATASET: 'SRIBIL'
+TEST:
+  DATASET: 'SRIBILTest'
+  BATCH_MODE: true
+  BINARIZE_THRESHOLD: 0.50
+  CHECKPOINT_FILE_PATH: ''
+  DATA_PATH: ''
+  ROBUSTNESS_EXP: true
+  ROBUST_EXP_LIST:
+    - - t_name: 'noise'
+        t_params:
+          sigma:
+              - 0.1
+              - 0.5
+              - 0.9
+            noise_type:
+            - 'gaussian'
+            - 'gaussian'
+            - 'gaussian'
+    - - t_name: 'contrast'
+        t_params:
+          value:
+            - 0.1
+            - 0.5
+            - 0.9
+    - - t_name: 'noise'
+        t_params:
+          sigma:
+              - 0.1
+              - 0.5
+              - 0.9
+            noise_type:
+            - 'gaussian'
+            - 'gaussian'
+            - 'gaussian'
+      - t_name: 'contrast'
+        t_params:
+          value:
+            - 0.1
+            - 0.5
+            - 0.9

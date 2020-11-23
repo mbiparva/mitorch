@@ -90,7 +90,7 @@ _C.TRAIN.IN_MOD = {
         ('t2', 't2.nii.gz'),
         ('annot', 'truth.nii.gz'),
     ],
-}[_C.TRAIN.DATASET]
+}
 
 # Total mini-batch size.
 _C.TRAIN.BATCH_SIZE = 1
@@ -159,7 +159,7 @@ _C.TEST.IN_MOD = {
         ('fl', 'T1acq_nu_FL.nii.gz'),
         ('annot', 'wmh_seg.nii.gz'),
     ],
-}[_C.TEST.DATASET]
+}
 
 # Total mini-batch size
 _C.TEST.BATCH_SIZE = 1
@@ -174,6 +174,14 @@ _C.TEST.DATA_PATH = ""
 _C.TEST.BATCH_MODE = (False, True)[0]
 
 _C.TEST.BINARIZE_THRESHOLD = 0.55
+
+_C.TEST.BINARIZE_THRESHOLD = 0.55
+
+# whether to run the set of robustness experiments
+_C.TEST.ROBUST_EXP = (False, True)[0]
+
+# if so, loop over the list of experiments each having transformations
+_C.TEST.ROBUST_EXP_LIST = []
 
 
 # # ---------------------------------------------------------------------------- #
@@ -226,7 +234,7 @@ _C.MODEL.ENCO_DEPTH = 5
 _C.MODEL.NUM_PRED_LEVELS = 3
 
 # Number of input channels to the model
-_C.MODEL.INPUT_CHANNELS = (len(_C.TEST.IN_MOD) - 1) if _C.TEST.ENABLE else (len(_C.TRAIN.IN_MOD) - 1)
+_C.MODEL.INPUT_CHANNELS = (len(_C.TRAIN.IN_MOD) - 1, len(_C.TEST.IN_MOD) - 1)
 
 # Model settings
 _C.MODEL.SETTINGS = tuple({
@@ -308,11 +316,9 @@ _C.DATA.CROP_SCALE = ((0.7, 1.0), (0.8, 1.0), (0.9, 1.0))[1]
 
 # The mean value of the volume raw voxels across the T1, FLAIR, T2 channels.
 # ATTENTION: Assumes the order of channels is always T1, FLAIR, T2.
-# _C.DATA.MEAN = [0.18278566002845764, 0.1672040820121765]  # MAGED PREP - TODO add it to the init of dataset
 _C.DATA.MEAN = [0.058173052966594696, 0.044205766171216965, 0.04969067499041557][:_C.MODEL.INPUT_CHANNELS]  # [1:3]
 
 # The standard deviation value of the volume raw voxels across the above channels.
-# _C.DATA.STD = [0.018310515210032463, 0.017989424988627434]  # MAGED PREP
 _C.DATA.STD = [0.021794982254505157, 0.02334374189376831, 0.024663571268320084][:_C.MODEL.INPUT_CHANNELS]
 
 _C.DATA.PADDING_MODE = ('mean', 'median', 'min', 'max')[0]
@@ -453,14 +459,14 @@ _C.HPO.TOTAL_TRIALS = 100
 _C.WMH = CfgNode()
 
 # Whether WMH is enabled
-_C.WMH.ENABLE = True if _C.TRAIN.DATASET in ('WMHSegmentationChallenge', 'SRIBIL') else False
+_C.WMH.ENABLE = _C.TRAIN.DATASET in ('WMHSegmentationChallenge', 'SRIBIL')
 
 # HFB checkpoint to load
 _C.WMH.HFB_CHECKPOINT = os.path.join(_C.PROJECT.EXPERIMENT_DIR,
                                      'SRIBILhfb/20200612_134356_471570/checkpoints/checkpoint_epoch_00060.pyth')
 
 # Whether to use ground-truth HFB masks
-_C.WMH.HFB_GT = (False, True)[1] if _C.TRAIN.DATASET == 'SRIBIL' else False  # must be True only when SRIBIL
+_C.WMH.HFB_GT = _C.TRAIN.DATASET == 'SRIBIL' and (False, True)[1]  # must be True only when SRIBIL
 
 _C.WMH.BINARIZE_THRESHOLD = 0.5
 
@@ -480,7 +486,7 @@ _C.WMH.RESIZING_PADDING = (False, True)[0]
 _C.NVT = CfgNode()
 
 # Whether NVT is enabled
-_C.NVT.ENABLE = True if _C.TRAIN.DATASET in ('TRAP', 'CAPTURE', 'TRACING') else False
+_C.NVT.ENABLE = _C.TRAIN.DATASET in ('TRAP', 'CAPTURE', 'TRACING')
 
 _C.NVT.NUM_MULTI_PATCHES = 16
 
@@ -502,7 +508,26 @@ _C.NVT.REPEAT_DATASET = 0  # < 2 is off
 _C.HPSF = CfgNode()
 
 # Whether NVT is enabled
-_C.HPSF.ENABLE = True if _C.TRAIN.DATASET in ('HPSubfield', ) else False
+_C.HPSF.ENABLE = _C.TRAIN.DATASET in ('HPSubfield', )
+
+
+def init_dependencies(cfg):
+    cfg.TRAIN.IN_MOD = _C.TRAIN.IN_MOD[_C.TRAIN.DATASET]
+
+    cfg.TEST.IN_MOD = _C.TEST.IN_MOD[_C.TEST.DATASET]
+    cfg.MODEL.INPUT_CHANNELS = _C.MODEL.INPUT_CHANNELS[cfg.TEST.ENABLE is True]
+
+    cfg.DATA.MEAN = _C.DATA.MEAN[:cfg.MODEL.INPUT_CHANNELS]
+    cfg.DATA.STD = _C.DATA.MEAN[:cfg.MODEL.INPUT_CHANNELS]
+
+    cfg.WMH.ENABLE = cfg.TRAIN.DATASET in ('WMHSegmentationChallenge', 'SRIBIL')
+    cfg.WMH.HFB_GT = cfg.TRAIN.DATASET == 'SRIBIL' and cfg.WMH.HFB_GT
+
+    cfg.NVT.ENABLE = cfg.TRAIN.DATASET in ('TRAP', 'CAPTURE', 'TRACING')
+
+    cfg.HPSF.ENABLE = cfg.TRAIN.DATASET in ('HPSubfield',)
+
+    return cfg
 
 
 def init_cfg(cfg, parent_dir=''):
@@ -515,6 +540,8 @@ def init_cfg(cfg, parent_dir=''):
     cfg.OUTPUT_DIR = os.path.join(cfg.PROJECT.EXPERIMENT_DIR, destin_set, parent_dir, cfg.MODEL.ID)
     if not os.path.exists(cfg.OUTPUT_DIR):
         os.makedirs(cfg.OUTPUT_DIR)
+
+    cfg = init_dependencies(cfg)
 
     return cfg
 
