@@ -27,6 +27,7 @@ class NetWrapper(nn.Module):
     def __init__(self, device, cfg):
         super().__init__()
         self.cfg = cfg
+        self.grad_scaler = None
 
         self._create_net(device)
 
@@ -41,7 +42,6 @@ class NetWrapper(nn.Module):
     def _create_net(self, device):
         self.net_core = build_model(self.cfg, device)  # this moves to device memory too
 
-        self.grad_scaler = None
         if self.cfg.AMP:
             self.grad_scaler = GradScaler()
 

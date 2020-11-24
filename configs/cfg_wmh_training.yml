@@ -36,14 +36,14 @@ DATA:
 #  RANGE_START: 0
 #  TOTAL_TRIALS: 100
 #LOG_PERIOD: 2
-#MODEL:
+MODEL:
 #  ARCH: unet3d
 #  FC_INIT_STD: 0.01
 #  IGNORE_INDEX: 255
 #  INPUT_CHANNELS: 2
 #  LOSS_AUG_WHL: false
 #  LOSS_FUNC: DiceLoss
-#  MODEL_NAME: Unet3D
+  MODEL_NAME: Unet3D  # Unet3D, NestedUnet3D
 #  NUM_CLASSES: 1
 #  WHL_NUM_DEPTH_SHEETS: 8
 #  WHL_SEG_THR: 0.25
@@ -121,3 +121,9 @@ WMH:
   CROPPING: true
   RESIZING_PADDING: false
   MAX_SIDE_SIZE: 160
+
+USE_GPU: true
+GPU_ID: 0
+AMP: false
+DP: false
+DDP: false
