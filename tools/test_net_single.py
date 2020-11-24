@@ -186,7 +186,11 @@ def test(cfg, transformations=None):
           '*** Results are saved at:')
     print(cfg.OUTPUT_DIR)
 
+    output_results = dict()
     if eval_pred_flag:
         print('\nEvaluation results on the test set is:')
         for k in meters_test_set[0].keys():
-            print(k, np.array([i[k] for i in meters_test_set]).mean())
+            output_results[k] = np.array([i[k] for i in meters_test_set]).mean()
+            print(f'{k}: {output_results[k]}')
+
+    return output_results
