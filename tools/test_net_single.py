@@ -69,7 +69,7 @@ def reset_cfg_init(cfg):
 
 
 @torch.no_grad()
-def test(cfg):
+def test(cfg, transformations=None):
     # (0) initial setup
     cfg = reset_cfg_init(cfg)
 
@@ -94,17 +94,19 @@ def test(cfg):
     # (2) define data pipeline
     eval_pred_flag = True
     save_pred_flag = True
-    transformations = torch_tf.Compose([
-        tf.ToTensorImageVolume(),
-        tf.RandomOrientationTo('RPI'),
-        tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
+    if transformations is None:
+        transformations = torch_tf.Compose([
+            tf.ToTensorImageVolume(),
+            tf.RandomOrientationTo('RPI'),
+            tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
 
-        # tf.ResizeImageVolume(cfg.DATA.MAX_SIDE_SIZE, min_side=cfg.DATA.MIN_SIDE),
-        # tf.PadToSizeVolume(cfg.DATA.MAX_SIDE_SIZE, padding_mode=cfg.DATA.PADDING_MODE),
+            # tf.ResizeImageVolume(cfg.DATA.MAX_SIDE_SIZE, min_side=cfg.DATA.MIN_SIDE),
+            # tf.PadToSizeVolume(cfg.DATA.MAX_SIDE_SIZE, padding_mode=cfg.DATA.PADDING_MODE),
 
-        tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
-        # tf.NormalizeMeanStdVolume(mean=cfg.DATA.MEAN, std=cfg.DATA.STD, inplace=True),
-    ])
+            tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
+            # tf.NormalizeMeanStdVolume(mean=cfg.DATA.MEAN, std=cfg.DATA.STD, inplace=True),
+        ])
+
     # Define any test dataset with annotation as known dataset otherwise call TestSet
     if len(cfg.TEST.DATA_PATH):
         if cfg.WMH.ENABLE and not cfg.WMH.HFB_GT:
