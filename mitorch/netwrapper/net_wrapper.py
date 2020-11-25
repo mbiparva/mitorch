@@ -143,6 +143,9 @@ class NetWrapperWMH(NetWrapper):
             self._create_net_hfb(device)
         self.net_core = build_model(self.cfg, device)
 
+        if self.cfg.AMP:
+            self.grad_scaler = GradScaler()
+
     def _create_net_hfb(self, device):
         self.net_core_hfb = build_model(self.cfg, device)
         self.load_checkpoint_hfb(self.cfg.WMH.HFB_CHECKPOINT)
