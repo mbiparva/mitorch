@@ -109,7 +109,7 @@ class SpatialAttentionModule(nn.Module):
         )
 
         for i in range(self.num_conv_blocks):
-            self.add_module(
+            self.conv_layers.add_module(
                 self.get_layer_name(i),
                 BasicBlock(
                     in_channels=out_channels,
