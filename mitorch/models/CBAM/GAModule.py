@@ -24,7 +24,7 @@ class MLPModule(nn.Sequential):
         super().__init__(
             nn.Linear(in_channels, out_channels),
             nn.BatchNorm1d(num_features=out_channels),
-            nn.ReLU,
+            nn.ReLU(),
             nn.Linear(out_channels, in_channels),
         )
 

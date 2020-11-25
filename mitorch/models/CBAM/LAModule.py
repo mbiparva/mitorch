@@ -18,7 +18,7 @@ class MLPModule(nn.Sequential):
     def __init__(self, in_channels, out_channels):
         super().__init__(
             nn.Linear(in_channels, out_channels),
-            nn.ReLU,
+            nn.ReLU(),
             nn.Linear(out_channels, in_channels),
         )
 
@@ -115,7 +115,7 @@ class ChannelPoolingLayer(nn.Module):
         B, C, D, H, W = x.shape
         x = x.view(B, C, -1)
         x = self.pooling_layer(x)
-        x = x.view(B, C, D, H, W)
+        x = x.view(B, -1, D, H, W)
 
         return x
 
