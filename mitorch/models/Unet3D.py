@@ -49,7 +49,7 @@ class BasicBlock(nn.Sequential):
         padding = tuple((torch.tensor(kernel_size) // 2 + torch.tensor(dilation) // 2).tolist())  # does the same
         return nn.Conv3d(
             in_channels, out_channels, kernel_size=is_3d(kernel_size), stride=is_3d(stride),
-            padding=is_3d(padding, lb=0), dilation=is_3d(padding), groups=1, bias=False
+            padding=is_3d(padding, lb=0), dilation=is_3d(dilation), groups=1, bias=False
         )  # TODO check bias=True, most nets use False though because of BN
 
     @staticmethod

@@ -173,6 +173,8 @@ class SpatialAttentionModule(nn.Module):
 
         x_attention_map = self.attention_normalization(x_attention_map)
 
+        x_attention_map = x_attention_map.expand_as(x)
+
         x = self.modulation_layer((x, x_attention_map))
 
         return x
@@ -203,7 +205,7 @@ class LAMBlock(nn.Module):
             self.spatial_attention_modulation = ModulationAggregationBlock(
                 gate_channels=self.gate_channels,
                 modulation_type=self.modulation_type,
-                concat_reduction_factor=3 if self.channel and self.spatial else 2,
+                concat_reduction_factor=4 if self.channel and self.spatial else 2,
             )
 
     def forward(self, x):

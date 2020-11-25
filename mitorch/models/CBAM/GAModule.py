@@ -70,7 +70,11 @@ class ChannelAttentionModule(nn.Module):
         return x
 
     def forward(self, x):
+        B, C, D, H, W = x.shape
+
         x_out = self.forward_pooling(self.pooling_type, x)
+
+        x_out = x_out.view(B, C, 1, 1, 1)
 
         x_out = x_out.expand_as(x)
 
