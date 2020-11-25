@@ -26,7 +26,7 @@ MODEL:
   ENCO_DEPTH: 5  # 5
   NUM_PRED_LEVELS: 3  # 3 - max is ENCO_DEPTH - 1
   DROPOUT_RATE: 0.30
-  MODEL_NAME: 'Unet3D' # 'Unet3D', 'NestedUnet3D'
+  MODEL_NAME: 'Unet3DCBAM' # 'Unet3D', 'NestedUnet3D', 'Unet3DCBAM', 'DAUnet3D'
 #  FC_INIT_STD: 0.01  # 0.01
 
 SOLVER:
