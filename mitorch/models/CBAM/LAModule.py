@@ -29,7 +29,7 @@ class ChannelAttentionModule(nn.Module):
         self.gate_channels = gate_channels
         self.pooling_types = self_attention_attr.CHANNEL_POOLING_TYPES
         assert isinstance(self.pooling_types, (tuple, list)) and len(self.pooling_types) > 0
-        assert all([True if p in ('max', 'average', 'pa', 'lse') else False for p in self.pooling_type]), 'p undefined'
+        assert all([True if p in ('max', 'average', 'pa', 'lse') else False for p in self.pooling_types]), 'p undefined'
         self.reduction_ratio = self_attention_attr.REDUCTION_RATIO
         self.modulation_type = self_attention_attr.CHANNEL_TYPES_MODULATION_TYPE
         self.final_modulation_type = self_attention_attr.ATTENTION_MODULATION_TYPE
