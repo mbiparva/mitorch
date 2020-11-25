@@ -16,7 +16,7 @@ def pad_if_necessary(x, x_b):
     if (padding_size == 0).all():
         return x, x_b
 
-    if (padding_size > 0).all():
+    if (padding_size >= 0).all():
         if mode == 'one':
             padding_size_l = padding_size / 2
             padding_size_r = padding_size - padding_size_l
