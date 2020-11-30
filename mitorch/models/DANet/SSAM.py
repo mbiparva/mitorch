@@ -29,6 +29,7 @@ class SpatialAttentionModule(nn.Module):
 
     def _create_net(self, self_attention_attr):
         in_channels, out_channels = self.gate_channels, self.gate_channels // self.reduction_ratio
+        assert out_channels > 0, 'reduce reduction ration, out_channels hit < 1 range'
 
         self.query_conv_layer = nn.Conv3d(in_channels=in_channels, out_channels=out_channels, kernel_size=(1, 1, 1))
 
@@ -47,18 +48,19 @@ class SpatialAttentionModule(nn.Module):
 
     def forward(self, x):
         B, C, D, H, W = x.shape
+        C_red = C // self.reduction_ratio  # reduced
 
         x_query = self.query_conv_layer(x)
-        x_query = x_query.view(B, C, -1).permute(0, 2, 1)
+        x_query = x_query.view(B, C_red, -1).permute(0, 2, 1)
 
         x_key = self.key_conv_layer(x)
-        x_key = x_key.view(B, C, -1)
+        x_key = x_key.view(B, C_red, -1)
 
         x_energy = torch.bmm(x_query, x_key)
 
         x_attention = self.attention_normalization(x_energy)
 
-        x_attention = x_attention.permute(0, 2, 1)  # why? paper does not explain!
+        x_attention = x_attention.permute(0, 2, 1)  # change the normalization axis from -1 to -2
 
         x_value = self.value_conv_layer(x)
         x_value = x_value.view(B, C, -1)

@@ -15,7 +15,8 @@ from models.Unet3D import Encoder as Unet3DEncoder, Decoder as Unet3DDecoder, Se
 from models.Unet3D import Unet3D, BasicBlock, ContextBlock, is_3d
 from models.NestedUnet3D import ModulationBlock
 from models.CBAM.GAModule import ModulationAggregationBlock
-
+from models.DANet.CSAM import ChannelAttentionModule
+from models.DANet.SSAM import SpatialAttentionModule
 
 IS_3D = True
 
@@ -30,14 +31,16 @@ class AttentionModule(nn.Module):
         self._create_net(self_attention_attr, attention_modality)
 
     def _create_net(self, self_attention_attr, attention_modality):
-        in_channels, out_channels = self.gate_channels, self.gate_channels // self.reduction_ratio
+        in_channels, out_channels = self.gate_channels, self.gate_channels // self.input_reduction_ratio
+        assert out_channels > 0, 'reduce reduction ration, out_channels hit < 1 range'
+
         self.pre_attention_conv_layer = BasicBlock(in_channels=in_channels, out_channels=out_channels,
                                                    kernel_size=self.kernel_size)
-        self.attention_block = attention_modality(self.gate_channels, self_attention_attr)
-        self.post_attention_conv_layer = BasicBlock(in_channels=in_channels, out_channels=out_channels,
+        self.attention_block = attention_modality(out_channels, self_attention_attr)
+        self.post_attention_conv_layer = BasicBlock(in_channels=out_channels, out_channels=out_channels,
                                                     kernel_size=self.kernel_size)
 
-        self.last_conv_layer = nn.Conv3d(in_channels=in_channels, out_channels=out_channels, kernel_size=(1, 1, 1))
+        self.last_conv_layer = nn.Conv3d(in_channels=out_channels, out_channels=in_channels, kernel_size=(1, 1, 1))
 
     def forward(self, x):
         x = self.pre_attention_conv_layer(x)
@@ -58,7 +61,6 @@ class LAMBlock(nn.Module):
         self.channel, self.spatial = self_attention_attr.CHANNEL, self_attention_attr.SPATIAL
         self.cm_modulation_type = self_attention_attr.CROSS_MODAL_MODULATION_TYPE
         self.ref_modulation_type = self_attention_attr.REF_MODULATION_TYPE
-        self.residual = self_attention_attr.RESIDUAL
         assert self.channel or self.spatial, 'either modalities must be on'
 
         self._create_net(self_attention_attr)
@@ -94,6 +96,4 @@ class LAMBlock(nn.Module):
 
         x_attention_map = self.ref_att_mod_agg((x, x_attention_map))
 
-        x = (x + x_attention_map) if self.residual else x
-
-        return x
+        return x_attention_map

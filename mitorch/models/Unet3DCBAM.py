@@ -28,6 +28,7 @@ class CompoundBlock(nn.Module):
         super().__init__()
         self.self_attention = self_attention
         self.residual_relative = self_attention_attr.RESIDUAL_RELATIVE
+        self.residual = self_attention_attr.RESIDUAL
         self.self_attention_block = self_attention_block
 
         self._create_net(i, in_channels, out_channels, stride, dilation, p, self_attention_attr)
@@ -47,9 +48,12 @@ class CompoundBlock(nn.Module):
     def forward(self, x):
         x_input = self.input_layer(x)
         x = self.context_layer(x_input)
+
         if self.self_attention and self.residual_relative == 'before':
             x = self.self_attention_layer(x)
-        x = x_input + x
+
+        x = (x_input + x) if self.residual else x
+
         if self.self_attention and self.residual_relative == 'after':
             x = self.self_attention_layer(x)
         return x
@@ -76,7 +80,7 @@ class Encoder(Unet3DEncoder):
                               self_attention_block=self.local_sab,
                               ),
             )
-            if i in self.cfg.MODEL.SETTINGS.LAM.BLOCKS:
+            if i in self.cfg.MODEL.SETTINGS.GAM.BLOCKS:
                 self.add_module(
                     self.get_layer_name(i, postfix='_GAM'),
                     GAMBlock(out_channels, self_attention_attr=self.cfg.MODEL.SETTINGS.GAM),
@@ -88,7 +92,7 @@ class Encoder(Unet3DEncoder):
         outputs = list()
         for i in range(self.cfg.MODEL.ENCO_DEPTH):
             x = getattr(self, self.get_layer_name(i))(x)
-            if i in self.cfg.MODEL.SETTINGS.LAM.BLOCKS:
+            if i in self.cfg.MODEL.SETTINGS.GAM.BLOCKS:
                 x = getattr(self, self.get_layer_name(i, '_GAM'))(x)
             outputs.append(x)
         return outputs

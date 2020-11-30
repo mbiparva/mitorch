@@ -260,6 +260,7 @@ _C.MODEL.SETTINGS = tuple({
             'CHANNEL_POOLING_MODULATION_TYPE': ('additive', 'multiplicative', 'mean', 'concatenation')[3],
             'ATTENTION_MODULATION_TYPE': ('additive', 'multiplicative', 'mean', 'concatenation')[1],
             'REF_MODULATION_TYPE': ('additive', 'multiplicative', 'mean', 'concatenation', 'bypass')[3],
+            'RESIDUAL': (False, True)[1],
             'CHANNEL': (False, True)[1],
             'SPATIAL': (False, True)[1],
             'SPATIAL_KERNEL_SIZE': 3,
@@ -271,6 +272,7 @@ _C.MODEL.SETTINGS = tuple({
         }),
         'LAM': CfgNode({
             'BLOCKS': [3, 4],
+            'RESIDUAL_RELATIVE': ('before', 'after')[0],
             'INPUT_REDUCTION_RATIO': 4,
             'MIDDLE_REDUCTION_RATIO': 8,
             'INTERNAL_MODULATION_TYPE': ('additive', 'multiplicative', 'mean', 'concatenation')[0],
