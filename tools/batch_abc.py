@@ -108,6 +108,10 @@ class BatchBase(ABC):
         if isinstance(p, (tuple, list)):  # Deep_supervision returns outputs at multiple levels
             p = torch.mean(torch.stack(p), dim=0)
 
+        if self.cfg.AMP and p.dtype is torch.float16:  # dice has one sum that hit inf
+            p = p.to(dtype=torch.float32)
+            a = a.to(dtype=torch.float32)
+
         if self.cfg.MODEL.LOSS_FUNC == 'CrossEntropyLoss':
             p, a = self.cel_prep(p, a)
 
