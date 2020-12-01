@@ -226,6 +226,6 @@ def test(cfg, transformations=None, eval_pred_flag=True, save_pred_flag=True):
     meters_test_set = test_loop(cfg, test_loader, device, net_wrapper, save_pred_flag, eval_pred_flag)
 
     # (5) log formatted outputs
-    output_results = get_output_results(meters_test_set)
+    output_results = get_output_results(meters_test_set, eval_pred_flag)
 
     return output_results

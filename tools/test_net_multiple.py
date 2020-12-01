@@ -26,6 +26,7 @@ from netwrapper.net_wrapper import NetWrapperHFB, NetWrapperWMH
 from test_net_single import test as test_single
 from data.build_test_pipeline import build_transformations
 import copy
+# TODO add logging
 
 KNOWN_TRANSFORMATIONS = (
     'noise',

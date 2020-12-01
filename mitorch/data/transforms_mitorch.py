@@ -645,7 +645,7 @@ class RandomBrightness(Randomizable):
     def __init__(self, value, channel_wise=True, *args, **kwargs):
         super().__init__(*args, **kwargs)
         assert isinstance(value, float), 'value must be float'
-        assert -0.5 <= value <= +0.5, 'value must be between [-0.5, +0.5]'
+        assert -0.5 < value < +0.5, 'value must be between [-0.5, +0.5]'
         assert isinstance(channel_wise, bool), 'channel_wise is bool'
         self.channel_wise = channel_wise
         self.value = value
@@ -656,14 +656,14 @@ class RandomBrightness(Randomizable):
     def update_value(self, image):
         img_min, img_max = image.min().item(), image.max().item()
         img_range = img_max - img_min
-        self.value = img_range * self.value
+        return img_range * self.value
 
-    def find_ranges(self, image):
+    def find_ranges(self, image, value):
         img_min, img_max = image.min().item(), image.max().item()
-        if self.value > 0:
-            input_range, output_range = (img_min, img_max), (img_min + self.value, img_max)
+        if value > 0:
+            input_range, output_range = (img_min, img_max), (img_min + value, img_max)
         else:
-            input_range, output_range = (img_min, img_max), (img_min, img_max + self.value)
+            input_range, output_range = (img_min, img_max), (img_min, img_max + value)
 
         return input_range, output_range
 
@@ -676,10 +676,10 @@ class RandomBrightness(Randomizable):
             else:
                 image_i = image
 
-            self.update_value(image_i)
+            value = self.update_value(image_i)
 
-            if not self.value == 0:
-                input_range, output_range = self.find_ranges(image_i)
+            if not value == 0:
+                input_range, output_range = self.find_ranges(image_i, value)
 
                 image_i = F.scale_tensor_intensity(image_i, input_range, output_range)
 
@@ -697,12 +697,12 @@ class RandomContrast(RandomBrightness):
     def __init__(self, value, channel_wise=True, *args, **kwargs):
         super().__init__(value, channel_wise, *args, **kwargs)
 
-    def find_ranges(self, image):
+    def find_ranges(self, image, value):
         img_min, img_max = image.min().item(), image.max().item()
-        if self.value < 0:
-            input_range, output_range = (img_min, img_max), (img_min - self.value, img_max + self.value)
+        if value < 0:
+            input_range, output_range = (img_min, img_max), (img_min - value, img_max + value)
         else:
-            input_range, output_range = (img_min + self.value, img_max - self.value), (img_min, img_max)
+            input_range, output_range = (img_min + value, img_max - value), (img_min, img_max)
 
         return input_range, output_range
 
