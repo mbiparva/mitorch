@@ -12,3 +12,4 @@ from .SRIBILSet import SRIBIL, SRIBILhfb, SRIBILhfbTest, LEDUCQTest, PPMITest, S
 from .NeuroSegSets import TRAP, CAPTURE, TRACING
 from .HPSubfieldSegSets import HPSubfield
 from .DatasetTransformations import HFBTransformations, WMHTransformations, NVTTransformations, HPSFTransformations
+from .TestTransformations import NoiseTestTransformations, ContrastTestTransformations

@@ -96,7 +96,7 @@ def test_single_exp(cfg, exp):
     exp_perm_len = sanity_check_exp(exp)
 
     # create transformations
-    for j in enumerate(range(exp_perm_len)):
+    for j in range(exp_perm_len):
         exp_current, exp_description = define_exp_current(exp, j)
 
         transformations = create_transformations(cfg, exp_current)

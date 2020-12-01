@@ -68,9 +68,7 @@ def reset_cfg_init(cfg):
     return cfg
 
 
-@torch.no_grad()
-def test(cfg, transformations=None):
-    # (0) initial setup
+def setup_test(cfg):
     cfg = reset_cfg_init(cfg)
 
     cfg.TRAIN.ENABLE = cfg.VALID.ENABLE = False
@@ -86,27 +84,30 @@ def test(cfg, transformations=None):
     else:
         device = torch.device('cpu')
 
-    # (1) setup data root
     assert cfg.TEST.CHECKPOINT_FILE_PATH and \
         len(cfg.TEST.CHECKPOINT_FILE_PATH) and \
         os.path.exists(cfg.TEST.CHECKPOINT_FILE_PATH), 'TEST.CHECKPOINT_FILE_PATH not set'
 
-    # (2) define data pipeline
-    eval_pred_flag = True
-    save_pred_flag = True
-    if transformations is None:
-        transformations = torch_tf.Compose([
-            tf.ToTensorImageVolume(),
-            tf.RandomOrientationTo('RPI'),
-            tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
+    return cfg, device
 
-            # tf.ResizeImageVolume(cfg.DATA.MAX_SIDE_SIZE, min_side=cfg.DATA.MIN_SIDE),
-            # tf.PadToSizeVolume(cfg.DATA.MAX_SIDE_SIZE, padding_mode=cfg.DATA.PADDING_MODE),
 
-            tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
-            # tf.NormalizeMeanStdVolume(mean=cfg.DATA.MEAN, std=cfg.DATA.STD, inplace=True),
-        ])
+def build_transformations():
+    transformations = torch_tf.Compose([
+        tf.ToTensorImageVolume(),
+        tf.RandomOrientationTo('RPI'),
+        tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
 
+        # tf.ResizeImageVolume(cfg.DATA.MAX_SIDE_SIZE, min_side=cfg.DATA.MIN_SIDE),
+        # tf.PadToSizeVolume(cfg.DATA.MAX_SIDE_SIZE, padding_mode=cfg.DATA.PADDING_MODE),
+
+        tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
+        # tf.NormalizeMeanStdVolume(mean=cfg.DATA.MEAN, std=cfg.DATA.STD, inplace=True),
+    ])
+
+    return transformations
+
+
+def create_test_set(cfg, transformations):
     # Define any test dataset with annotation as known dataset otherwise call TestSet
     if len(cfg.TEST.DATA_PATH):
         if cfg.WMH.ENABLE and not cfg.WMH.HFB_GT:
@@ -136,17 +137,10 @@ def test(cfg, transformations=None):
     else:
         test_set = build_dataset(cfg.TEST.DATASET, cfg, 'test', transformations)
 
-    test_loader = DataLoader(test_set,
-                             batch_size=cfg.TEST.BATCH_SIZE,
-                             shuffle=False,
-                             drop_last=False,
-                             num_workers=cfg.DATA_LOADER.NUM_WORKERS,
-                             pin_memory=cfg.DATA_LOADER.PIN_MEMORY,
-                             worker_init_fn=ds_worker_init_fn,
-                             collate_fn=collate_fn,
-                             )
+    return test_set
 
-    # (3) create network and load snapshots
+
+def create_net(cfg, device):
     if cfg.WMH.ENABLE:
         net_wrapper = NetWrapperWMH(device, cfg)
     else:
@@ -155,7 +149,10 @@ def test(cfg, transformations=None):
     checkops.load_checkpoint(cfg.TEST.CHECKPOINT_FILE_PATH, net_wrapper.net_core, distributed_data_parallel=False)
     net_wrapper.net_core.eval()
 
-    # (4) loop over samples
+    return net_wrapper
+
+
+def test_loop(cfg, test_loader, device, net_wrapper, save_pred_flag, eval_pred_flag):
     meters_test_set = list()
     for cnt, (image, annot, meta) in enumerate(test_loader):
         print(cnt+1, len(test_loader))
@@ -186,6 +183,10 @@ def test(cfg, transformations=None):
           '*** Results are saved at:')
     print(cfg.OUTPUT_DIR)
 
+    return meters_test_set
+
+
+def get_output_results(meters_test_set, eval_pred_flag):
     output_results = dict()
     if eval_pred_flag:
         print('\nEvaluation results on the test set is:')
@@ -193,4 +194,38 @@ def test(cfg, transformations=None):
             output_results[k] = np.array([i[k] for i in meters_test_set]).mean()
             print(f'{k}: {output_results[k]}')
 
+    return output_results
+
+
+@torch.no_grad()
+def test(cfg, transformations=None, eval_pred_flag=True, save_pred_flag=True):
+
+    # (0) initial setup
+    cfg, device = setup_test(cfg)
+
+    # (1) define data pipeline
+    transformations = build_transformations() if transformations is None else transformations
+
+    # (2) create test set and loader
+    test_set = create_test_set(cfg, transformations)
+
+    test_loader = DataLoader(test_set,
+                             batch_size=cfg.TEST.BATCH_SIZE,
+                             shuffle=False,
+                             drop_last=False,
+                             num_workers=cfg.DATA_LOADER.NUM_WORKERS,
+                             pin_memory=cfg.DATA_LOADER.PIN_MEMORY,
+                             worker_init_fn=ds_worker_init_fn,
+                             collate_fn=collate_fn,
+                             )
+
+    # (3) create network and load snapshots
+    net_wrapper = create_net(cfg, device)
+
+    # (4) loop over samples
+    meters_test_set = test_loop(cfg, test_loader, device, net_wrapper, save_pred_flag, eval_pred_flag)
+
+    # (5) log formatted outputs
+    output_results = get_output_results(meters_test_set)
+    
     return output_results

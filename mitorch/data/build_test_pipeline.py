@@ -20,7 +20,7 @@ The call should return a `list` object.
 # noinspection PyCallingNonCallable
 def get_test_transformation_name(t):
     name = t['t_name']
-    name[0] = name[0].upper()
+    name = f'{name[0].upper()}{name[1:]}'
     name = '{}TestTransformations'.format(name)
 
     return name
