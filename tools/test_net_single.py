@@ -227,5 +227,5 @@ def test(cfg, transformations=None, eval_pred_flag=True, save_pred_flag=True):
 
     # (5) log formatted outputs
     output_results = get_output_results(meters_test_set)
-    
+
     return output_results

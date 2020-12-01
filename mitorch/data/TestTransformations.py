@@ -15,8 +15,10 @@ class BaseTransformations(ABC):
         self.cfg = cfg
         self.params = params
 
+        self.transform = self.create_transform()
+
     def __call__(self, *args, **kwargs):
-        return self.create_transform()
+        return self.transform(*args, **kwargs)
 
     @abstractmethod
     def create_transform(self):
