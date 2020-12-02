@@ -10,6 +10,14 @@ import torchvision.transforms as torch_tf
 from abc import ABC, abstractmethod
 
 
+__all__ = [
+    'HFBTransformations',
+    'WMHTransformations',
+    'NVTTransformations',
+    'HPSFTransformations',
+]
+
+
 class BaseTransformations(ABC):
     def __init__(self, cfg, mode):
         self.cfg = cfg

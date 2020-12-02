@@ -6,27 +6,33 @@
 #  Implemented by Mahdi Biparva, May 2020
 #  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
-import os
-import torch
-import numpy as np
 import pandas as pd
-import nibabel as nib
 import data.transforms_mitorch as tf
-from torch.utils.data import DataLoader
 import torchvision.transforms as torch_tf
-from data.data_container import ds_worker_init_fn
-from data.VolSet import collate_fn
-from data.TestSetExt import TestSet
-from models.build import build_model
-import utils.checkpoint as checkops
-from data.build import build_dataset
-from utils.metrics import dice_coefficient_metric, jaccard_index_metric, hausdorff_distance_metric
-from config.defaults import init_cfg
-from netwrapper.net_wrapper import NetWrapperHFB, NetWrapperWMH
 from test_net_single import test as test_single
 from data.build_test_pipeline import build_transformations
 import copy
-# TODO add logging
+import logging
+from datetime import datetime
+
+# setup logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter('{asctime}: {name}: {message}')
+
+# create file handler if you wish
+file_handler = logging.FileHandler('/tmp/test_error_output_{}.log'.format(datetime.now().strftime('%Y%m%d_%H%M%S_%f')))
+file_handler.setLevel(logging.ERROR)
+file_handler.setFormatter(formatter)
+
+# create stream handler
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+
+logger.addHandler(file_handler)
+logger.addHandler(stream_handler)
+
 
 KNOWN_TRANSFORMATIONS = (
     'noise',
@@ -111,6 +117,12 @@ def test_single_exp(cfg, exp):
     return exp_results
 
 
+def process_output_results(exp_ls_results):
+    # TODO whatever you want with exp_ls_results, e.g. save it to disk, visualize in graphs etc. I just print it.
+    for i, exp, output_df in exp_ls_results:
+        logger.info(f'{i} --- {exp}:\n{output_df}{["="]*20}\n\n')
+
+
 def test(cfg):
     exp_ls = cfg.TEST.ROBUST_EXP_LIST
     exp_ls_results = list()
@@ -120,8 +132,8 @@ def test(cfg):
 
         output_df = pd.DataFrame(output_results)
 
-        exp_ls_results.append(output_df)
+        exp_ls_results.append((i, exp, output_df))
 
-        print(output_df)
+        logger.info(output_df)
 
-    # TODO whatever you want with exp_ls_results, e.g. save it to disk, visualize in graphs etc. I just print it.
+    process_output_results(exp_ls_results)

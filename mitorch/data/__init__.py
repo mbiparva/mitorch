@@ -11,5 +11,5 @@ from .WMHSegChal import WMHSegmentationChallenge
 from .SRIBILSet import SRIBIL, SRIBILhfb, SRIBILhfbTest, LEDUCQTest, PPMITest, SRIBILTest
 from .NeuroSegSets import TRAP, CAPTURE, TRACING
 from .HPSubfieldSegSets import HPSubfield
-from .DatasetTransformations import HFBTransformations, WMHTransformations, NVTTransformations, HPSFTransformations
-from .TestTransformations import NoiseTestTransformations, ContrastTestTransformations
+from .DatasetTransformations import *
+from .TestTransformations import *

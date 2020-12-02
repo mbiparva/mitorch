@@ -9,6 +9,11 @@ import data.transforms_mitorch as tf
 import torchvision.transforms as torch_tf
 from abc import ABC, abstractmethod
 
+__all__ = [
+    'NoiseTestTransformations',
+    'ContrastTestTransformations',
+]
+
 
 class BaseTransformations(ABC):
     def __init__(self, cfg, params):

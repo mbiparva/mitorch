@@ -19,6 +19,14 @@ import torch.nn.functional as F
 from .functional import focal_loss
 
 
+__all__ = [
+    'CrossEntropyLoss',
+    'DiceLoss',
+    'WeightedHausdorffLoss',
+    'LovaszLoss',
+]
+
+
 @LOSS_REGISTRY.register()
 class CrossEntropyLoss(CrossEntropyLoss):
     def __init__(self, **kwargs):
