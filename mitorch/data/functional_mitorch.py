@@ -11,6 +11,7 @@ import torch
 import numbers
 import collections
 import numpy as np
+import data.motion_utils as ks_motion
 
 if sys.version_info < (3, 3):
     Sequence = collections.Sequence
@@ -418,3 +419,26 @@ def one_hot(labels: torch.Tensor, num_classes: int, dtype: torch.dtype, dim: int
         labels = labels.index_select(dim=dim, index=keep_ind)
 
     return labels
+<<<<<<< HEAD
+=======
+
+
+def k_space_motion_artifact(volume, time, **kwargs):
+    """
+    Args:
+        volume (torch.Tensor): Volume to be transformed and resampled. Must be 4D
+            with a channel dimension i.e. (C, D, H, W).
+        time (float): Time at which the motion occurs during scanning. Should be between [0.5, 1), where 0
+            represents the beginning of the scan and 1 represents the end. Time >= 0.5 assures that the
+            most prominent object in the image is in the original position of the image so that ground truth
+            annotations don't need to be adjusted.
+        kwargs (dict): all the other parameters the motion algorithm needs.
+    Returns:
+        volume (torch.Tensor): Motion-artifacted image. Shape is the same as the input.
+    """
+    assert _is_tensor_image_volume(volume), 'volume should be a 4D torch.Tensor with a channel dimension'
+    assert isinstance(time, float), 'time must be float between 0.0 (inclusive) and 1.0 (exclusive).'
+    assert 0.5 <= time < 1.0, 'time must be float between 0.0 (inclusive) and 1.0 (exclusive).'
+
+    return ks_motion.apply_motion_from_affine_params(volume, time, **kwargs)
+>>>>>>> 376197d... motion: I merely refactored and made some style fixes and relocation
