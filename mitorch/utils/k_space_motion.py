@@ -166,6 +166,35 @@ def compose_affine(delta=None, direction=None, theta=None, seq=None, degrees=Tru
     return A
 
 
+def construct_kspace_masks(img, t):
+    """Construct k-space masks for an image based on a sampled set of movement times t.
+        See Shaw et al. (2020) for more details.
+    Args:
+        img (ndarray or torch.Tensor): MRI image volume.
+        t (ndarray): Sampled set of movement times for motion artifacts model.
+    Returns:
+        M (torch.Tensor): Set of k-space masks.
+    """
+    assert isinstance(img, (np.ndarray, torch.Tensor)), 'Image must be ndarray or tensor.'
+    assert len(img.shape) in (3,4), 'Image must be 3D or 4D with a channel dimension.'
+    assert isinstance(t, np.ndarray), 'Array "t" must be an array.'
+    assert len(t.shape) == 1, 'Array "t" must be a 1-dimensional vector.'
+    if isinstance(img, np.ndarray):
+        img = torch.Tensor(img)
+    if len(img.shape) == 4:
+        img = img[0]   # only need first channel for the sake of array sizes
+    t = np.insert(t, 0, 0)   # insert 0 at start of array for pre-movement mask
+    N = len(t)
+    M = torch.zeros(size=(N, torch.numel(img)))   # initialize as flattened array
+    for i in range(len(t)):
+        if i == len(t) - 1:
+            M[i, t[i]:] = 1
+        else:
+            M[i, t[i]:t[i+1]] = 1
+    M = torch.reshape(M, shape=(N,) + img.shape)
+    return M
+
+
 def resample_from_affine(img, affine, mode='bilinear', padding_mode='zeros', align_corners=False,
                          numpy_out=False):
     """Apply an affine transform to an image using resampling.
