@@ -875,6 +875,7 @@ class AdditiveNoise(Randomizable):
 
         return image, annot, meta
 
+
 class PresetMotionArtifact(Transformable):
     """
     Apply a preset motion artifact to an image volume. This class wraps the apply_motion_from_affine_params function.
@@ -913,7 +914,7 @@ class PresetMotionArtifact(Transformable):
         volume (torch.Tensor): Motion-artifacted image. Shape is the same as the input.   
     """
     def __init__(self, time, delta=None, direction=None, pixels=True, theta=None, seq=None,
-                                    degrees=True, mode='bilinear', padding_mode='zeros', align_corners=False):
+                 degrees=True, mode='bilinear', padding_mode='zeros', align_corners=False):
         assert isinstance(time, float), 'time must be float between 0.0 (inclusive) and 1.0 (exclusive).'
         assert 0.5 <= time < 1.0, 'time must be float between 0.0 (inclusive) and 1.0 (exclusive).'
         if delta is not None:
@@ -938,7 +939,8 @@ class PresetMotionArtifact(Transformable):
                 assert seq in 'xyz', 'If theta is int or float, seq must be "x", "y", or "z".'
             else:
                 assert len(seq) == 3, \
-                    'If theta is list, tuple, array or tensor, seq must be a length-3 string containing letters "x", "y", and "z".'
+                    'If theta is list, tuple, array or tensor, ' \
+                    'seq must be a length-3 string containing letters "x", "y", and "z".'
                 assert all([letter in 'xyz' for letter in seq]), 'All letters in seq must be "x", "y", or "z".'
                 if isinstance(theta, (np.ndarray, torch.Tensor)):
                     assert len(theta.shape) == 1, 'If theta is an array or tensor it must have a single dimension.'
@@ -947,7 +949,8 @@ class PresetMotionArtifact(Transformable):
         assert isinstance(mode, str), 'Mode must be "bilinear" or "nearest"'
         assert mode in ('bilinear', 'nearest'), 'Mode must be "bilinear" or "nearest"'
         assert isinstance(padding_mode, str), 'Padding mode must be either "zeros", "border" or "reflection"'
-        assert padding_mode in ('zeros', 'border', 'reflection'), 'Padding mode must be either "zeros", "border" or "reflection"'
+        assert padding_mode in ('zeros', 'border', 'reflection'), 'Padding mode must be ' \
+                                                                  'either "zeros", "border" or "reflection"'
         assert isinstance(align_corners, bool), 'align_corners must be True or False'
         self.time = time
         self.delta = delta
@@ -963,9 +966,9 @@ class PresetMotionArtifact(Transformable):
     def apply(self, volume):
         image, annot, meta = volume
         assert image.shape[1:] == annot.shape[1:], 'Image and ground-truth annotation should have the same shape.'
-        image = F.apply_motion_from_affine_params(image, self.time, self.delta, self.direction, self.pixels,
-                                                  self.theta, self.seq, self.degrees, self.mode, self.padding_mode,
-                                                  self.align_corners)
+        image = F.k_space_motion_artifact(image, self.time, self.delta, self.direction, self.pixels,
+                                          self.theta, self.seq, self.degrees, self.mode, self.padding_mode,
+                                          self.align_corners)
         return image, annot, meta
 
 
