@@ -1,5 +1,3 @@
-#BN:
-#  WEIGHT_DECAY: 0.0
 DATA:
   CROP_SCALE:
   - 0.8
@@ -15,112 +13,26 @@ DATA:
     HEAD_RES: 0
     INTENSITY: false
     INTENSITY_SEL: 0
-#  MEAN:
-#  - 0.18278566002845764
-#  - 0.1672040820121765
-#  STD:
-#    - 0.018310515210032463
-#    - 0.017989424988627434
   PADDING_MODE: mean
   MIN_SIDE: false
   UNI_SCALE: true
-#DATA_LOADER:
-#  NUM_WORKERS: 8
-#  PIN_MEMORY: true
-#GPU_ID: 0
-#HPO:
-#  EVAL_METRIC: jaccard_ind
-#  MAX_EPOCH: 200
-#  MODE: BOAX
-#  RANGE_LEN: 0
-#  RANGE_START: 0
-#  TOTAL_TRIALS: 100
-#LOG_PERIOD: 2
 MODEL:
-#  ARCH: unet3d
-#  FC_INIT_STD: 0.01
-#  IGNORE_INDEX: 255
-#  INPUT_CHANNELS: 2
-#  LOSS_AUG_WHL: false
-#  LOSS_FUNC: DiceLoss
   MODEL_NAME: Unet3D  # Unet3D, NestedUnet3D
-#  NUM_CLASSES: 1
-#  WHL_NUM_DEPTH_SHEETS: 8
-#  WHL_SEG_THR: 0.25
-#  DROPOUT_RATE: 0.25
-#  ENCO_DEPTH: 5
-#  NUM_PRED_LEVELS: 3
-#  N_BASE_FILTERS: 16
-#NUM_GPUS: 1
 PROJECT:
-#  DATASET_DIR: /gpfs/fs0/scratch/m/mgoubran/mbiparva/wmh_pytorch/dataset
-#  EXPERIMENT_DIR: /gpfs/fs0/scratch/m/mgoubran/mbiparva/wmh_pytorch/experiments
-#  METERS:
-#  - loss
-#  - dice_coeff
-#  - jaccard_ind
-#  - hausdorff_dist
-#  MODELS_DIR: /gpfs/fs0/scratch/m/mgoubran/mbiparva/wmh_pytorch/lib/models
-#  ROOT_DIR: /gpfs/fs0/scratch/m/mgoubran/mbiparva/wmh_pytorch
-#  TSR: 0.0
-#  TVSR: 0.8
-#RNG_SEED: 110
   PA_INDICES: true
-#SOLVER:
-#  BASE_LR: 0.01
-#  OPTIMIZING_METHOD: sgd  # good for challenge
-#  MOMENTUM: 0.8
-#  WEIGHT_DECAY: 1.0e-04
-#  MAX_EPOCH: 100
-#  DAMPENING: 0
-#  NESTEROV: false
-#  SCHEDULER_MODE: false
-#  SCHEDULER_TYPE: step
-#TEST:
-#  BATCH_MODE: false
-#  BATCH_SIZE: 1
-#  BINARIZE_THRESHOLD: 0.55
-#  CHECKPOINT_FILE_PATH: ''
-#  DATASET: PPMITest
-#  DATA_PATH: ''
-#  ENABLE: false
-#  IN_MOD:
-#  - - t1
-#    - T1_nu.img
-#  - - fl
-#    - T1acq_nu_FL.img
-#  - - annot
-#    - T1acq_nu_HfBd.img
 TRAIN:
-#  AUTO_RESUME: true
-#  BATCH_SIZE: 1
-#  CHECKPOINT_FILE_PATH: ''
-  CHECKPOINT_PERIOD: 0  # 20
-#  DATASET: SRIBIL
-#  ENABLE: true
-#  EVAL_PERIOD: 1
-#  HPO: false
-#  IN_MOD:
-#  - - t1
-#    - T1_nu.nii.gz
-#  - - fl
-#    - T1acq_nu_FL.nii.gz
-#  - - annot
-#    - wmh_seg.nii.gz
-#  SHUFFLE: true
-#VALID:
-#  BATCH_SIZE: 1
-#  ENABLE: true
+  DATASET: 'SRIBIL'
+  CHECKPOINT_PERIOD: 10
 WMH:
   BINARIZE_THRESHOLD: 0.5
   ENABLE: true
+  HFB_GT: true
   PADDING_MODE: mean
   FILL: 0
-  HFB_CHECKPOINT: /gpfs/fs0/scratch/m/mgoubran/mbiparva/wmh_pytorch/experiments/SRIBILhfb/20200612_134356_471570/checkpoints/checkpoint_epoch_00060.pyth
-  HFB_GT: true
   CROPPING: true
   RESIZING_PADDING: false
   MAX_SIDE_SIZE: 160
+  HFB_CHECKPOINT: ''
 
 USE_GPU: true
 GPU_ID: 0
