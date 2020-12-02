@@ -14,24 +14,7 @@ from data.build_test_pipeline import build_transformations
 import copy
 import logging
 from datetime import datetime
-
-# setup logger
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter('{asctime}: {name}: {message}')
-
-# create file handler if you wish
-file_handler = logging.FileHandler('/tmp/test_error_output_{}.log'.format(datetime.now().strftime('%Y%m%d_%H%M%S_%f')))
-file_handler.setLevel(logging.ERROR)
-file_handler.setFormatter(formatter)
-
-# create stream handler
-stream_handler = logging.StreamHandler()
-stream_handler.setFormatter(formatter)
-
-logger.addHandler(file_handler)
-logger.addHandler(stream_handler)
+import pprint
 
 
 KNOWN_TRANSFORMATIONS = (
@@ -42,6 +25,30 @@ KNOWN_T_KEYS = (
     't_name',
     't_params',
 )
+
+
+def setup_logger():
+    local_logger = logging.getLogger(__name__)
+    local_logger.setLevel(logging.INFO)
+
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    # create file handler if you wish
+    file_handler = logging.FileHandler('/tmp/test_error_output_{}.log'.format(datetime.now().strftime('%Y%m%d_%H%M')))
+    file_handler.setLevel(logging.ERROR)
+    file_handler.setFormatter(formatter)
+
+    # create stream handler
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+
+    local_logger.addHandler(file_handler)
+    local_logger.addHandler(stream_handler)
+
+    return local_logger
+
+
+logger = setup_logger()
 
 
 def sanity_check_exp(exp):
@@ -104,6 +111,8 @@ def test_single_exp(cfg, exp):
 
     # create transformations
     for j in range(exp_perm_len):
+        logger.info(f'experiment permutation: {j}|{exp_perm_len}')
+
         exp_current, exp_description = define_exp_current(exp, j)
 
         transformations = create_transformations(cfg, exp_current)
@@ -114,13 +123,15 @@ def test_single_exp(cfg, exp):
 
         exp_results.append(output_single)
 
+        logger.info(f'{"".join(["-"*20])}\n')
+
     return exp_results
 
 
 def process_output_results(exp_ls_results):
     # TODO whatever you want with exp_ls_results, e.g. save it to disk, visualize in graphs etc. I just print it.
     for i, exp, output_df in exp_ls_results:
-        logger.info(f'{i} --- {exp}:\n{output_df}{["="]*20}\n\n')
+        logger.info(f'{i} --- \n{pprint.pformat(exp)}:\n{output_df}\n\n')
 
 
 def test(cfg):
@@ -128,12 +139,14 @@ def test(cfg):
     exp_ls_results = list()
 
     for i, exp in enumerate(exp_ls):
+        logger.info(f'started testing experiment --- \n{i:03d}:{pprint.pformat(exp)}')
+
         output_results = test_single_exp(cfg, exp)
 
         output_df = pd.DataFrame(output_results)
 
         exp_ls_results.append((i, exp, output_df))
 
-        logger.info(output_df)
+        logger.info(f'experiment {i} is done --- \n{output_df}\n')
 
     process_output_results(exp_ls_results)

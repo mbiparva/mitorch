@@ -186,7 +186,10 @@ class NetWrapperWMH(NetWrapper):
 
     @staticmethod
     def gen_cropping_box(pred):
-        return [(p.eq(1).nonzero().min(0)[0].tolist(), p.eq(1).nonzero().max(0)[0].tolist()) for p in pred]
+        return [
+            (p.eq(1).nonzero(as_tuple=False).min(0)[0].tolist(), p.eq(1).nonzero(as_tuple=False).max(0)[0].tolist())
+            for p in pred
+        ]
 
     def crop_masked_input(self, x, cropping_box):
         b, _, d, h, w = x.shape

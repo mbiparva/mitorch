@@ -22,6 +22,32 @@ from data.build import build_dataset
 from utils.metrics import dice_coefficient_metric, jaccard_index_metric, hausdorff_distance_metric
 from config.defaults import init_cfg
 from netwrapper.net_wrapper import NetWrapperHFB, NetWrapperWMH
+from datetime import datetime
+import logging
+
+
+def setup_logger():
+    local_logger = logging.getLogger(__name__)
+    local_logger.setLevel(logging.INFO)
+
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    # create file handler if you wish
+    file_handler = logging.FileHandler('/tmp/test_error_output_{}.log'.format(datetime.now().strftime('%Y%m%d_%H%M')))
+    file_handler.setLevel(logging.ERROR)
+    file_handler.setFormatter(formatter)
+
+    # create stream handler
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+
+    local_logger.addHandler(file_handler)
+    local_logger.addHandler(stream_handler)
+
+    return local_logger
+
+
+logger = setup_logger()
 
 
 def binarize_pred(p, binarize_threshold):
@@ -78,9 +104,9 @@ def setup_test(cfg):
     torch.cuda.set_device(cuda_device_id)
     if cfg.USE_GPU and torch.cuda.is_available():
         device = torch.device('cuda:{}'.format(cuda_device_id))
-        print('cuda available')
-        print('device count is', torch.cuda.device_count())
-        print(device, 'will be used ...')
+        logger.info('cuda available')
+        logger.info(f'device count is {torch.cuda.device_count()}')
+        logger.info(f'{device} will be used ...')
     else:
         device = torch.device('cpu')
 
@@ -115,7 +141,7 @@ def create_test_set(cfg, transformations):
                 len(cfg.WMH.HFB_CHECKPOINT) and \
                 os.path.exists(cfg.WMH.HFB_CHECKPOINT), 'WMH.HFB_CHECKPOINT not set'
 
-        print('you chose {} mode'.format(('single', 'batch')[cfg.TEST.BATCH_MODE]))
+        logger.info('you chose {} mode'.format(('single', 'batch')[cfg.TEST.BATCH_MODE]))
         eval_pred_flag = (False, True)[1]
         save_pred_flag = True
 
@@ -155,7 +181,7 @@ def create_net(cfg, device):
 def test_loop(cfg, test_loader, device, net_wrapper, save_pred_flag, eval_pred_flag):
     meters_test_set = list()
     for cnt, (image, annot, meta) in enumerate(test_loader):
-        print(cnt+1, len(test_loader))
+        logger.info(f'testing on: {cnt+1:05d}|{len(test_loader):05d}')
         meters = dict()
 
         image = image.to(device, non_blocking=True)
@@ -179,9 +205,9 @@ def test_loop(cfg, test_loader, device, net_wrapper, save_pred_flag, eval_pred_f
             eval_pred(pred, annot, meters, cfg)
             meters_test_set.append(meters)
 
-    print('*** Done saving segmentation prediction for the test data.'
-          '*** Results are saved at:')
-    print(cfg.OUTPUT_DIR)
+    if save_pred_flag:
+        logger.info('*** Done saving segmentation prediction for the test data.'
+                    '*** Results are saved at: {}'.format(cfg.OUTPUT_DIR))
 
     return meters_test_set
 
@@ -189,10 +215,10 @@ def test_loop(cfg, test_loader, device, net_wrapper, save_pred_flag, eval_pred_f
 def get_output_results(meters_test_set, eval_pred_flag):
     output_results = dict()
     if eval_pred_flag:
-        print('\nEvaluation results on the test set is:')
+        logger.info('Evaluation results on the test set is ---')
         for k in meters_test_set[0].keys():
             output_results[k] = np.array([i[k] for i in meters_test_set]).mean()
-            print(f'{k}: {output_results[k]}')
+            logger.info(f'{k}: {output_results[k]}')
 
     return output_results
 

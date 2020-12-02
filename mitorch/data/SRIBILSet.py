@@ -193,5 +193,3 @@ class SRIBILTest(SRIBIL):
     def __init__(self, cfg, mode, transform):
         super().__init__(cfg, mode, transform)
         self.prefix_name = True
-
-        self.sample_path_list = self.sample_path_list[:10]  # TODO remove it
