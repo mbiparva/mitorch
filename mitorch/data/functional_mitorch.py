@@ -11,7 +11,8 @@ import torch
 import numbers
 import collections
 import numpy as np
-import data.motion_utils as ks_motion
+import utils.k_space_motion as ks_motion
+
 
 if sys.version_info < (3, 3):
     Sequence = collections.Sequence
