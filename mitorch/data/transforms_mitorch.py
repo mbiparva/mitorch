@@ -16,7 +16,7 @@ from data.VolSet import c3d_labels
 import numpy as np
 from data.ABC_utils import Transformable, Randomizable
 import itertools
-from utils.MONAI import Affine
+from utils.MONAI import Affine, NormalizeIntensity
 
 if sys.version_info < (3, 3):
     Sequence = collections.Sequence
@@ -1077,6 +1077,27 @@ class AffineScale(Transformable):
             self.transform(annot),
             meta
         )
+
+
+class NormalizeMeanStdSingleVolume(Transformable):
+    def __init__(
+            self,
+            nonzero: bool = False,
+            channel_wise: bool = True,
+    ):
+        self.transform = NormalizeIntensity(nonzero=nonzero, channel_wise=channel_wise)
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        return (
+            self.transform(image),
+            annot,
+            meta
+        )
+
+
+
 
 
 # TODO Implement CropTightVolume based off of
