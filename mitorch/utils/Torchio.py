@@ -5,22 +5,25 @@
 #  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
 """
-****** NOTE: ALL THE CODE BELOW ARE TAKEN FROM TORCHIO ******
+****** NOTE: ALL THE CODE BELOW ARE TAKEN FROM TORCHIO WITH MODIFICATION******
             https://github.com/fepegar/torchio
 """
 
-from collections import defaultdict
 from typing import Tuple, Optional, Union, Sequence, Dict
 import torch
 import numpy as np
-import copy
 import numbers
 from abc import ABC, abstractmethod
-from contextlib import contextmanager
-from typing import Optional, Union, Tuple, Sequence, Iterable
+from typing import Optional, Union, Tuple, Sequence, Iterable, List
 import nibabel as nib
 import scipy.ndimage as ndi
 
+TypeTripletInt = Tuple[int, int, int]
+TypeTuple = Union[int, TypeTripletInt]
+TypeTripletInt = Tuple[int, int, int]
+TypeLocations = Sequence[Tuple[TypeTripletInt, TypeTripletInt]]
+TypeRangeFloat = Union[float, Tuple[float, float]]
+TypeData = Union[torch.Tensor, np.ndarray]
 TypeTripletFloat = Tuple[float, float, float]
 TypeNumber = Union[int, float]
 TypeTransformInput = Union[
@@ -549,8 +552,33 @@ def parse_params(params, around, name, make_ranges=True, **kwargs):
     return tuple(params)
 
 
+def sample_uniform(a, b):
+    return torch.FloatTensor(1).uniform_(a, b)
+
+
+def sample_uniform_sextet(self, params):
+    results = []
+    for (a, b) in zip(params[::2], params[1::2]):
+        results.append(self.sample_uniform(a, b))
+    return torch.Tensor(results)
+
+
 class Transformable(ABC):
     def __call__(self, volume):
+        return self.apply_transform(volume)
+
+    @abstractmethod
+    def apply_transform(self, volume):
+        raise NotImplementedError
+
+
+class Randomizeable(ABC):
+    def __init__(self, p: float = 0.5):
+        self.p = p
+
+    def __call__(self, volume):
+        if torch.rand(1).item() < self.p:
+            return volume
         return self.apply_transform(volume)
 
     @abstractmethod
@@ -573,7 +601,7 @@ class FourierTransform:
         return img_back
 
 
-class RandomSpike(Transformable, FourierTransform):
+class RandomSpike(Randomizeable, FourierTransform):
     r"""Add random MRI spike artifacts.
 
     Also known as `Herringbone artifact
@@ -606,8 +634,8 @@ class RandomSpike(Transformable, FourierTransform):
             num_spikes: Union[int, Tuple[int, int]] = 1,
             intensity: Union[float, Tuple[float, float]] = (1, 3),
             p: float = 1,
-            keys: Optional[Sequence[str]] = None,
             ):
+        super().__init__(p)
         self.intensity_range = parse_range(
             intensity, 'intensity_range')
         self.num_spikes_range = parse_range(
@@ -632,7 +660,7 @@ class RandomSpike(Transformable, FourierTransform):
             ) -> Tuple[np.ndarray, float]:
         ns_min, ns_max = num_spikes_range
         num_spikes_param = torch.randint(ns_min, ns_max + 1, (1,)).item()
-        intensity_param = torch.FloatTensor(1).uniform_(*intensity_range)
+        intensity_param = sample_uniform(*intensity_range)
         spikes_positions = torch.rand(num_spikes_param, 3).numpy()
         return spikes_positions, intensity_param.item()
 
@@ -708,7 +736,7 @@ class Spike(Transformable, FourierTransform):
         return torch.from_numpy(result.astype(np.float32))
 
 
-class RandomGhosting(Transformable):
+class RandomGhosting(Randomizeable):
     r"""Add random MRI ghosting artifact.
 
     Discrete "ghost" artifacts may occur along the phase-encode direction
@@ -749,7 +777,9 @@ class RandomGhosting(Transformable):
             axes: Union[int, Tuple[int, ...]] = (0, 1, 2),
             intensity: Union[float, Tuple[float, float]] = (0.5, 1),
             restore: float = 0.02,
+            p: float = 1,
             ):
+        super().__init__(p)
         if not isinstance(axes, tuple):
             try:
                 axes = tuple(axes)
@@ -932,8 +962,8 @@ class RandomBlur(Transformable):
             self,
             std: Union[float, Tuple[float, float]] = (0, 2),
             p: float = 1,
-            keys: Optional[Sequence[str]] = None,
             ):
+        super().__init__(p)
         self.std_ranges = parse_params(std, None, 'std', min_constraint=0)
 
     def apply_transform(self, volume: torch.tensor) -> torch.tensor:
@@ -944,8 +974,9 @@ class RandomBlur(Transformable):
         volume = transform(volume)
         return volume
 
-    def get_params(self, std_ranges: TypeSextetFloat) -> TypeTripletFloat:
-        std = self.sample_uniform_sextet(std_ranges)
+    @staticmethod
+    def get_params(std_ranges: TypeSextetFloat) -> TypeTripletFloat:
+        std = sample_uniform_sextet(std_ranges)
         return std
 
 
@@ -993,3 +1024,315 @@ class Blur(Transformable):
         blurred = ndi.gaussian_filter(data, std_physical)
         tensor = torch.from_numpy(blurred)
         return tensor
+
+
+class RandomBiasField(Transformable):
+    r"""Add random MRI bias field artifact.
+
+    MRI magnetic field inhomogeneity creates intensity
+    variations of very low frequency across the whole image.
+
+    The bias field is modeled as a linear combination of
+    polynomial basis functions, as in K. Van Leemput et al., 1999,
+    *Automated model-based tissue classification of MR images of the brain*.
+
+    It was implemented in NiftyNet by Carole Sudre and used in
+    `Sudre et al., 2017, Longitudinal segmentation of age-related
+    white matter hyperintensities
+    <https://www.sciencedirect.com/science/article/pii/S1361841517300257?via%3Dihub>`_.
+
+    Args:
+        coefficients: Maximum magnitude :math:`n` of polynomial coefficients.
+            If a tuple :math:`(a, b)` is specified, then
+            :math:`n \sim \mathcal{U}(a, b)`.
+        order: Order of the basis polynomial functions.
+        p: Probability that this transform will be applied.
+        keys: See :class:`~torchio.transforms.Transform`.
+    """
+    def __init__(
+            self,
+            coefficients: Union[float, Tuple[float, float]] = 0.5,
+            order: int = 3,
+            p: float = 1,
+            ):
+        super().__init__(p)
+        self.coefficients_range = parse_range(
+            coefficients, 'coefficients_range')
+        self.order = self._parse_order(order)
+
+    def apply_transform(self, volume: torch.tensor) -> torch.tensor:
+        arguments = dict()
+        coefficients = self.get_params(
+            self.order,
+            self.coefficients_range,
+        )
+        arguments['coefficients'] = coefficients
+        arguments['order'] = self.order
+        transform = BiasField(**arguments)
+        volume = transform(volume)
+        return volume
+
+    @staticmethod
+    def get_params(
+            order: int,
+            coefficients_range: Tuple[float, float],
+            ) -> List[float]:
+        # Sampling of the appropriate number of coefficients for the creation
+        # of the bias field map
+        random_coefficients = []
+        for x_order in range(0, order + 1):
+            for y_order in range(0, order + 1 - x_order):
+                for _ in range(0, order + 1 - (x_order + y_order)):
+                    number = sample_uniform(*coefficients_range)
+                    random_coefficients.append(number.item())
+        return random_coefficients
+
+
+class BiasField(Transformable):
+    r"""Add MRI bias field artifact.
+
+    Args:
+        coefficients: Magnitudes of the polinomial coefficients.
+        order: Order of the basis polynomial functions.
+        keys: See :class:`~torchio.transforms.Transform`.
+    """
+    def __init__(
+            self,
+            coefficients: Union[List[float], Dict[str, List[float]]],
+            order: Union[int, Dict[str, int]],
+            keys: Optional[Sequence[str]] = None,
+            ):
+        self.coefficients = coefficients
+        self.order = order
+        self.invert_transform = False
+        self.args_names = 'coefficients', 'order'
+
+    def arguments_are_dict(self):
+        coefficients_dict = isinstance(self.coefficients, dict)
+        order_dict = isinstance(self.order, dict)
+        if coefficients_dict != order_dict:
+            message = 'If one of the arguments is a dict, all must be'
+            raise ValueError(message)
+        return coefficients_dict and order_dict
+
+    def apply_transform(self, volume: torch.tensor) -> torch.tensor:
+        coefficients, order = self.coefficients, self.order
+        bias_field = self.generate_bias_field(volume, order, coefficients)
+        if self.invert_transform:
+            np.divide(1, bias_field, out=bias_field)
+        volume = volume * torch.from_numpy(bias_field)
+        return volume
+
+    @staticmethod
+    def generate_bias_field(
+            data: TypeData,
+            order: int,
+            coefficients: TypeData,
+            ) -> np.ndarray:
+        # Create the bias field map using a linear combination of polynomial
+        # functions and the coefficients previously sampled
+        shape = np.array(data.shape[1:])  # first axis is channels
+        half_shape = shape / 2
+
+        ranges = [np.arange(-n, n) for n in half_shape]
+
+        bias_field = np.zeros(shape)
+        x_mesh, y_mesh, z_mesh = np.asarray(np.meshgrid(*ranges))
+
+        x_mesh /= x_mesh.max()
+        y_mesh /= y_mesh.max()
+        z_mesh /= z_mesh.max()
+
+        i = 0
+        for x_order in range(order + 1):
+            for y_order in range(order + 1 - x_order):
+                for z_order in range(order + 1 - (x_order + y_order)):
+                    coefficient = coefficients[i]
+                    new_map = (
+                        coefficient
+                        * x_mesh ** x_order
+                        * y_mesh ** y_order
+                        * z_mesh ** z_order
+                    )
+                    bias_field += np.transpose(new_map, (1, 0, 2))  # why?
+                    i += 1
+        bias_field = np.exp(bias_field).astype(np.float32)
+        return bias_field
+
+    @staticmethod
+    def _parse_order(order):
+        if not isinstance(order, int):
+            raise TypeError(f'Order must be an int, not {type(order)}')
+        if order < 0:
+            raise ValueError(f'Order must be a positive int, not {order}')
+        return order
+
+
+class RandomSwap(Transformable):
+    r"""Randomly swap patches within an image.
+
+    This is typically used in `context restoration for self-supervised learning
+    <https://www.sciencedirect.com/science/article/pii/S1361841518304699>`_.
+
+    Args:
+        patch_size: Tuple of integers :math:`(w, h, d)` to swap patches
+            of size :math:`w \times h \times d`.
+            If a single number :math:`n` is provided, :math:`w = h = d = n`.
+        num_iterations: Number of times that two patches will be swapped.
+        p: Probability that this transform will be applied.
+        keys: See :class:`~torchio.transforms.Transform`.
+    """
+    def __init__(
+            self,
+            patch_size: TypeTuple = 15,
+            num_iterations: int = 100,
+            p: float = 1,
+            ):
+        super().__init__(p)
+        self.patch_size = np.array(to_tuple(patch_size))
+        self.num_iterations = self._parse_num_iterations(num_iterations)
+
+    @staticmethod
+    def _parse_num_iterations(num_iterations):
+        if not isinstance(num_iterations, int):
+            raise TypeError('num_iterations must be an int,'
+                            f'not {num_iterations}')
+        if num_iterations < 0:
+            raise ValueError('num_iterations must be positive,'
+                             f'not {num_iterations}')
+        return num_iterations
+
+    def get_params(
+            self,
+            tensor: torch.Tensor,
+            patch_size: np.ndarray,
+            num_iterations: int,
+            ) -> List[Tuple[TypeTripletInt, TypeTripletInt]]:
+        spatial_shape = tensor.shape[-3:]
+        locations = []
+        for _ in range(num_iterations):
+            first_ini, first_fin = self.get_random_indices_from_shape(
+                spatial_shape,
+                patch_size,
+            )
+            while True:
+                second_ini, second_fin = self.get_random_indices_from_shape(
+                    spatial_shape,
+                    patch_size,
+                )
+                larger_than_initial = np.all(second_ini >= first_ini)
+                less_than_final = np.all(second_fin <= first_fin)
+                if larger_than_initial and less_than_final:
+                    continue  # patches overlap
+                else:
+                    break  # patches don't overlap
+            location = tuple(first_ini), tuple(second_ini)
+            locations.append(location)
+        return locations
+
+    def apply_transform(self, volume: torch.tensor) -> torch.tensor:
+        arguments = dict()
+        locations = self.get_params(
+            volume,
+            self.patch_size,
+            self.num_iterations,
+        )
+        arguments['locations'] = locations
+        arguments['patch_size'] = self.patch_size
+        transform = Swap(**arguments)
+        volume = transform(volume)
+        return volume
+
+    @staticmethod
+    def get_random_indices_from_shape(
+            spatial_shape: TypeTripletInt,
+            patch_size: TypeTripletInt,
+            ) -> Tuple[np.ndarray, np.ndarray]:
+        shape_array = np.array(spatial_shape)
+        patch_size_array = np.array(patch_size)
+        max_index_ini = shape_array - patch_size_array
+        if (max_index_ini < 0).any():
+            message = (
+                f'Patch size {patch_size} cannot be'
+                f' larger than image spatial shape {spatial_shape}'
+            )
+            raise ValueError(message)
+        max_index_ini = max_index_ini.astype(np.uint16)
+        coordinates = []
+        for max_coordinate in max_index_ini.tolist():
+            if max_coordinate == 0:
+                coordinate = 0
+            else:
+                coordinate = torch.randint(max_coordinate, size=(1,)).item()
+            coordinates.append(coordinate)
+        index_ini = np.array(coordinates, np.uint16)
+        index_fin = index_ini + patch_size_array
+        return index_ini, index_fin
+
+
+class Swap(Transformable):
+    r"""Swap patches within an image.
+
+    This is typically used in `context restoration for self-supervised learning
+    <https://www.sciencedirect.com/science/article/pii/S1361841518304699>`_.
+
+    Args:
+        patch_size: Tuple of integers :math:`(w, h, d)` to swap patches
+            of size :math:`w \times h \times d`.
+            If a single number :math:`n` is provided, :math:`w = h = d = n`.
+        num_iterations: Number of times that two patches will be swapped.
+        keys: See :class:`~torchio.transforms.Transform`.
+    """
+    def __init__(
+            self,
+            patch_size: Union[TypeTripletInt, Dict[str, TypeTripletInt]],
+            locations: Union[TypeLocations, Dict[str, TypeLocations]],
+            keys: Optional[Sequence[str]] = None,
+            ):
+        self.locations = locations
+        self.patch_size = patch_size
+        self.args_names = 'locations', 'patch_size'
+        self.invert_transform = False
+
+    def apply_transform(self, volume: torch.tensor) -> torch.tensor:
+        locations, patch_size = self.locations, self.patch_size
+        if self.invert_transform:
+            locations.reverse()
+
+        volume = self.swap(volume, patch_size, locations)
+
+        return volume
+
+    def swap(
+            self,
+            tensor: torch.Tensor,
+            patch_size: TypeTuple,
+            locations: List[Tuple[np.ndarray, np.ndarray]],
+            ) -> torch.tensor:
+        tensor = tensor.clone()
+        patch_size = np.array(patch_size)
+        for first_ini, second_ini in locations:
+            first_fin = first_ini + patch_size
+            second_fin = second_ini + patch_size
+            first_patch = self.crop(tensor, first_ini, first_fin)
+            second_patch = self.crop(tensor, second_ini, second_fin).clone()
+            self.insert(tensor, first_patch, second_ini)
+            self.insert(tensor, second_patch, first_ini)
+        return tensor
+
+    @staticmethod
+    def insert(tensor: TypeData, patch: TypeData, index_ini: np.ndarray) -> None:
+        index_fin = index_ini + np.array(patch.shape[-3:])
+        i_ini, j_ini, k_ini = index_ini
+        i_fin, j_fin, k_fin = index_fin
+        tensor[:, i_ini:i_fin, j_ini:j_fin, k_ini:k_fin] = patch
+
+    @staticmethod
+    def crop(
+            image: Union[np.ndarray, torch.Tensor],
+            index_ini: np.ndarray,
+            index_fin: np.ndarray,
+            ) -> Union[np.ndarray, torch.Tensor]:
+        i_ini, j_ini, k_ini = index_ini
+        i_fin, j_fin, k_fin = index_fin
+        return image[:, i_ini:i_fin, j_ini:j_fin, k_ini:k_fin]
