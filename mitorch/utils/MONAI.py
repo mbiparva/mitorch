@@ -1191,7 +1191,7 @@ class Affine(Transform):
         spatial_size: Optional[Union[Sequence[int], int]] = None,
         mode: Union[GridSampleMode, str] = GridSampleMode.BILINEAR,
         padding_mode: Union[GridSamplePadMode, str] = GridSamplePadMode.REFLECTION,
-        as_tensor_output: bool = False,
+        as_tensor_output: bool = True,
         device: Optional[torch.device] = None,
     ) -> None:
         """
