@@ -20,6 +20,15 @@ import pprint
 KNOWN_TRANSFORMATIONS = (
     'noise',
     'contrast',
+    'rotate',
+    'shear',
+    'translate',
+    'scale',
+    'spike',
+    'ghosting',
+    'blur',
+    'biasfield',
+    'swap',
 )
 KNOWN_T_KEYS = (
     't_name',
