@@ -4,7 +4,11 @@
 #  Implemented by Mahdi Biparva, May 2020
 #  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
-# NOTE: All the code below are taken from MONAI with the copyright note below
+"""
+****** NOTE: ALL THE CODE BELOW ARE TAKEN FROM MONAI WITH THE COPYRIGHT NOTE BELOW ******
+                    https://github.com/Project-MONAI/MONAI
+"""
+
 # Copyright 2020 MONAI Consortium
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
