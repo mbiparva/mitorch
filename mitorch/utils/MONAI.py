@@ -1362,3 +1362,72 @@ class Rotate(Transform):
         )
         output = output.squeeze(0).detach().cpu().numpy().astype(np.float32)
         return output
+
+
+class NormalizeIntensity(Transform):
+    """
+    Normalize input based on provided args, using calculated mean and std if not provided.
+    This transform can normalize only non-zero values or entire image, and can also calculate
+    mean and std on each channel separately.
+    When `channel_wise` is True, the first dimension of `subtrahend` and `divisor` should
+    be the number of image channels if they are not None.
+
+    Args:
+        subtrahend: the amount to subtract by (usually the mean).
+        divisor: the amount to divide by (usually the standard deviation).
+        nonzero: whether only normalize non-zero values.
+        channel_wise: if using calculated mean and std, calculate on each channel separately
+            or calculate on the entire image directly.
+    """
+
+    def __init__(
+        self,
+        subtrahend: Optional[Sequence] = None,
+        divisor: Optional[Sequence] = None,
+        nonzero: bool = False,
+        channel_wise: bool = False,
+    ) -> None:
+        self.subtrahend = subtrahend
+        self.divisor = divisor
+        self.nonzero = nonzero
+        self.channel_wise = channel_wise
+
+    def _normalize(self, img: np.ndarray, sub=None, div=None) -> np.ndarray:
+        slices = (img != 0) if self.nonzero else np.ones(img.shape, dtype=np.bool_)
+        if not np.any(slices):
+            return img
+
+        _sub = sub if sub is not None else np.mean(img[slices])
+        if isinstance(_sub, np.ndarray):
+            _sub = _sub[slices]
+
+        _div = div if div is not None else np.std(img[slices])
+        if np.isscalar(_div):
+            if _div == 0.0:
+                _div = 1.0
+        elif isinstance(_div, np.ndarray):
+            _div = _div[slices]
+            _div[_div == 0.0] = 1.0
+        img[slices] = (img[slices] - _sub) / _div
+        return img
+
+    def __call__(self, img: np.ndarray) -> np.ndarray:
+        """
+        Apply the transform to `img`, assuming `img` is a channel-first array if `self.channel_wise` is True,
+        """
+        if self.channel_wise:
+            if self.subtrahend is not None and len(self.subtrahend) != len(img):
+                raise ValueError(f"img has {len(img)} channels, but subtrahend has {len(self.subtrahend)} components.")
+            if self.divisor is not None and len(self.divisor) != len(img):
+                raise ValueError(f"img has {len(img)} channels, but divisor has {len(self.divisor)} components.")
+
+            for i, d in enumerate(img):
+                img[i] = self._normalize(
+                    d,
+                    sub=self.subtrahend[i] if self.subtrahend is not None else None,
+                    div=self.divisor[i] if self.divisor is not None else None,
+                )
+        else:
+            img = self._normalize(img, self.subtrahend, self.divisor)
+
+        return img
