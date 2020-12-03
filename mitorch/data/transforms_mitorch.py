@@ -16,6 +16,7 @@ from data.VolSet import c3d_labels
 import numpy as np
 from data.ABC_utils import Transformable, Randomizable
 import itertools
+from utils.MONAI import Affine
 
 if sys.version_info < (3, 3):
     Sequence = collections.Sequence
@@ -1002,6 +1003,81 @@ class OneHotAnnot(Transformable):
             ),
             meta
         )
+
+
+class Affine(Transformable):
+    def __init__(self, **kwargs):
+        self.transform = Affine(**kwargs)
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        return (
+            self.transform(image),
+            self.transform(annot),
+            meta
+        )
+
+
+class AffineRotate(Transformable):
+    def __init__(self, **kwargs):
+        assert 'rotate_params' in kwargs, 'rotate parameters are undefined'
+        self.transform = Affine(**kwargs)
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        return (
+            self.transform(image),
+            self.transform(annot),
+            meta
+        )
+
+
+class AffineShear(Transformable):
+    def __init__(self, **kwargs):
+        assert 'shear_params' in kwargs, 'shear parameters are undefined'
+        self.transform = Affine(**kwargs)
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        return (
+            self.transform(image),
+            self.transform(annot),
+            meta
+        )
+
+
+class AffineTranslate(Transformable):
+    def __init__(self, **kwargs):
+        assert 'translate_params' in kwargs, 'translate parameters are undefined'
+        self.transform = Affine(**kwargs)
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        return (
+            self.transform(image),
+            self.transform(annot),
+            meta
+        )
+
+
+class AffineScale(Transformable):
+    def __init__(self, **kwargs):
+        assert 'scale_params' in kwargs, 'scale parameters are undefined'
+        self.transform = Affine(**kwargs)
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        return (
+            self.transform(image),
+            self.transform(annot),
+            meta
+        )
+
 
 # TODO Implement CropTightVolume based off of
 #  https://github.com/nilearn/nilearn/blob/c10248e43769f37eaea804f64d44a7816e3c6e03/nilearn/image/image.py
