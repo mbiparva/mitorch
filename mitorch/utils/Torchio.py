@@ -837,7 +837,7 @@ class RandomGhosting(Randomizeable):
         return num_ghosts, axis, intensity
 
 
-class Ghosting(FourierTransform):
+class Ghosting(Transformable, FourierTransform):
     r"""Add MRI ghosting artifact.
 
     Discrete "ghost" artifacts may occur along the phase-encode direction
