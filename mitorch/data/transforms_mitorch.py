@@ -16,7 +16,8 @@ from data.VolSet import c3d_labels
 import numpy as np
 from data.ABC_utils import Transformable, Randomizable
 import itertools
-from utils.MONAI import Affine, NormalizeIntensity
+import utils.MONAI as mn
+import utils.Torchio as tio
 
 if sys.version_info < (3, 3):
     Sequence = collections.Sequence
@@ -1007,7 +1008,7 @@ class OneHotAnnot(Transformable):
 
 class Affine(Transformable):
     def __init__(self, **kwargs):
-        self.transform = Affine(**kwargs)
+        self.transform = mn.Affine(**kwargs)
 
     def apply(self, volume):
         image, annot, meta = volume
@@ -1022,7 +1023,7 @@ class Affine(Transformable):
 class AffineRotate(Transformable):
     def __init__(self, **kwargs):
         assert 'rotate_params' in kwargs, 'rotate parameters are undefined'
-        self.transform = Affine(**kwargs)
+        self.transform = mn.Affine(**kwargs)
 
     def apply(self, volume):
         image, annot, meta = volume
@@ -1037,7 +1038,7 @@ class AffineRotate(Transformable):
 class AffineShear(Transformable):
     def __init__(self, **kwargs):
         assert 'shear_params' in kwargs, 'shear parameters are undefined'
-        self.transform = Affine(**kwargs)
+        self.transform = mn.Affine(**kwargs)
 
     def apply(self, volume):
         image, annot, meta = volume
@@ -1052,7 +1053,7 @@ class AffineShear(Transformable):
 class AffineTranslate(Transformable):
     def __init__(self, **kwargs):
         assert 'translate_params' in kwargs, 'translate parameters are undefined'
-        self.transform = Affine(**kwargs)
+        self.transform = mn.Affine(**kwargs)
 
     def apply(self, volume):
         image, annot, meta = volume
@@ -1067,7 +1068,7 @@ class AffineTranslate(Transformable):
 class AffineScale(Transformable):
     def __init__(self, **kwargs):
         assert 'scale_params' in kwargs, 'scale parameters are undefined'
-        self.transform = Affine(**kwargs)
+        self.transform = mn.Affine(**kwargs)
 
     def apply(self, volume):
         image, annot, meta = volume
@@ -1085,7 +1086,7 @@ class NormalizeMeanStdSingleVolume(Transformable):
             nonzero: bool = False,
             channel_wise: bool = True,
     ):
-        self.transform = NormalizeIntensity(nonzero=nonzero, channel_wise=channel_wise)
+        self.transform = mn.NormalizeIntensity(nonzero=nonzero, channel_wise=channel_wise)
 
     def apply(self, volume):
         image, annot, meta = volume
@@ -1097,15 +1098,74 @@ class NormalizeMeanStdSingleVolume(Transformable):
         )
 
 
+class Spike(Transformable):
+    def __init__(self, **kwargs):
+        self.transform = tio.Spike(**kwargs)
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        return (
+            self.transform(image),
+            annot,
+            meta
+        )
 
 
+class Ghosting(Transformable):
+    def __init__(self, **kwargs):
+        self.transform = tio.Ghosting(**kwargs)
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        return (
+            self.transform(image),
+            annot,
+            meta
+        )
+
+
+class Blur(Transformable):
+    def __init__(self, **kwargs):
+        self.transform = tio.Blur(**kwargs)
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        return (
+            self.transform(image),
+            annot,
+            meta
+        )
+
+
+class BiasField(Transformable):
+    def __init__(self, **kwargs):
+        self.transform = tio.BiasField(**kwargs)
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        return (
+            self.transform(image),
+            annot,
+            meta
+        )
+
+
+class Swap(Transformable):
+    def __init__(self, **kwargs):
+        self.transform = tio.Swap(**kwargs)
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        return (
+            self.transform(image),
+            annot,
+            meta
+        )
 
 # TODO Implement CropTightVolume based off of
 #  https://github.com/nilearn/nilearn/blob/c10248e43769f37eaea804f64d44a7816e3c6e03/nilearn/image/image.py
-
-# TODO add https://github.com/fepegar/torchio/blob/master/torchio/transforms/augmentation/intensity/random_bias_field.py
-# TODO add https://github.com/fepegar/torchio/blob/master/torchio/transforms/augmentation/intensity/random_blur.py
-# TODO add https://github.com/fepegar/torchio/blob/master/torchio/transforms/augmentation/intensity/random_ghosting.py
-# TODO add https://github.com/fepegar/torchio/blob/master/torchio/transforms/augmentation/intensity/random_motion.py
-# TODO add https://github.com/fepegar/torchio/blob/master/torchio/transforms/augmentation/intensity/random_spike.py
-# TODO add https://github.com/fepegar/torchio/blob/master/torchio/transforms/augmentation/intensity/random_swap.py
