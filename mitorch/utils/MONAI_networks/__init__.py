@@ -9,4 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .basic_unet import BasicUNet
+from .bunet import BasicUNet
+from .unet import UNet
+
