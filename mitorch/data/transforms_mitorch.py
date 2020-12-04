@@ -16,7 +16,7 @@ from data.VolSet import c3d_labels
 import numpy as np
 from data.ABC_utils import Transformable, Randomizable
 import itertools
-import utils.MONAI as mn
+import utils.MONAI_data as mn
 import utils.Torchio as tio
 
 if sys.version_info < (3, 3):
