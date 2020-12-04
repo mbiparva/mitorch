@@ -13,5 +13,5 @@ from .bunet import BasicUNet
 from .unet import UNet
 from .dynunet import DynUNet
 from .senet import SENet
-
+from .vnet import VNet
 
