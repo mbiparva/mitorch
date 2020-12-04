@@ -9,7 +9,7 @@
 import torch
 import torch.nn as nn
 from .build import MODEL_REGISTRY
-from .weight_init_helper import init_weights
+from models.NetABC import NetABC
 from utils.models import pad_if_necessary
 try:
     from torch.cuda.amp import autocast
@@ -243,26 +243,9 @@ class SegHead(nn.Module):
 
 
 @MODEL_REGISTRY.register()
-class Unet3D(nn.Module):
+class Unet3D(NetABC):
     def __init__(self, cfg):
-        super().__init__()
-
-        self.cfg = self.set_model_settings(cfg.clone())
-
-        self.set_processing_mode()
-
-        self._create_net()
-
-        self.init_weights()
-
-    @staticmethod
-    def set_model_settings(cfg):
-        if 'SETTINGS' in cfg.MODEL and isinstance(cfg.MODEL.SETTINGS, tuple):
-            cfg_MODEL_SETTINGS = dict(cfg.MODEL.SETTINGS)
-            cfg.MODEL.SETTINGS = cfg_MODEL_SETTINGS[cfg.MODEL.MODEL_NAME] \
-                if cfg.MODEL.MODEL_NAME in cfg_MODEL_SETTINGS else cfg_MODEL_SETTINGS
-
-        return cfg
+        super().__init__(cfg)
 
     def set_processing_mode(self):
         global IS_3D
@@ -273,17 +256,8 @@ class Unet3D(nn.Module):
         self.Decoder = Decoder(self.cfg)
         self.SegHead = SegHead(self.cfg)
 
-    def init_weights(self):
-        init_weights(self, self.cfg.MODEL.FC_INIT_STD)
-
     def forward_core(self, x):
         x = self.Encoder(x)
         x = self.Decoder(x)
         x = self.SegHead(x)
         return x
-
-    def forward(self, x):
-        if self.cfg.AMP:
-            with autocast():
-                return self.forward_core(x)
-        return self.forward_core(x)
