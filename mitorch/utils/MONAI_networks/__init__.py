@@ -12,7 +12,14 @@
 from .bunet import BasicUNet
 from .unet import UNet
 from .dynunet import DynUNet
-from .senet import SENet
+from .senet import (
+            senet154,
+            se_resnet50,
+            se_resnet101,
+            se_resnet152,
+            se_resnext50_32x4d,
+            se_resnext101_32x4d,
+        )
 from .vnet import VNet
 # from .highresnet import HighResNet
 # from .densenet import DenseNet
