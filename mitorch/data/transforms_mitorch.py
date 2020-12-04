@@ -877,44 +877,45 @@ class AdditiveNoise(Randomizable):
 
 
 class PresetMotionArtifact(Transformable):
-    """
-    Apply a preset motion artifact to an image volume. This class wraps the apply_motion_from_affine_params function.
-    Args:
-        volume (torch.Tensor): Volume to be transformed and resampled. Must be 4D
-            with a channel dimension i.e. (C, D, H, W).
-        time (float): Time at which the motion occurs during scanning. Should be between [0.5, 1), where 0
-            represents the beginning of the scan and 1 represents the end. Time >= 0.5 assures that the
-            most prominent object in the image is in the original position of the image so that ground truth
-            annotations don't need to be adjusted.
-        delta (int, float, list, tuple, np.ndarray, torch.Tensor, optional): Can either be a number (int or float)
-            which specifies the magnitude of translation along a single axis, or a list, tuple, array
-            or tensor which specifies the translation components for all three directions. Default is None.
-        direction (str, optional): Specifies the direction of translation if delta is an int or float. Must be
-            either 'x', 'y' or 'z', corresponding to one of three array axes. If off-axis translation is desired,
-            please specify delta as a length-3 item of translation components. Default is None.
-        pixels (bool, optional): If True, the magnitude of translation is specified in pixels, as opposed to
-            units of half the input tensor (see pytorch grid_sample for details). Default is True.
-        theta (int, float, list, tuple, np.ndarray, torch.Tensor, optional): Can either be a number (int or float)
-            which specifies the angle of rotation about a single axis, or a list, tuple, array or tensor which specifies
-            a set of three Euler angles for rotation. Default is None.
-        seq (str): Must be specified if theta is provided. Specifies sequencce of axes for rotations. Up to 3 characters
-            belonging to the set {'X', 'Y', 'Z'} for intrinsic rotations, or {'x', 'y', 'z'} for extrinsic rotations.
-            Extrinsic and intrinsic rotations cannot be mixed in one function call. This description is repeated from
-            the documentation for scipy.spatial.transform.Rotation.from_euler. Default is None.
-        degrees (bool, optional): If True, then the given angles are assumed to be in degrees.
-            This description is repeated from the documentation for
-            scipy.spatial.transform.Rotation.from_euler. Default is True.
-        mode (str, optional): Interpolation mode to calculate output values 'bilinear' | 'nearest'.
-            Note that for 3D image input the interpolation mode used internally by torch is
-            actually trilinear. Default is 'bilinear'
-        padding_mode (str, optional): Padding mode for outside grid values 'zeros' | 'border' | 'reflection'.
-            Default is 'zeros'. See torch documentation for more details.
-        align_corners (bool, optional): See torch documentation for details. Default is False.
-    Returns:
-        volume (torch.Tensor): Motion-artifacted image. Shape is the same as the input.   
-    """
     def __init__(self, time, delta=None, direction=None, pixels=True, theta=None, seq=None,
                  degrees=True, mode='bilinear', padding_mode='zeros', align_corners=False):
+        """
+        Apply a preset motion artifact to an image volume. This class wraps the apply_motion_from_affine_params function.
+        Args:
+            volume (torch.Tensor): Volume to be transformed and resampled. Must be 4D
+                with a channel dimension i.e. (C, D, H, W).
+            time (float): Time at which the motion occurs during scanning. Should be between [0.5, 1), where 0
+                represents the beginning of the scan and 1 represents the end. Time >= 0.5 assures that the
+                most prominent object in the image is in the original position of the image so that ground truth
+                annotations don't need to be adjusted.
+            delta (int, float, list, tuple, np.ndarray, torch.Tensor, optional): Can either be a number (int or float)
+                which specifies the magnitude of translation along a single axis, or a list, tuple, array
+                or tensor which specifies the translation components for all three directions. Default is None.
+            direction (str, optional): Specifies the direction of translation if delta is an int or float. Must be
+                either 'x', 'y' or 'z', corresponding to one of three array axes. If off-axis translation is desired,
+                please specify delta as a length-3 item of translation components. Default is None.
+            pixels (bool, optional): If True, the magnitude of translation is specified in pixels, as opposed to
+                units of half the input tensor (see pytorch grid_sample for details). Default is True.
+            theta (int, float, list, tuple, np.ndarray, torch.Tensor, optional): Can either be a number (int or float)
+                which specifies the angle of rotation about a single axis, or a list, tuple, array or tensor which specifies
+                a set of three Euler angles for rotation. Default is None.
+            seq (str): Must be specified if theta is provided. Specifies sequencce of axes for rotations. Up to 3 characters
+                belonging to the set {'X', 'Y', 'Z'} for intrinsic rotations, or {'x', 'y', 'z'} for extrinsic rotations.
+                Extrinsic and intrinsic rotations cannot be mixed in one function call. This description is repeated from
+                the documentation for scipy.spatial.transform.Rotation.from_euler. Default is None.
+            degrees (bool, optional): If True, then the given angles are assumed to be in degrees.
+                This description is repeated from the documentation for
+                scipy.spatial.transform.Rotation.from_euler. Default is True.
+            mode (str, optional): Interpolation mode to calculate output values 'bilinear' | 'nearest'.
+                Note that for 3D image input the interpolation mode used internally by torch is
+                actually trilinear. Default is 'bilinear'
+            padding_mode (str, optional): Padding mode for outside grid values 'zeros' | 'border' | 'reflection'.
+                Default is 'zeros'. See torch documentation for more details.
+            align_corners (bool, optional): See torch documentation for details. Default is False.
+        Returns:
+            volume (torch.Tensor): Motion-artifacted image. Shape is the same as the input.
+        """
+
         assert isinstance(time, float), 'time must be float between 0.0 (inclusive) and 1.0 (exclusive).'
         assert 0.5 <= time < 1.0, 'time must be float between 0.0 (inclusive) and 1.0 (exclusive).'
         if delta is not None:
