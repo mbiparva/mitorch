@@ -969,9 +969,12 @@ class PresetMotionArtifact(Transformable):
     def apply(self, volume):
         image, annot, meta = volume
         assert image.shape[1:] == annot.shape[1:], 'Image and ground-truth annotation should have the same shape.'
-        image = F.k_space_motion_artifact(image, self.time, self.delta, self.direction, self.pixels,
-                                          self.theta, self.seq, self.degrees, self.mode, self.padding_mode,
-                                          self.align_corners)
+        image = F.k_space_motion_artifact(
+            image, self.time, delta=self.delta, direction=self.direction, pixels=self.pixels, theta=self.theta,
+            seq=self.seq, degrees=self.degrees, mode=self.mode, padding_mode=self.padding_mode,
+            align_corners=self.align_corners
+        )
+
         return image, annot, meta
 
 

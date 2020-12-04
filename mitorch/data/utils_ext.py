@@ -11,6 +11,7 @@
 
 import numpy as np
 import warnings
+import torch
 
 
 def correct_nifti_header_if_necessary(img_nii):
@@ -76,3 +77,13 @@ def aff_is_diag(aff):
     """
     rzs_aff = aff[:3, :3]
     return np.allclose(rzs_aff, np.diag(np.diag(rzs_aff)))
+
+
+def _is_tensor_image_volume(volume):
+    if not torch.is_tensor(volume):
+        raise TypeError("volume should be Tensor. Got %s" % type(volume))
+
+    if not volume.dim() == 4:
+        raise ValueError("volume should be 4D. Got %dD" % volume.dim())
+
+    return True

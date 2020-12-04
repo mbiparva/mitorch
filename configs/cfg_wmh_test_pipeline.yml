@@ -17,6 +17,11 @@ TEST:
   DATA_PATH: ''
   ROBUST_EXP: true
   ROBUST_EXP_LIST:
+    - - t_name: 'motion'
+        t_params:
+          time:
+            - 0.5
+            - 0.9
     - - t_name: 'noise'
         t_params:
           sigma:

@@ -12,6 +12,7 @@ import numbers
 import collections
 import numpy as np
 import utils.k_space_motion as ks_motion
+from data.utils_ext import _is_tensor_image_volume
 
 
 if sys.version_info < (3, 3):
@@ -20,16 +21,6 @@ if sys.version_info < (3, 3):
 else:
     Sequence = collections.abc.Sequence
     Iterable = collections.abc.Iterable
-
-
-def _is_tensor_image_volume(volume):
-    if not torch.is_tensor(volume):
-        raise TypeError("volume should be Tensor. Got %s" % type(volume))
-
-    if not volume.dim() == 4:
-        raise ValueError("volume should be 4D. Got %dD" % volume.dim())
-
-    return True
 
 
 def crop(volume, k, i, j, d, h, w):
@@ -433,7 +424,6 @@ def k_space_motion_artifact(volume, time, **kwargs):
             represents the beginning of the scan and 1 represents the end. Time >= 0.5 assures that the
             most prominent object in the image is in the original position of the image so that ground truth
             annotations don't need to be adjusted.
-        kwargs (dict): all the other parameters the motion algorithm needs.
     Returns:
         volume (torch.Tensor): Motion-artifacted image. Shape is the same as the input.
     """

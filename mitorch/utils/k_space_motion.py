@@ -8,7 +8,7 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 import torch
 import torch.nn.functional as torchF
-from data.functional_mitorch import _is_tensor_image_volume
+from data.utils_ext import _is_tensor_image_volume
 
 
 def complex_from_split(arr):
