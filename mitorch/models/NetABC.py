@@ -15,7 +15,7 @@ except ImportError:
 
 
 class NetABC(ABC, nn.Module):
-    def __init__(self, cfg):
+    def __init__(self, cfg, auto_init=True):
         super().__init__()
 
         self.cfg = self.set_model_settings(cfg)
@@ -24,7 +24,8 @@ class NetABC(ABC, nn.Module):
 
         self._create_net()
 
-        self.init_weights()
+        if auto_init:
+            self.init_weights()
 
     @staticmethod
     def set_model_settings(cfg):

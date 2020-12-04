@@ -14,11 +14,20 @@ from typing import Optional, Sequence, Union
 import torch
 import torch.nn as nn
 
-from monai.networks.layers.factories import Conv, Pad, Pool
-from monai.networks.utils import icnr_init, pixelshuffle
-from monai.utils import InterpolateMode, UpsampleMode, ensure_tuple_rep
+from .factories import Conv, Pad, Pool
+from .utils import icnr_init, pixelshuffle
+from ..MONAI_data import InterpolateMode, ensure_tuple_rep
+from ..MONAI_data import Enum
 
-__all__ = ["Upsample", "UpSample", "SubpixelUpsample", "Subpixelupsample", "SubpixelUpSample"]
+
+class UpsampleMode(Enum):
+    """
+    See also: :py:class:`monai.networks.blocks.UpSample`
+    """
+
+    DECONV = "deconv"
+    NONTRAINABLE = "nontrainable"  # e.g. using torch.nn.Upsample
+    PIXELSHUFFLE = "pixelshuffle"
 
 
 class UpSample(nn.Sequential):
