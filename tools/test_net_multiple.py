@@ -29,6 +29,7 @@ KNOWN_TRANSFORMATIONS = (
     'blur',
     'biasfield',
     'swap',
+    'motion',
 )
 KNOWN_T_KEYS = (
     't_name',

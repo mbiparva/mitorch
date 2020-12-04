@@ -137,3 +137,12 @@ class SwapTestTransformations(BaseTransformations):
 
     def create_transform(self):
         return tf.Swap(**self.params)
+
+
+@TESTPIPELINE_REGISTRY.register()
+class MotionTestTransformations(BaseTransformations):
+    def __init__(self, cfg, params):
+        super().__init__(cfg, params)
+
+    def create_transform(self):
+        return tf.PresetMotionArtifact(**self.params)
