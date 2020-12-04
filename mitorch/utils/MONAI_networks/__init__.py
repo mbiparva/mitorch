@@ -14,4 +14,5 @@ from .unet import UNet
 from .dynunet import DynUNet
 from .senet import SENet
 from .vnet import VNet
-
+# from .highresnet import HighResNet
+# from .densenet import DenseNet
