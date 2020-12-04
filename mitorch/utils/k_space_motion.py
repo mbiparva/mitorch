@@ -1,3 +1,9 @@
+#  Copyright (c) 2020 Mahdi Biparva, mahdi.biparva@sri.utoronto.ca
+#  miTorch Deep Learning Package
+#  Deep Learning Package for 3D medical imaging in PyTorch
+#  Implemented by Mahdi Biparva, May 2020
+#  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
+
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import torch
@@ -403,7 +409,7 @@ def apply_motion_from_affine_params(volume, time, delta=None, direction=None, pi
     n_vox = volume[0].numel()   # get number of voxels in first channel
     time = round(time*n_vox)   # get voxel where movement occurs (k-space filling)
     time = np.array([time])   # put in array to be fed into mask constructor function
-    masks = construct_kspace_masks(volume, time)  # TODO definition to construct_kspace_masks is missing
+    masks = construct_kspace_masks(volume, time)
     fft = torch.rfft(volume, signal_ndim=3, onesided=False)
     fft = ks_motion_fftshift(fft, axes=(1, 2, 3))
     fft = complex_from_split(fft)
