@@ -22,4 +22,9 @@ from .senet import (
         )
 from .vnet import VNet
 # from .highresnet import HighResNet
-# from .densenet import DenseNet
+from .densenet import (
+            densenet121,
+            densenet169,
+            densenet201,
+            densenet264,
+)

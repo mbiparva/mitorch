@@ -16,5 +16,5 @@ from .MUnet3D import MUnet3D
 from .SEUnet3D import SEUnet3D
 from .Vnet3D import Vnet3D
 from .DYNUnet3D import DYNUnet3D
-# from .DenseNet3D import DenseNet3D
+from .Densenet3D import Densenet3D
 # from .HighresNet3D import HighResNet3D
