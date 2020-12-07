@@ -15,8 +15,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from monai.networks.blocks.convolutions import Convolution
-from monai.networks.layers.factories import Act, Norm, split_args
+from .convolutions import Convolution
+from .factories import Act, Norm, split_args
 
 
 class UnetResBlock(nn.Module):
