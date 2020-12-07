@@ -210,7 +210,8 @@ _C.MODEL = CfgNode()
 _C.MODEL.ARCH = "unet3d"
 
 # Model name
-_C.MODEL.MODEL_NAME = ('Unet3D', 'NestedUnet3D', 'Unet3DCBAM', 'DAUnet3D')[0]
+_C.MODEL.MODEL_NAME = ('Unet3D', 'NestedUnet3D', 'Unet3DCBAM', 'DAUnet3D',
+                       'MBUnet3D', 'MUnet3D', 'Densenet3D', 'Highresnet3D', 'DYNUnet3D', 'SEUnet3D', 'Vnet3D')[0]
 
 _C.MODEL.PROCESSING_MODE = ('2d', '3d')[1]
 
