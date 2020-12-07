@@ -15,7 +15,6 @@ from .MBUnet3D import MBUnet3D
 from .MUnet3D import MUnet3D
 from .SEUnet3D import SEUnet3D
 from .Vnet3D import Vnet3D
-
-
-# TODO add https://github.com/Project-MONAI/MONAI/blob/master/monai/networks/nets/densenet.py
-# TODO add https://github.com/Project-MONAI/MONAI/blob/master/monai/networks/nets/dynunet.py
+from .DYNUnet3D import DYNUnet3D
+# from .DenseNet3D import DenseNet3D
+# from .HighresNet3D import HighResNet3D
