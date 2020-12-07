@@ -20,11 +20,11 @@ from .senet import (
             se_resnext50_32x4d,
             se_resnext101_32x4d,
         )
-from .vnet import VNet
-# from .highresnet import HighResNet
 from .densenet import (
             densenet121,
             densenet169,
             densenet201,
             densenet264,
 )
+from .vnet import VNet
+from .highresnet import HighResNet

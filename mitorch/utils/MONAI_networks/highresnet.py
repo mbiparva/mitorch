@@ -207,6 +207,14 @@ class HighResBlock(nn.Module):
         return x_conv + x
 
 
+class MarkerLayer(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return x
+
+
 class HighResNet(nn.Module):
     """
     Reimplementation of highres3dnet based on
@@ -277,6 +285,10 @@ class HighResNet(nn.Module):
                 )
                 _in_chns = _out_chns
 
+            blocks.append(
+                MarkerLayer()  # this helps to save lateral connections for the decoder
+            )
+
         # final conv layers
         params = layer_params[-2]
         _in_chns, _out_chns = _out_chns, params["n_features"]
@@ -290,6 +302,10 @@ class HighResNet(nn.Module):
                 acti_type=acti_type,
                 dropout_prob=dropout_prob,
             )
+        )
+
+        blocks.append(
+            MarkerLayer()  # this helps to save lateral connections for the decoder
         )
 
         params = layer_params[-1]
