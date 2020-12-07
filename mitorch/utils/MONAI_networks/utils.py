@@ -18,7 +18,7 @@ from typing import Any, Callable, Optional, Sequence, cast
 import torch
 import torch.nn as nn
 
-from monai.utils import ensure_tuple_size
+from ..MONAI_data import ensure_tuple_size
 
 
 def one_hot(labels: torch.Tensor, num_classes: int, dtype: torch.dtype = torch.float, dim: int = 1) -> torch.Tensor:
