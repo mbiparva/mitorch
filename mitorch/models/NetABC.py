@@ -33,7 +33,7 @@ class NetABC(ABC, nn.Module):
         if 'SETTINGS' in cfg.MODEL and isinstance(cfg.MODEL.SETTINGS, tuple):
             cfg_MODEL_SETTINGS = dict(cfg.MODEL.SETTINGS)
             cfg.MODEL.SETTINGS = cfg_MODEL_SETTINGS[cfg.MODEL.MODEL_NAME] \
-                if cfg.MODEL.MODEL_NAME in cfg_MODEL_SETTINGS else cfg_MODEL_SETTINGS
+                if cfg.MODEL.MODEL_NAME in cfg_MODEL_SETTINGS else cfg.MODEL.SETTINGS
 
         return cfg
 
