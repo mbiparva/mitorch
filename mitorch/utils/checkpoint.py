@@ -111,6 +111,7 @@ def save_checkpoint(path_to_ckpnt, model, optimizer, epoch, cfg, scaler=None, be
     cfg = cfg.clone()
     if isinstance(cfg.MODEL.SETTINGS, tuple):
         cfg.MODEL.SETTINGS = dict(cfg.MODEL.SETTINGS)[cfg.MODEL.MODEL_NAME]
+
     # Record the state.
     checkpoint = {
         "epoch": epoch,
