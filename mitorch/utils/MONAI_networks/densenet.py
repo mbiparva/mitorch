@@ -126,6 +126,8 @@ class DenseNet(nn.Module):
 
         super(DenseNet, self).__init__()
 
+        self.block_features = list()
+
         conv_type: Type[Union[nn.Conv1d, nn.Conv2d, nn.Conv3d]] = Conv[Conv.CONV, spatial_dims]
         norm_type: Type[Union[nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d]] = Norm[Norm.BATCH, spatial_dims]
         pool_type: Type[Union[nn.MaxPool1d, nn.MaxPool2d, nn.MaxPool3d]] = Pool[Pool.MAX, spatial_dims]
@@ -136,7 +138,7 @@ class DenseNet(nn.Module):
         self.features = nn.Sequential(
             OrderedDict(
                 [
-                    ("conv0", conv_type(in_channels, init_features, kernel_size=7, stride=2, padding=3, bias=False)),
+                    ("conv0", conv_type(in_channels, init_features, kernel_size=7, stride=1, padding=3, bias=False)),
                     ("norm0", norm_type(init_features)),
                     ("relu0", nn.ReLU(inplace=True)),
                     ("pool0", pool_type(kernel_size=3, stride=2, padding=1)),
@@ -145,6 +147,7 @@ class DenseNet(nn.Module):
         )
 
         in_channels = init_features
+        self.block_features.append(in_channels)
         for i, num_layers in enumerate(block_config):
             block = _DenseBlock(
                 spatial_dims=spatial_dims,
@@ -163,6 +166,7 @@ class DenseNet(nn.Module):
                 trans = _Transition(spatial_dims, in_channels=in_channels, out_channels=_out_channels)
                 self.features.add_module(f"transition{i + 1}", trans)
                 in_channels = _out_channels
+            self.block_features.append(in_channels)
 
         # pooling and classification
         self.class_layers = nn.Sequential(
@@ -230,7 +234,7 @@ def densenet121(pretrained: bool = False, progress: bool = True, **kwargs) -> De
     from `PyTorch Hub 2D version
     <https://github.com/pytorch/vision/blob/master/torchvision/models/densenet.py>`_
     """
-    model = DenseNet(init_features=64, growth_rate=32, block_config=(6, 12, 24, 16), **kwargs)
+    model = DenseNet(block_config=(6, 12, 24, 16), **kwargs)
     if pretrained:
         arch = "densenet121"
         _load_state_dict(model, model_urls[arch], progress)
@@ -243,7 +247,7 @@ def densenet169(pretrained: bool = False, progress: bool = True, **kwargs) -> De
     from `PyTorch Hub 2D version
     <https://github.com/pytorch/vision/blob/master/torchvision/models/densenet.py>`_
     """
-    model = DenseNet(init_features=64, growth_rate=32, block_config=(6, 12, 32, 32), **kwargs)
+    model = DenseNet(block_config=(6, 12, 32, 32), **kwargs)
     if pretrained:
         arch = "densenet169"
         _load_state_dict(model, model_urls[arch], progress)
@@ -256,7 +260,7 @@ def densenet201(pretrained: bool = False, progress: bool = True, **kwargs) -> De
     from `PyTorch Hub 2D version
     <https://github.com/pytorch/vision/blob/master/torchvision/models/densenet.py>`_
     """
-    model = DenseNet(init_features=64, growth_rate=32, block_config=(6, 12, 48, 32), **kwargs)
+    model = DenseNet(block_config=(6, 12, 48, 32), **kwargs)
     if pretrained:
         arch = "densenet201"
         _load_state_dict(model, model_urls[arch], progress)
@@ -264,7 +268,7 @@ def densenet201(pretrained: bool = False, progress: bool = True, **kwargs) -> De
 
 
 def densenet264(pretrained: bool = False, progress: bool = True, **kwargs) -> DenseNet:
-    model = DenseNet(init_features=64, growth_rate=32, block_config=(6, 12, 64, 48), **kwargs)
+    model = DenseNet(block_config=(6, 12, 64, 48), **kwargs)
     if pretrained:
         print("Currently PyTorch Hub does not provide densenet264 pretrained models.")
     return model
