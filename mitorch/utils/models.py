@@ -39,3 +39,17 @@ def pad_if_necessary_all(x_list, x_b):
         x_list[i], x_b = pad_if_necessary(x, x_b)
 
     return x_list, x_b
+
+
+def is_3d(size, is_3d_flag, lb=1):
+    if isinstance(size, (tuple, list)):
+        assert len(size) == 3, 'expects 3D iterables'
+        return (
+            is_3d(size[0], is_3d_flag, lb=lb),
+            size[1],
+            size[2],
+        )
+    elif isinstance(size, (int, float)):
+        return size if is_3d_flag else lb
+    else:
+        raise NotImplementedError

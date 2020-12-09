@@ -15,23 +15,11 @@ from utils.MONAI_networks import (
             densenet264,
 )
 from .Unet3D import pad_if_necessary, ParamUpSamplingBlock, LocalizationBlock
+from utils.MONAI_networks.utils import MarkerLayer
+from utils.models import is_3d
 
 
 IS_3D = True
-
-
-def is_3d(size, lb=1):
-    if isinstance(size, (tuple, list)):
-        assert len(size) == 3, 'expects 3D iterables'
-        return (
-            is_3d(size[0], lb=lb),
-            size[1],
-            size[2],
-        )
-    elif isinstance(size, (int, float)):
-        return size if IS_3D else lb
-    else:
-        raise NotImplementedError
 
 
 class Encoder(nn.Module):
@@ -69,7 +57,7 @@ class Encoder(nn.Module):
         output_list = list()
         for name, module in self.net.features._modules.items():
             x = module(x)
-            if name in ('norm5', 'pool0') or name.startswith('transition'):
+            if isinstance(module, MarkerLayer):
                 output_list.append(x)
         return output_list
 
@@ -138,16 +126,16 @@ class SegHead(nn.Module):
             in_channels = self.block_features[beg_ind+i]
             self.add_module(
                 self.get_layer_name(i, 'conv'),
-                nn.Conv3d(in_channels, self.cfg.MODEL.NUM_CLASSES, kernel_size=is_3d((1, 1, 1))),
+                nn.Conv3d(in_channels, self.cfg.MODEL.NUM_CLASSES, kernel_size=is_3d((1, 1, 1), IS_3D)),
             )
             self.add_module(
                 self.get_layer_name(i, 'upsam'),
-                nn.Upsample(scale_factor=is_3d((2, 2, 2)), mode='trilinear', align_corners=False),
+                nn.Upsample(scale_factor=is_3d((2, 2, 2), IS_3D), mode='trilinear', align_corners=False),
             )
 
         self.add_module(
             'upsam_final',
-            nn.Upsample(scale_factor=is_3d((2, 2, 2)), mode='trilinear', align_corners=False),
+            nn.Upsample(scale_factor=is_3d((2, 2, 2), IS_3D), mode='trilinear', align_corners=False),
         )
 
     def forward(self, x_input):

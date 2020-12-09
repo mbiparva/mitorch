@@ -232,3 +232,11 @@ def pixelshuffle(x: torch.Tensor, dimensions: int, scale_factor: int) -> torch.T
     x = x.reshape(batch_size, org_channels, *([factor] * dim + input_size[2:]))
     x = x.permute(permute_indices).reshape(output_size)
     return x
+
+
+class MarkerLayer(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return x

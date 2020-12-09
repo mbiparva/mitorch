@@ -13,6 +13,7 @@ import torch.nn.functional as F
 from .convutils import same_padding
 from .factories import Conv, Dropout, Norm
 from ..MONAI_data import Enum
+from .utils import MarkerLayer
 
 
 class ChannelMatching(Enum):
@@ -53,7 +54,12 @@ SUPPORTED_NORM = {
     Normalisation.BATCH: lambda spatial_dims: Norm[Norm.BATCH, spatial_dims],
     Normalisation.INSTANCE: lambda spatial_dims: Norm[Norm.INSTANCE, spatial_dims],
 }
-SUPPORTED_ACTI = {Activation.RELU: nn.ReLU, Activation.PRELU: nn.PReLU, Activation.RELU6: nn.ReLU6}
+SUPPORTED_ACTI = {
+    Activation.RELU: nn.ReLU,
+    Activation.PRELU: nn.PReLU,
+    Activation.RELU6: nn.ReLU6
+}
+
 DEFAULT_LAYER_PARAMS_3D = (
     # initial conv layer
     {"name": "conv_0", "n_features": 16, "kernel_size": 3},
@@ -207,14 +213,6 @@ class HighResBlock(nn.Module):
         return x_conv + x
 
 
-class MarkerLayer(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, x):
-        return x
-
-
 class HighResNet(nn.Module):
     """
     Reimplementation of highres3dnet based on
@@ -251,6 +249,7 @@ class HighResNet(nn.Module):
 
         super(HighResNet, self).__init__()
         blocks = nn.ModuleList()
+        self.block_features = list()
 
         # initial conv layer
         params = layer_params[0]
@@ -285,9 +284,7 @@ class HighResNet(nn.Module):
                 )
                 _in_chns = _out_chns
 
-            blocks.append(
-                MarkerLayer()  # this helps to save lateral connections for the decoder
-            )
+            self.marker_functor(_in_chns, blocks)
 
         # final conv layers
         params = layer_params[-2]
@@ -304,9 +301,7 @@ class HighResNet(nn.Module):
             )
         )
 
-        blocks.append(
-            MarkerLayer()  # this helps to save lateral connections for the decoder
-        )
+        self.marker_functor(_out_chns, blocks)
 
         params = layer_params[-1]
         _in_chns = _out_chns
@@ -323,6 +318,11 @@ class HighResNet(nn.Module):
         )
 
         self.blocks = nn.Sequential(*blocks)
+
+    def marker_functor(self, out_channels, blocks):
+        self.block_features.append(out_channels)
+
+        blocks.append(MarkerLayer())
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return torch.as_tensor(self.blocks(x))

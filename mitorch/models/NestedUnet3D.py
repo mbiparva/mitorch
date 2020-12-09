@@ -7,8 +7,8 @@
 import torch
 import torch.nn as nn
 from .build import MODEL_REGISTRY
-from utils.models import pad_if_necessary_all
-from models.Unet3D import Unet3D, Encoder as Unet3DEncoder, ParamUpSamplingBlock, LocalizationBlock, is_3d
+from utils.models import pad_if_necessary_all, is_3d
+from models.Unet3D import Unet3D, Encoder as Unet3DEncoder, ParamUpSamplingBlock, LocalizationBlock
 
 
 IS_3D = True
@@ -155,7 +155,7 @@ class SegHead(nn.Module):
         for j in range(self.lower_bound, self.cfg.MODEL.ENCO_DEPTH):
             self.add_module(
                 self.get_layer_name(j, 'conv'),
-                nn.Conv3d(in_channels, self.cfg.MODEL.NUM_CLASSES, kernel_size=is_3d((1, 1, 1))),
+                nn.Conv3d(in_channels, self.cfg.MODEL.NUM_CLASSES, kernel_size=is_3d((1, 1, 1), IS_3D)),
             )
 
     def forward(self, x_input):

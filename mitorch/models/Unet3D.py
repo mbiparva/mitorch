@@ -10,27 +10,13 @@ import torch
 import torch.nn as nn
 from .build import MODEL_REGISTRY
 from models.NetABC import NetABC
-from utils.models import pad_if_necessary
+from utils.models import pad_if_necessary, is_3d
 try:
     from torch.cuda.amp import autocast
 except ImportError:
     pass
 
 IS_3D = True
-
-
-def is_3d(size, lb=1):
-    if isinstance(size, (tuple, list)):
-        assert len(size) == 3, 'expects 3D iterables'
-        return (
-            is_3d(size[0], lb=lb),
-            size[1],
-            size[2],
-        )
-    elif isinstance(size, (int, float)):
-        return size if IS_3D else lb
-    else:
-        raise NotImplementedError
 
 
 class BasicBlock(nn.Sequential):
@@ -48,8 +34,8 @@ class BasicBlock(nn.Sequential):
     def _create_convolution(in_channels, out_channels, kernel_size, stride, dilation):
         padding = tuple((torch.tensor(dilation) * (torch.tensor(kernel_size) // 2)).tolist())  # does the same
         return nn.Conv3d(
-            in_channels, out_channels, kernel_size=is_3d(kernel_size), stride=is_3d(stride),
-            padding=is_3d(padding, lb=0), dilation=is_3d(dilation), groups=1, bias=False
+            in_channels, out_channels, kernel_size=is_3d(kernel_size, IS_3D), stride=is_3d(stride, IS_3D),
+            padding=is_3d(padding, IS_3D, lb=0), dilation=is_3d(dilation, IS_3D), groups=1, bias=False
         )  # TODO check bias=True, most nets use False though because of BN
 
     @staticmethod
@@ -91,7 +77,7 @@ class ContextBlock(nn.Sequential):
 class ParamUpSamplingBlock(nn.Sequential):
     def __init__(self, in_channels, out_channels, scale_factor=(2, 2, 2)):
         super().__init__(
-            nn.Upsample(scale_factor=is_3d(scale_factor), mode='trilinear', align_corners=False),
+            nn.Upsample(scale_factor=is_3d(scale_factor, IS_3D), mode='trilinear', align_corners=False),
             BasicBlock(in_channels, out_channels),
         )
 
@@ -218,12 +204,12 @@ class SegHead(nn.Module):
             in_channels = self.cfg.MODEL.N_BASE_FILTERS * 2 ** i_r
             self.add_module(
                 self.get_layer_name(i, 'conv'),
-                nn.Conv3d(in_channels, self.cfg.MODEL.NUM_CLASSES, kernel_size=is_3d((1, 1, 1))),
+                nn.Conv3d(in_channels, self.cfg.MODEL.NUM_CLASSES, kernel_size=is_3d((1, 1, 1), IS_3D)),
             )
             if not i == self.num_pred_levels - 1:
                 self.add_module(
                     self.get_layer_name(i, 'upsam'),
-                    nn.Upsample(scale_factor=is_3d((2, 2, 2)), mode='trilinear', align_corners=False),
+                    nn.Upsample(scale_factor=is_3d((2, 2, 2), IS_3D), mode='trilinear', align_corners=False),
                 )
 
     def forward(self, x_input):

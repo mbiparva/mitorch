@@ -13,6 +13,7 @@ import torch.nn as nn
 from torch.hub import load_state_dict_from_url
 
 from .factories import Conv, Dropout, Norm, Pool
+from .utils import MarkerLayer
 
 
 class _DenseLayer(nn.Module):
@@ -137,7 +138,7 @@ class DenseNet(nn.Module):
 
         self.features = nn.Sequential(
             OrderedDict(
-                [
+                [   # conv stride officially was 2 changed to 1 for neuron segmentation
                     ("conv0", conv_type(in_channels, init_features, kernel_size=7, stride=1, padding=3, bias=False)),
                     ("norm0", norm_type(init_features)),
                     ("relu0", nn.ReLU(inplace=True)),
@@ -147,7 +148,7 @@ class DenseNet(nn.Module):
         )
 
         in_channels = init_features
-        self.block_features.append(in_channels)
+        self.marker_functor('marker0', in_channels)
         for i, num_layers in enumerate(block_config):
             block = _DenseBlock(
                 spatial_dims=spatial_dims,
@@ -166,7 +167,7 @@ class DenseNet(nn.Module):
                 trans = _Transition(spatial_dims, in_channels=in_channels, out_channels=_out_channels)
                 self.features.add_module(f"transition{i + 1}", trans)
                 in_channels = _out_channels
-            self.block_features.append(in_channels)
+            self.marker_functor(f'marker{i + 1}', in_channels)
 
         # pooling and classification
         self.class_layers = nn.Sequential(
@@ -188,6 +189,11 @@ class DenseNet(nn.Module):
                 nn.init.constant_(torch.as_tensor(m.bias), 0)
             elif isinstance(m, nn.Linear):
                 nn.init.constant_(torch.as_tensor(m.bias), 0)
+
+    def marker_functor(self, identifier, out_channels):
+        self.block_features.append(out_channels)
+
+        self.features.add_module(identifier, MarkerLayer())
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.features(x)
