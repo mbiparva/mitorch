@@ -127,7 +127,11 @@ class DynUNet(nn.Module):
             start_output_idx = len(upsample_outs) - 1 - self.deep_supr_num
             upsample_outs = upsample_outs[start_output_idx:-1][::-1]
             preds = [self.deep_supervision_heads[i](out) for i, out in enumerate(upsample_outs)]
-            return [out] + preds
+            preds = [out] + preds
+
+            # Up-sampling outputs to match the input spatial sitze
+            stride_outs = torch.cumprod(torch.tensor(self.strides), 0)
+            out = [nn.Upsample(scale_factor=stride_outs[i])(out) for i, out in enumerate(preds)]
 
         return out
 

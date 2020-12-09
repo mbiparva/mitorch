@@ -27,13 +27,12 @@ class DYNUnet3D(NetABC):
             spatial_dims=3,
             in_channels=self.cfg.MODEL.INPUT_CHANNELS,
             out_channels=self.cfg.MODEL.NUM_CLASSES,
-            channels=(32, 32, 64, 128, 256),
-            kernel_size=3,
-            strides=2,
-            upsample_kernel_size=3,
-            norm="instance",
+            kernel_size=(3, 3, 3, 3, 3),
+            strides=(1, 2, 2, 2, 2),
+            upsample_kernel_size=(2, 2, 2, 2, 2),
+            norm_name="instance",
             deep_supervision=True,
-            deep_supr_num=1,
+            deep_supr_num=2,
             res_block=True,
         )
 
