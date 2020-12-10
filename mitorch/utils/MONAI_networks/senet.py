@@ -81,6 +81,7 @@ class SENet(nn.Module):
     ) -> None:
 
         super(SENet, self).__init__()
+        self.block_features = [inplanes, 128*2**1, 128*2**2, 128*2**3, 128*2**4]
 
         relu_type: Type[nn.ReLU] = Act[Act.RELU]
         conv_type: Type[Union[nn.Conv1d, nn.Conv2d, nn.Conv3d]] = Conv[Conv.CONV, spatial_dims]
