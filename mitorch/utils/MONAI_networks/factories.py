@@ -252,14 +252,14 @@ Act.add_factory_callable("logsoftmax", lambda: nn.modules.LogSoftmax)
 
 @Act.factory_function("swish")
 def swish_factory():
-    from monai.networks.blocks.activation import Swish
+    from .activation import Swish
 
     return Swish
 
 
 @Act.factory_function("mish")
 def mish_factory():
-    from monai.networks.blocks.activation import Mish
+    from .activation import Mish
 
     return Mish
 

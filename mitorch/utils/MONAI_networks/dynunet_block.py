@@ -180,13 +180,14 @@ class UnetUpBlock(nn.Module):
         norm_name: str,
     ):
         super(UnetUpBlock, self).__init__()
-        upsample_stride = upsample_kernel_size
+        # upsample_stride = upsample_kernel_size  # TODO Is this a bug or mentioned like so in the official imp?
         self.transp_conv = get_conv_layer(
             spatial_dims,
             in_channels,
             out_channels,
             kernel_size=upsample_kernel_size,
-            stride=upsample_stride,
+            # stride=upsample_stride,  # Fixed this consequently
+            stride=stride,
             conv_only=True,
             is_transposed=True,
         )
@@ -253,6 +254,8 @@ def get_conv_layer(
     output_padding = None
     if is_transposed:
         output_padding = get_output_padding(kernel_size, stride, padding)
+        if stride == 1:  # This throws an error I manage to fix it like so
+            is_transposed = False
     return Convolution(
         spatial_dims,
         in_channels,

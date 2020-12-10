@@ -29,7 +29,7 @@ class DYNUnet3D(NetABC):
             out_channels=self.cfg.MODEL.NUM_CLASSES,
             kernel_size=(3, 3, 3, 3, 3),
             strides=(1, 2, 2, 2, 2),
-            upsample_kernel_size=(2, 2, 2, 2, 2),
+            upsample_kernel_size=(2, 2, 2, 2),  # one size less than kernel size tuple
             norm_name="instance",
             deep_supervision=True,
             deep_supr_num=2,
