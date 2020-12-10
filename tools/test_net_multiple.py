@@ -127,7 +127,7 @@ def test_single_exp(cfg, exp):
 
         transformations = create_transformations(cfg, exp_current)
 
-        output_single = test_single(cfg, transformations=transformations, save_pred_flag=False, eval_pred_flag=True)
+        output_single = test_single(cfg, transformations=transformations, save_pred_flag=True, eval_pred_flag=True)
 
         output_single.update(exp_description)
 

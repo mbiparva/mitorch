@@ -88,7 +88,8 @@ def eval_pred(p, a, meters, cfg):
 
 
 def reset_cfg_init(cfg):
-    os.rmdir(cfg.OUTPUT_DIR)  # the old one is useless, we create a new one instead
+    if not len(os.listdir(cfg.OUTPUT_DIR)):
+        os.rmdir(cfg.OUTPUT_DIR)  # the old one is useless, we create a new one instead
     cfg = init_cfg(cfg)
 
     return cfg
