@@ -32,7 +32,7 @@ class Encoder(nn.Module):
 
     def _create_net(self):
         # TODO add them to net cfg settings for hpo
-        _net_sel = 0
+        _net_sel = 3
         _net_caller = (
             senet154,
             se_resnet50,
