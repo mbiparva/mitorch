@@ -112,7 +112,7 @@ class ConvNormActi(nn.Module):
             layers.append(SUPPORTED_NORM[norm_type](spatial_dims)(out_channels))
         if acti_type is not None:
             acti_type = Activation(acti_type)
-            layers.append(SUPPORTED_ACTI[acti_type](inplace=True))
+            layers.append(SUPPORTED_ACTI[acti_type]())
         if dropout_prob is not None:
             dropout_type = Dropout[Dropout.DROPOUT, spatial_dims]
             layers.append(dropout_type(p=dropout_prob))
@@ -191,7 +191,7 @@ class HighResBlock(nn.Module):
 
         for kernel_size in kernels:
             layers.append(SUPPORTED_NORM[norm_type](spatial_dims)(_in_chns))
-            layers.append(SUPPORTED_ACTI[acti_type](inplace=True))
+            layers.append(SUPPORTED_ACTI[acti_type]())
             layers.append(
                 conv_type(
                     _in_chns, _out_chns, kernel_size, padding=same_padding(kernel_size, dilation), dilation=dilation

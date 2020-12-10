@@ -31,8 +31,8 @@ class Encoder(nn.Module):
             spatial_dims=3,
             in_channels=self.cfg.MODEL.INPUT_CHANNELS,
             out_channels=self.cfg.MODEL.NUM_CLASSES,
-            norm_type=Normalisation.BATCH,
-            acti_type=Activation.RELU,
+            norm_type=Normalisation.INSTANCE,
+            acti_type=Activation.PRELU,
             dropout_prob=self.cfg.MODEL.DROPOUT_RATE,
             layer_params=DEFAULT_LAYER_PARAMS_3D,
         )
