@@ -168,9 +168,6 @@ class SegHead(nn.Module):
 
             x.append(x_j)
 
-        if self.cfg.MODEL.LOSS_FUNC in ('DiceLoss', 'WeightedHausdorffLoss', 'FocalLoss'):
-            x = [nn.Sigmoid()(i) for i in x]
-
         return x
 
 

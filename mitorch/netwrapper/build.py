@@ -8,7 +8,7 @@
 #  Implemented by Mahdi Biparva, April 2021
 #  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
-import torch
+import torch.nn as nn
 from fvcore.common.registry import Registry
 
 LOSS_REGISTRY = Registry("LOSS")
@@ -18,6 +18,14 @@ Registry for loss modules.
 The registered object will be called with `obj(cfg)`.
 The call should return a `torch.nn.Module` object.
 """
+
+
+class LossWithLogits(nn.Sequential):
+    def __init__(self, loss) -> None:
+        super().__init__(
+            nn.Softmax(),
+            loss
+        )
 
 
 # noinspection PyCallingNonCallable
@@ -38,11 +46,16 @@ def build_loss(cfg, name=None):
         }
     elif name == 'FocalLoss':
         loss_params = {
-            'alpha': 1.0,
+            'alpha': 0.25,
             'gamma': 2.0,
             'reduction': 'mean',
         }
     else:
         loss_params = dict()
+
     loss = LOSS_REGISTRY.get(name)(ignore_index=ignore_index, **loss_params)
+
+    if cfg.MODEL.LOSS_WITH_LOGITS:
+        loss = LossWithLogits(loss)
+
     return loss

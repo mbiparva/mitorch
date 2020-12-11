@@ -117,6 +117,9 @@ _C.TRAIN.AUTO_RESUME = True
 # Path to the checkpoint to load the initial weight.
 _C.TRAIN.CHECKPOINT_FILE_PATH = ""
 
+# binarization threshold used for performance evaluation
+_C.TRAIN.BINARIZE_THRESHOLD = 0.50
+
 
 # ---------------------------------------------------------------------------- #
 # Validation options
@@ -182,8 +185,6 @@ _C.TEST.BATCH_MODE = (False, True)[0]
 
 _C.TEST.BINARIZE_THRESHOLD = 0.55
 
-_C.TEST.BINARIZE_THRESHOLD = 0.55
-
 # whether to run the set of robustness experiments
 _C.TEST.ROBUST_EXP = (False, True)[0]
 
@@ -217,6 +218,12 @@ _C.MODEL.PROCESSING_MODE = ('2d', '3d')[1]
 
 # Loss function.
 _C.MODEL.LOSS_FUNC = ('CrossEntropyLoss', 'DiceLoss', 'WeightedHausdorffLoss', 'FocalLoss', 'LovaszLoss')[1]
+
+# Loss functions that would need logits separately.
+_C.MODEL.LOSS_FUNC_WITH_LOGITS = ('DiceLoss', 'WeightedHausdorffLoss')
+
+# Loss with logits
+_C.MODEL.LOSS_WITH_LOGITS = (False, True)[1]
 
 # The number of classes to predict for the model.
 _C.MODEL.NUM_CLASSES = 2 if _C.MODEL.LOSS_FUNC == 'CrossEntropyLoss' else 1
@@ -547,6 +554,8 @@ def init_dependencies(cfg):
         cfg.MODEL.NUM_CLASSES = 1
 
     cfg.HPSF.ENABLE = cfg.TRAIN.DATASET in ('HPSubfield',)
+
+    cfg.MODEL.LOSS_WITH_LOGITS = cfg.MODEL.LOSS_FUNC in cfg.MODEL.LOSS_FUNC_WITH_LOGITS and cfg.MODEL.LOSS_WITH_LOGITS
 
     return cfg
 

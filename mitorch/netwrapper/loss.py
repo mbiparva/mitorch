@@ -16,7 +16,7 @@ from torch import nn
 from scipy.spatial.distance import cdist
 from sklearn.metrics.pairwise import pairwise_distances
 import torch.nn.functional as F
-from .functional import focal_loss
+from .functional import focal_loss_kornia, focal_loss_torchvision
 
 
 __all__ = [
@@ -367,11 +367,26 @@ class FocalLossKornia(nn.Module):
             self,
             input: torch.Tensor,
             target: torch.Tensor) -> torch.Tensor:
-        return focal_loss(input, target, self.alpha, self.gamma, self.reduction, self.eps)
+        return focal_loss_kornia(input, target, self.alpha, self.gamma, self.reduction, self.eps)
+
+
+class FocalLossTorchvision(nn.Module):
+    def __init__(self, alpha: float = 0.25, gamma: float = 2.0,
+                 reduction: str = 'none') -> None:
+        super().__init__()
+        self.alpha: float = alpha
+        self.gamma: float = gamma
+        self.reduction: str = reduction
+
+    def forward(  # type: ignore
+            self,
+            input: torch.Tensor,
+            target: torch.Tensor) -> torch.Tensor:
+        return focal_loss_torchvision(input, target, self.alpha, self.gamma, self.reduction)
 
 
 @LOSS_REGISTRY.register()
-class FocalLoss(FocalLossKornia):
+class FocalLoss(FocalLossTorchvision):  # FocalLossKornia
     def __init__(self, ignore_index=None, **kwargs):
         self.ignore_index = ignore_index
         super().__init__(**kwargs)

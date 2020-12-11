@@ -150,9 +150,6 @@ class SegHead(nn.Module):
 
         x = getattr(self, 'upsam_final')(x)
 
-        if self.cfg.MODEL.LOSS_FUNC in ('DiceLoss', 'WeightedHausdorffLoss', 'FocalLoss'):
-            x = nn.Sigmoid()(x)
-
         return x
 
 

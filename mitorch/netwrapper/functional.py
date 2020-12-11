@@ -176,9 +176,9 @@ def hausdorff_distance(input, target, ignore_index=-100, reduction='mean'):
     }[reduction]
 
 
-# modified from Kornia
+# modified from Kornia multi-class to
 # https://github.com/kornia/kornia/blob/master/kornia/losses/focal.py
-def focal_loss(
+def focal_loss_kornia(
         input: torch.Tensor,
         target: torch.Tensor,
         alpha: float,
@@ -212,28 +212,14 @@ def focal_loss(
             "input and target must be in the same device. Got: {} and {}" .format(
                 input.device, target.device))
 
-    # compute softmax over the classes axis
-    # input_soft: torch.Tensor = F.softmax(input, dim=1) + eps
-    # input = input + eps  # input is already passed to Sigmoid. It is binary classification
-    input = input.squeeze(dim=1)
-
-    # create the labels one hot tensor
-    # target_one_hot: torch.Tensor = one_hot(
-    #     target, num_classes=input.shape[1],
-    #     device=input.device, dtype=input.dtype)
-    # target_one_hot = target.unsqueeze(dim=1)  # target is already one-hot since it is a binary classification problem
-
-    # loss = target_one_hot * torch.log(input_soft)
-    loss = nn.BCELoss(reduction='none')(input, target)
-    # loss = F.binary_cross_entropy(input, target, reduction='none')
+    # compute sigmoid
+    input_soft: torch.Tensor = F.sigmoid(input) + eps
+    input_soft = input_soft.squeeze(dim=1)
 
     # compute the actual focal loss
-    weight = torch.pow(-input + 1., gamma)
-    focal = alpha * weight
+    weight = torch.pow(-input_soft + 1., gamma)
 
-    floss = focal * loss
-
-    # floss = torch.sum(floss, dim=1)
+    floss = -alpha * weight * torch.log(input_soft)
 
     if reduction == 'none':
         pass
@@ -245,6 +231,58 @@ def focal_loss(
         raise NotImplementedError("Invalid reduction mode: {}"
                                   .format(reduction))
     return floss
+
+
+# modified from torchvision 0.8.2
+# https://github.com/pytorch/vision/blob/v0.8.2/torchvision/ops/focal_loss.py
+def focal_loss_torchvision(
+        inputs: torch.Tensor,
+        targets: torch.Tensor,
+        alpha: float = 0.25,
+        gamma: float = 2,
+        reduction: str = "none",
+):
+    """
+    Original implementation from https://github.com/facebookresearch/fvcore/blob/master/fvcore/nn/focal_loss.py .
+    Loss used in RetinaNet for dense detection: https://arxiv.org/abs/1708.02002.
+    Arguments:
+        inputs: A float tensor of arbitrary shape.
+                The predictions for each example.
+        targets: A float tensor with the same shape as inputs. Stores the binary
+                classification label for each element in inputs
+                (0 for the negative class and 1 for the positive class).
+        alpha: (optional) Weighting factor in range (0,1) to balance
+                positive vs negative examples or -1 for ignore. Default = 0.25
+        gamma: Exponent of the modulating factor (1 - p_t) to
+               balance easy vs hard examples.
+        reduction: 'none' | 'mean' | 'sum'
+                 'none': No reduction will be applied to the output.
+                 'mean': The output will be averaged.
+                 'sum': The output will be summed.
+    Returns:
+        Loss tensor with the reduction option applied.
+    """
+    p = torch.sigmoid(inputs)
+    ce_loss = F.binary_cross_entropy_with_logits(
+        inputs, targets, reduction="none"
+    )
+    p_t = p * targets + (1 - p) * (1 - targets)
+    loss = ce_loss * ((1 - p_t) ** gamma)
+
+    if alpha >= 0:
+        alpha_t = alpha * targets + (1 - alpha) * (1 - targets)
+        loss = alpha_t * loss
+
+    if reduction == 'none':
+        pass
+    elif reduction == 'mean':
+        loss = torch.mean(loss)
+    elif reduction == 'sum':
+        loss = torch.sum(loss)
+    else:
+        raise NotImplementedError("Invalid reduction mode: {}"
+                                  .format(reduction))
+    return loss
 
 
 def rvd(

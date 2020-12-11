@@ -4,6 +4,7 @@
 #  Implemented by Mahdi Biparva, May 2020
 #  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
+import torch.nn as nn
 from .build import MODEL_REGISTRY
 from models.NetABC import NetABC
 from utils.MONAI_networks import BasicUNet
@@ -30,9 +31,10 @@ class MBUnet3D(NetABC):
             act=("LeakyReLU", {"negative_slope": 0.1, "inplace": True}),
             norm=("instance", {"affine": True}),
             dropout=self.cfg.MODEL.DROPOUT_RATE,
-            upsample=("deconv", "nontrainable")[0],
+            upsample=("deconv", "nontrainable")[1],
         )
 
     def forward_core(self, x):
         x = self.EncoDecoSeg(x)
+
         return x

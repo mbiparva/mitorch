@@ -4,6 +4,7 @@
 #  Implemented by Mahdi Biparva, May 2020
 #  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
+import torch.nn as nn
 from .build import MODEL_REGISTRY
 from models.NetABC import NetABC
 from utils.MONAI_networks import UNet
@@ -39,4 +40,5 @@ class MUnet3D(NetABC):
 
     def forward_core(self, x):
         x = self.EncoDecoSeg(x)
+
         return x

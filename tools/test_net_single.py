@@ -24,6 +24,7 @@ from datetime import datetime
 import logging
 import pandas as pd
 import utils.metrics as metrics
+from .batch_abc import post_proc_pred
 
 
 def setup_logger():
@@ -192,6 +193,8 @@ def test_loop(cfg, test_loader, device, net_wrapper, save_pred_flag, eval_pred_f
             pred, annot, image = net_wrapper.forward((image, annot), return_input=True)
         else:
             pred = net_wrapper.forward(image)
+
+        pred, annot = post_proc_pred(pred, annot, cfg)
 
         # (B) Threshold prediction
         pred = binarize_pred(pred, binarize_threshold=cfg.TEST.BINARIZE_THRESHOLD)

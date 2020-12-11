@@ -17,6 +17,33 @@ from utils.meters import TVTMeter
 import utils.metrics as metrics
 
 
+def cel_prep(p, a):
+    p = p.softmax(dim=1)
+    p = p[:, 1, ...]
+    p = p.unsqueeze(dim=1)
+    a = a.unsqueeze(dim=1)
+    a = a.float()
+
+    return p, a
+
+
+def post_proc_pred(p, a, cfg):
+    if isinstance(p, (tuple, list)):  # Deep_supervision returns outputs at multiple levels
+        p = torch.mean(torch.stack(p), dim=0)
+
+    if cfg.AMP and p.dtype is torch.float16:  # dice has one sum that hit inf
+        p = p.to(dtype=torch.float32)
+        a = a.to(dtype=torch.float32)
+
+    if cfg.MODEL.LOSS_FUNC == 'CrossEntropyLoss':
+        p, a = cel_prep(p, a)
+
+    if cfg.MODEL.LOSS_WITH_LOGITS or cfg.MODEL.LOSS_FUNC == 'FocalLoss':
+        p = p.sigmoid()
+
+    return p, a
+
+
 class BatchBase(ABC):
     modes = ('train', 'valid', 'test')
 
@@ -66,16 +93,6 @@ class BatchBase(ABC):
         return annotation
 
     @staticmethod
-    def cel_prep(p, a):
-        p = p.softmax(dim=1)
-        p = p[:, 1, ...]
-        p = p.unsqueeze(dim=1)
-        a = a.unsqueeze(dim=1)
-        a = a.float()
-
-        return p, a
-
-    @staticmethod
     def binarize(p, binarize_threshold):
         prediction_mask = p.ge(binarize_threshold)
         p = p.masked_fill(prediction_mask, 1)
@@ -103,24 +120,13 @@ class BatchBase(ABC):
             meters[k] = v
 
     def evaluate(self, p, a, meters):
-        BINARIZE_THRESHOLD = 0.5
+        p, a = post_proc_pred(p, a, self.cfg)
 
-        if isinstance(p, (tuple, list)):  # Deep_supervision returns outputs at multiple levels
-            p = torch.mean(torch.stack(p), dim=0)
-
-        if self.cfg.AMP and p.dtype is torch.float16:  # dice has one sum that hit inf
-            p = p.to(dtype=torch.float32)
-            a = a.to(dtype=torch.float32)
-
-        if self.cfg.MODEL.LOSS_FUNC == 'CrossEntropyLoss':
-            p, a = self.cel_prep(p, a)
-
-        p = self.binarize(p, binarize_threshold=BINARIZE_THRESHOLD)
+        p = self.binarize(p, binarize_threshold=self.cfg.TRAIN.BINARIZE_THRESHOLD)
 
         for m in self.cfg.PROJECT.METERS:
             if m == 'loss':
                 continue
-
             metric_function = getattr(metrics, f'{m}_metric')
             meters[m] = metric_function(p, a, ignore_index=self.cfg.MODEL.IGNORE_INDEX)
 

@@ -121,9 +121,6 @@ class SegHead(nn.Module):
                 x, x_b = pad_if_necessary(x, x_b)
             x = x + x_b
 
-        if self.cfg.MODEL.LOSS_FUNC in ('DiceLoss', 'WeightedHausdorffLoss', 'FocalLoss'):
-            x = nn.Sigmoid()(x)
-
         return x
 
 
