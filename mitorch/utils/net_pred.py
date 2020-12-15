@@ -26,7 +26,7 @@ def post_proc_pred(p, a, cfg):
         p = [cel_prep(i) for i in p]
         a = a.unsqueeze(dim=1).float()
 
-    if cfg.MODEL.LOSS_WITH_LOGITS or cfg.MODEL.LOSSES[0]['name'] == 'FocalLoss':
+    if cfg.MODEL.LOSSES[0]['with_logits'] or cfg.MODEL.LOSSES[0]['name'] == 'FocalLoss':
         p = [i.sigmoid() for i in p]
 
     p = torch.mean(torch.stack(p), dim=0)
