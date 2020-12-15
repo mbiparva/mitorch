@@ -24,6 +24,7 @@ from config.defaults import init_cfg
 from netwrapper.net_wrapper import NetWrapperHFB, NetWrapperWMH
 from datetime import datetime
 import logging
+import pandas as pd
 
 
 def setup_logger():
@@ -217,9 +218,14 @@ def get_output_results(meters_test_set, eval_pred_flag):
     output_results = dict()
     if eval_pred_flag:
         logger.info('Evaluation results on the test set is ---')
-        for k in meters_test_set[0].keys():
-            output_results[k] = np.array([i[k] for i in meters_test_set]).mean()
-            logger.info(f'{k}: {output_results[k]}')
+        meters_test_set = pd.DataFrame(meters_test_set)
+        meters_mean = meters_test_set.mean()
+        meters_std = meters_test_set.std()
+        for k in meters_test_set.columns:
+            output_results[f'{k}_mean'] = meters_mean[k]
+            output_results[f'{k}_std'] = meters_std[k]
+
+        logger.info(output_results)
 
     return output_results
 
