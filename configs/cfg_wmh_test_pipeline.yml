@@ -16,6 +16,11 @@ TEST:
   CHECKPOINT_FILE_PATH: ''
   DATA_PATH: ''
   ROBUST_EXP: true
+  EVAL_METRICS:
+    - 'dice_coefficient'
+    - 'jaccard_index'
+    - 'hausdorff_distance'
+    - 'rvd'
   ROBUST_EXP_LIST:
     - - t_name: 'noise'
         t_params:

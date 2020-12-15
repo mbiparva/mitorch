@@ -247,6 +247,34 @@ def focal_loss(
     return floss
 
 
+def rvd(
+        input: torch.Tensor,
+        target: torch.Tensor,
+        ignore_index: int) -> torch.tensor:
+    """
+    This function implements Relative Volume Distance metric. Possible values are [-1, +inf].
+    It assumes the input and target have 0 and 1 values reminiscent of binary tensors.
+    Args:
+        ignore_index: the value to ignore applying the metric on
+        input: input tensor predicted by the model
+        target: target tensor provided as the ground truth
+
+    Returns: metric value
+
+    """
+    assert input.size() == target.size(), 'input size and target size do not match'
+
+    apply_ignore_index(input, target, ignore_index, fill_value=0)
+
+    input_volume = input.sum()
+    target_volume = target.sum()
+
+    if not target_volume:
+        raise RuntimeError('The target tensor does not contain any binary object.')
+
+    return (input_volume - target_volume) / float(target_volume)
+
+
 if __name__ == '__main__':
     from PIL import Image
     input_test = Image.open('/home/mbiparva/Downloads/input.jpg')

@@ -8,7 +8,7 @@
 """Functions for computing metrics."""
 
 import torch
-from netwrapper.functional import dice_coeff, jaccard_index, hausdorff_distance
+from netwrapper.functional import dice_coeff, jaccard_index, hausdorff_distance, rvd
 from sklearn.metrics import f1_score
 # Could be implemented manually or called from another external packages like FastAI
 # Could add metrics of all different sort of tasks e.g. segmentation, detection, classification
@@ -130,3 +130,11 @@ def f1_metric(p, a, ignore_index):
                 average='binary',
                 pos_label=1,
             )
+
+
+def rvd_metric(p, a, ignore_index):
+    return rvd(
+        p,
+        a,
+        ignore_index=ignore_index,
+    ).item()

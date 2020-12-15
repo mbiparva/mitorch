@@ -183,6 +183,7 @@ _C.TEST.ROBUST_EXP = (False, True)[0]
 # if so, loop over the list of experiments each having transformations
 _C.TEST.ROBUST_EXP_LIST = []
 
+_C.TEST.EVAL_METRICS = ['dice_coefficient', 'jaccard_index', 'hausdorff_distance', 'rvd']
 
 # # ---------------------------------------------------------------------------- #
 # # Batch norm options

@@ -16,15 +16,14 @@ import torchvision.transforms as torch_tf
 from data.data_container import ds_worker_init_fn
 from data.VolSet import collate_fn
 from data.TestSetExt import TestSet
-from models.build import build_model
 import utils.checkpoint as checkops
 from data.build import build_dataset
-from utils.metrics import dice_coefficient_metric, jaccard_index_metric, hausdorff_distance_metric
 from config.defaults import init_cfg
 from netwrapper.net_wrapper import NetWrapperHFB, NetWrapperWMH
 from datetime import datetime
 import logging
 import pandas as pd
+import utils.metrics as metrics
 
 
 def setup_logger():
@@ -81,11 +80,10 @@ def save_pred(pred, output_dir, basename, *in_mod):
     nib.save(pred, output_path)
 
 
-# TODO do it in functional or OOP later
 def eval_pred(p, a, meters, cfg):
-    meters['dice_coeff'] = dice_coefficient_metric(p, a, ignore_index=cfg.MODEL.IGNORE_INDEX)
-    meters['jaccard_ind'] = jaccard_index_metric(p, a, ignore_index=cfg.MODEL.IGNORE_INDEX)
-    meters['hausdorff_dist'] = hausdorff_distance_metric(p, a, ignore_index=cfg.MODEL.IGNORE_INDEX)
+    for m in cfg.TEST.EVAL_METRICS:
+        metric_function = getattr(metrics, f'{m}_metric')
+        meters[m] = metric_function(p, a, ignore_index=cfg.MODEL.IGNORE_INDEX)
 
 
 def reset_cfg_init(cfg):
