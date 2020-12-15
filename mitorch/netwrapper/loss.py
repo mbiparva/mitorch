@@ -4,7 +4,7 @@
 #  Implemented by Mahdi Biparva, April 2021
 #  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
-from torch.nn.modules.loss import _Loss, _WeightedLoss, CrossEntropyLoss
+from torch.nn.modules.loss import _Loss, _WeightedLoss
 from netwrapper.functional import dice_coeff, apply_ignore_index
 from .build import LOSS_REGISTRY
 import math
@@ -23,12 +23,14 @@ __all__ = [
     'CrossEntropyLoss',
     'DiceLoss',
     'WeightedHausdorffLoss',
+    'FocalLoss',
     'LovaszLoss',
+    'MSELoss',
 ]
 
 
 @LOSS_REGISTRY.register()
-class CrossEntropyLoss(CrossEntropyLoss):
+class CrossEntropyLoss(nn.CrossEntropyLoss):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -367,6 +369,11 @@ class FocalLossKornia(nn.Module):
             self,
             input: torch.Tensor,
             target: torch.Tensor) -> torch.Tensor:
+
+        B, C = input.shape[:2]
+        input = input.reshape(B, C, -1)
+        target = target.reshape(B, -1)
+
         return focal_loss_kornia(input, target, self.alpha, self.gamma, self.reduction, self.eps)
 
 
@@ -382,11 +389,16 @@ class FocalLossTorchvision(nn.Module):
             self,
             input: torch.Tensor,
             target: torch.Tensor) -> torch.Tensor:
+
+        B, C = input.shape[:2]
+        input = input.reshape(B, C, -1)
+        target = target.reshape(B, C, -1)
+
         return focal_loss_torchvision(input, target, self.alpha, self.gamma, self.reduction)
 
 
 @LOSS_REGISTRY.register()
-class FocalLoss(FocalLossTorchvision):  # FocalLossKornia
+class FocalLoss(FocalLossTorchvision):  # FocalLossKornia is another implementation
     def __init__(self, ignore_index=None, **kwargs):
         self.ignore_index = ignore_index
         super().__init__(**kwargs)
@@ -395,10 +407,6 @@ class FocalLoss(FocalLossTorchvision):  # FocalLossKornia
             self,
             input: torch.Tensor,
             target: torch.Tensor) -> torch.Tensor:
-
-        B, C = input.shape[:2]
-        input = input.reshape(B, C, -1)
-        target = target.reshape(B, -1)
 
         return super().forward(input, target)
 
@@ -538,3 +546,17 @@ class LovaszLoss(_Loss):
             per_image=self.per_image,
             ignore=self.ignore_index
         )
+
+
+@LOSS_REGISTRY.register()
+class MSELoss(nn.MSELoss):
+    FILL_VALUE = 0
+
+    def __init__(self, size_average=None, reduce=None, reduction: str = 'mean', ignore_index=-100, **kwargs) -> None:
+        super().__init__(size_average, reduce, reduction)
+        self.ignore_index = ignore_index
+
+    def forward(self, input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        apply_ignore_index(input, target, self.ignore_index, self.FILL_VALUE)
+
+        return super().forward(input, target)

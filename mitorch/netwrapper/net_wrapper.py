@@ -32,9 +32,7 @@ class NetWrapper(nn.Module):
 
         self._create_net(device)
 
-        self.criterion = self._create_criterion()
-        # self.criterion_aux = self._create_criterion('WeightedHausdorffLoss') if self.cfg.MODEL.LOSS_AUG_WHL else None
-        self.criterion_aux = self._create_criterion('FocalLoss') if self.cfg.MODEL.LOSS_AUG_WHL else None
+        self.criteria = self._create_criterion_multi()
 
         self.optimizer = self._create_optimizer()
 
@@ -46,8 +44,16 @@ class NetWrapper(nn.Module):
         if self.cfg.AMP:
             self.grad_scaler = GradScaler()
 
-    def _create_criterion(self, name=None):
-        return build_loss(self.cfg, name)
+    def _create_criterion(self, name, with_logits):
+        return build_loss(self.cfg, name, with_logits)
+
+    def _create_criterion_multi(self):
+        losses = [
+            (loss['weight'], self._create_criterion(loss['name'], loss['with_logits']))
+            for loss in self.cfg.MODEL.LOSSES
+        ]
+
+        return losses
 
     def _create_optimizer(self):
         return construct_optimizer(self.net_core, self.cfg)
@@ -92,10 +98,8 @@ class NetWrapper(nn.Module):
         loss = torch.tensor([0], dtype=torch.float, device=p[0].device)
         a = [a] * len(p)
         for p_i, a_i in zip(p, a):
-            loss += self.criterion(p_i, a_i)
-            # loss += self.criterion_aux(p_i, a_i)
-            if self.cfg.MODEL.LOSS_AUG_WHL:
-                loss += 10.0 * self.criterion_aux(p_i, a_i)
+            for weight, criterion in self.criteria:
+                loss += weight * criterion(p_i, a_i)
 
         return loss
 
@@ -106,9 +110,6 @@ class NetWrapper(nn.Module):
         return self.compute_loss_core(p, a)
 
     def loss_update(self, p, a, step=True):
-        if not isinstance(p, (tuple, list)):
-            p = [p]
-
         loss = self.compute_loss(p, a)
 
         if step:

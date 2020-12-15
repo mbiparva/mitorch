@@ -15,33 +15,7 @@ import utils.distributed as du
 from data.data_container import DataContainer
 from utils.meters import TVTMeter
 import utils.metrics as metrics
-
-
-def cel_prep(p, a):
-    p = p.softmax(dim=1)
-    p = p[:, 1, ...]
-    p = p.unsqueeze(dim=1)
-    a = a.unsqueeze(dim=1)
-    a = a.float()
-
-    return p, a
-
-
-def post_proc_pred(p, a, cfg):
-    if isinstance(p, (tuple, list)):  # Deep_supervision returns outputs at multiple levels
-        p = torch.mean(torch.stack(p), dim=0)
-
-    if cfg.AMP and p.dtype is torch.float16:  # dice has one sum that hit inf
-        p = p.to(dtype=torch.float32)
-        a = a.to(dtype=torch.float32)
-
-    if cfg.MODEL.LOSS_FUNC == 'CrossEntropyLoss':
-        p, a = cel_prep(p, a)
-
-    if cfg.MODEL.LOSS_WITH_LOGITS or cfg.MODEL.LOSS_FUNC == 'FocalLoss':
-        p = p.sigmoid()
-
-    return p, a
+from utils.net_pred import post_proc_pred, pack_pred
 
 
 class BatchBase(ABC):
@@ -85,7 +59,7 @@ class BatchBase(ABC):
     def generate_gt(self, annotation):
         if not (self.cfg.HPSF.ENABLE or (self.cfg.NVT.ENABLE and self.cfg.MODEL.NUM_CLASSES > 1)):
             assert annotation.size(1) == 1
-        if self.cfg.MODEL.LOSS_FUNC == 'CrossEntropyLoss':
+        if self.cfg.MODEL.LOSSES[0]['name'] == 'CrossEntropyLoss':
             assert annotation.size(1) == 1
             annotation = annotation.squeeze(dim=1).long()
         if self.cfg.AMP:
@@ -134,10 +108,6 @@ class BatchBase(ABC):
         if self.cfg.DDP:
             self.ddp_reduce_meters(meters)
 
-    @abstractmethod
-    def batch_main(self, net, x, annotation):
-        pass
-
     @staticmethod
     def depth_sampling(image, annotation):
         # create index tensor
@@ -160,6 +130,35 @@ class BatchBase(ABC):
 
         return image, annotation
 
+    def batch_main(self, netwrapper, x, annotation, step=True):
+        meters = dict()
+
+        if self.cfg.WMH.ENABLE:
+            p, annotation = netwrapper.forward((x, annotation))
+        else:
+            p = netwrapper.forward(x)
+
+        a = self.generate_gt(annotation)
+
+        p = pack_pred(p)
+
+        meters['loss'] = netwrapper.loss_update(p, a, step=step)
+
+        self.evaluate(p, a, meters)
+
+        self.meters.iter_toc()
+
+        self.meters.update_stats(self._get_lr(netwrapper), self.cfg.TRAIN.BATCH_SIZE, **meters)
+
+    def batch_main_mode(self, netwrapper, x, annotation):
+        if self.mode == 'train':
+            return self.batch_main(netwrapper, x, annotation, step=True)
+        elif self.mode == 'valid':
+            with torch.no_grad():
+                return self.batch_main(netwrapper, x, annotation, step=False)
+        else:
+            raise NotImplementedError
+
     def batch_loop(self, netwrapper, cur_epoch):
 
         self.meters.iter_tic()
@@ -178,7 +177,7 @@ class BatchBase(ABC):
             if self.cfg.MODEL.PROCESSING_MODE == '2d':
                 image, annotation = self.depth_sampling(image, annotation)
 
-            self.batch_main(netwrapper, image, annotation)
+            self.batch_main_mode(netwrapper, image, annotation)
 
             self.meters.log_iter_stats(cur_epoch, cur_iter, self.mode)
 

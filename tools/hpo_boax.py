@@ -331,7 +331,7 @@ hp_set = [
             ],
         },
         # {
-        #     'name': 'MODEL.LOSS_FUNC',
+        #     'name': 'MODEL.LOSSES[0]['name']',
         #     'type': 'choice',
         #     'values': [
         #         'CrossEntropyLoss', 'DiceLoss',  # 'FocalLoss', 'LovaszLoss'

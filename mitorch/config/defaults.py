@@ -217,21 +217,35 @@ _C.MODEL.MODEL_NAME = ('Unet3D', 'NestedUnet3D', 'Unet3DCBAM', 'DAUnet3D',
 _C.MODEL.PROCESSING_MODE = ('2d', '3d')[1]
 
 # Loss function.
-_C.MODEL.LOSS_FUNC = ('CrossEntropyLoss', 'DiceLoss', 'WeightedHausdorffLoss', 'FocalLoss', 'LovaszLoss')[1]
+_C.MODEL.LOSSES = [
+    {
+        'name': ('CrossEntropyLoss', 'DiceLoss', 'WeightedHausdorffLoss', 'FocalLoss', 'LovaszLoss', 'MSELoss')[1],
+        'weight': 1.0,
+        'with_logits': True,
+    },
+    # {
+    #     'name': ('CrossEntropyLoss', 'DiceLoss', 'WeightedHausdorffLoss', 'FocalLoss', 'LovaszLoss', 'MSELoss')[3],
+    #     'weight': 0.1,
+    #     'with_logits': True,
+    # },
+    # {
+    #     'name': ('CrossEntropyLoss', 'DiceLoss', 'WeightedHausdorffLoss', 'FocalLoss', 'LovaszLoss', 'MSELoss')[5],
+    #     'weight': 0.1,
+    #     'with_logits': True,
+    # },
+]
 
 # Loss functions that would need logits separately.
-_C.MODEL.LOSS_FUNC_WITH_LOGITS = ('DiceLoss', 'WeightedHausdorffLoss')
-
-# Loss with logits
-_C.MODEL.LOSS_WITH_LOGITS = (False, True)[1]
+_C.MODEL.LOSSES_WITH_LOGITS = ('DiceLoss', 'WeightedHausdorffLoss', 'MSELoss', )
 
 # The number of classes to predict for the model.
-_C.MODEL.NUM_CLASSES = 2 if _C.MODEL.LOSS_FUNC == 'CrossEntropyLoss' else 1
+_C.MODEL.NUM_CLASSES = -1
 
-_C.MODEL.LOSS_AUG_WHL = (False, True)[0]
+# Weighted Hausdorff loss options
 _C.MODEL.WHL_NUM_DEPTH_SHEETS = (2, 4, 8)[2]
 _C.MODEL.WHL_SEG_THR = (0.12, 0.25, 0.5)[1]
 
+# Ignore index; < 0 values disable it
 _C.MODEL.IGNORE_INDEX = 255
 
 # Dropout rate before final projection in the backbone.
@@ -531,6 +545,7 @@ _C.HPSF = CfgNode()
 _C.HPSF.ENABLE = _C.TRAIN.DATASET in ('HPSubfield', )
 
 
+# noinspection PyTypeChecker
 def init_dependencies(cfg):
     assert cfg.TRAIN.DATASET in _C.PROJECT.KNOWN_DATASETS, 'dataset is unknown'
     
@@ -555,7 +570,11 @@ def init_dependencies(cfg):
 
     cfg.HPSF.ENABLE = cfg.TRAIN.DATASET in ('HPSubfield',)
 
-    cfg.MODEL.LOSS_WITH_LOGITS = cfg.MODEL.LOSS_FUNC in cfg.MODEL.LOSS_FUNC_WITH_LOGITS and cfg.MODEL.LOSS_WITH_LOGITS
+    for l in cfg.MODEL.LOSSES:
+        l['with_logits'] = l['name'] in cfg.MODEL.LOSSES_WITH_LOGITS and l['with_logits']
+
+    if not cfg.HPSF.ENABLE:
+        cfg.MODEL.NUM_CLASSES = 2 if cfg.MODEL.LOSSES[0]['name'] == 'CrossEntropyLoss' else 1
 
     return cfg
 
@@ -573,6 +592,8 @@ def init_cfg(cfg, parent_dir=''):
 
     cfg = init_dependencies(cfg)
 
+    cfg = _assert_and_infer_cfg(cfg)
+
     return cfg
 
 
@@ -582,6 +603,8 @@ def _assert_and_infer_cfg(cfg):
         assert cfg.MODEL.SETTINGS.N_HOP_DENSE_SKIP_CONNECTION > 0
 
     assert not (cfg.DP and cfg.DDP), 'either use DP or DDP in PyTorch'
+
+    assert len(cfg.MODEL.LOSSES) > 0, 'at least one loss must be defined'
 
     return cfg
 

@@ -20,24 +20,31 @@ The call should return a `torch.nn.Module` object.
 """
 
 
-class LossWithLogits(nn.Sequential):
+class LossWithLogits(nn.Module):
     def __init__(self, loss) -> None:
-        super().__init__(
-            nn.Softmax(),
-            loss
-        )
+        super().__init__()
+
+        self._create_net(loss)
+
+    def _create_net(self, loss):
+        self.sigmoid = nn.Sigmoid()
+        self.loss = loss
+
+    def forward(self, p, a):
+        p = self.sigmoid(p)
+        return self.loss(p, a)
 
 
 # noinspection PyCallingNonCallable
-def build_loss(cfg, name=None):
+def build_loss(cfg, name, with_logits=True):
     """
     Builds the video model.
     Args:
+        with_logits: whether the loss is with logits; if true add sigmoid at the beginning.
         cfg (configs): configs that contains the hyper-parameters to build the backbone.
         name (str): name
     """
     # Construct the loss
-    name = cfg.MODEL.LOSS_FUNC if name is None else name
     ignore_index = cfg.MODEL.IGNORE_INDEX
     if name == 'WeightedHausdorffLoss':
         loss_params = {
@@ -55,7 +62,7 @@ def build_loss(cfg, name=None):
 
     loss = LOSS_REGISTRY.get(name)(ignore_index=ignore_index, **loss_params)
 
-    if cfg.MODEL.LOSS_WITH_LOGITS:
+    if with_logits:
         loss = LossWithLogits(loss)
 
     return loss

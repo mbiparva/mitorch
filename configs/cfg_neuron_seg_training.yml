@@ -14,12 +14,15 @@ NVT:
   SELECTION_LB: 16000
   RANDOM_CROP_THRESHOLD: 0
 MODEL:
-  LOSS_FUNC: DiceLoss
   N_BASE_FILTERS: 16
   ENCO_DEPTH: 5
   NUM_PRED_LEVELS: 3
   DROPOUT_RATE: 0.30
   MODEL_NAME: Unet3D
+  LOSSES:
+    - name: 'DiceLoss'
+      weight: 1.0
+      with_logits: true
 SOLVER:
   MAX_EPOCH: 200
   OPTIMIZING_METHOD: adam
