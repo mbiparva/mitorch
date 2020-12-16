@@ -1100,20 +1100,10 @@ class BiasField(Transformable):
             self,
             coefficients: Union[List[float], Dict[str, List[float]]],
             order: Union[int, Dict[str, int]],
-            keys: Optional[Sequence[str]] = None,
             ):
         self.coefficients = coefficients
         self.order = order
         self.invert_transform = False
-        self.args_names = 'coefficients', 'order'
-
-    def arguments_are_dict(self):
-        coefficients_dict = isinstance(self.coefficients, dict)
-        order_dict = isinstance(self.order, dict)
-        if coefficients_dict != order_dict:
-            message = 'If one of the arguments is a dict, all must be'
-            raise ValueError(message)
-        return coefficients_dict and order_dict
 
     def apply_transform(self, volume: torch.tensor) -> torch.tensor:
         coefficients, order = self.coefficients, self.order
