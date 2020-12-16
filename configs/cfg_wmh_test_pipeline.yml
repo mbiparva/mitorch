@@ -22,6 +22,12 @@ TEST:
     - 'hausdorff_distance'
     - 'rvd'
   ROBUST_EXP_LIST:
+    - - t_name: 'blur'
+        t_params:
+          std:
+            - 0.1
+            - 0.2
+            - 0.3
     - - t_name: 'contrastchannel'
         t_params:
           value:

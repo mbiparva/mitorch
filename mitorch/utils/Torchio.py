@@ -506,7 +506,7 @@ def parse_range(
 def to_tuple(
         value: Union[TypeNumber, Iterable[TypeNumber]],
         length: int = 1,
-        ) -> Tuple[TypeNumber, ...]:
+        ) -> Union[TypeTripletFloat, Tuple[TypeNumber, ...]]:
     """
     to_tuple(1, length=1) -> (1,)
     to_tuple(1, length=3) -> (1, 1, 1)
@@ -991,8 +991,8 @@ class Blur(Transformable):
     """
     def __init__(
             self,
-            std: Union[TypeTripletFloat, Dict[str, TypeTripletFloat]],
-            spacing: int = 1,
+            std: Union[TypeTripletFloat, Dict[str, TypeTripletFloat], int],
+            spacing: Union[TypeTripletFloat, Dict[str, TypeTripletFloat], int] = 1,
             ):
         self.std = std
         self.spacing = spacing
@@ -1003,10 +1003,10 @@ class Blur(Transformable):
         stds = to_tuple(std, length=len(volume))
         spacing = to_tuple(spacing, length=len(volume))
         transformed_tensors = []
-        for std, tensor in zip(stds, volume):
+        for std, spc, tensor in zip(stds, spacing, volume):
             transformed_tensor = self.blur(
                 tensor,
-                spacing,
+                spc,
                 std,
             )
             transformed_tensors.append(transformed_tensor)
@@ -1016,8 +1016,8 @@ class Blur(Transformable):
     @staticmethod
     def blur(
             data: torch.tensor,
-            spacing: TypeTripletFloat,
-            std_voxel: TypeTripletFloat,
+            spacing: Union[int, float],
+            std_voxel: Union[int, float],
             ) -> torch.Tensor:
         assert data.ndim == 3
         std_physical = np.array(std_voxel) / np.array(spacing)
