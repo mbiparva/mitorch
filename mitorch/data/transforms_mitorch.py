@@ -878,6 +878,35 @@ class AdditiveNoise(Randomizable):
         return image, annot, meta
 
 
+class AdditiveNoiseChannelWise(Transformable):
+    def __init__(self, sigma, noise_type='gaussian', randomize_type=False, out_of_bound_mode='normalize',
+                 *args, **kwargs):
+        assert isinstance(sigma, (list, tuple)), 'sigma must be sequential'
+        assert len(sigma) > 1, 'use AdditiveNoise if len(sigma) < 2'
+
+        self.num_channels = len(sigma)
+        self.transform = [
+            AdditiveNoise(s, channel_wise=False, noise_type=noise_type, randomize_type=randomize_type,
+                          out_of_bound_mode=out_of_bound_mode, *args, **kwargs)
+            for s in sigma
+        ]
+
+    def apply(self, volume):
+        image, annot, meta = volume
+        assert len(image) == len(annot) == self.num_channels, 'number of channels do not match'
+
+        for i in range(len(image)):
+            image_i = image[i]
+            volume_i = (image_i, None, None)
+            transform_i = self.transform[i]
+
+            image_i, _, _ = transform_i(volume_i)
+
+            image[i] = image_i
+
+        return image, annot, meta
+
+
 class PresetMotionArtifact(Transformable):
     def __init__(self, time, delta=None, direction=None, pixels=True, theta=None, seq=None,
                  degrees=True, mode='bilinear', padding_mode='zeros', align_corners=False):
