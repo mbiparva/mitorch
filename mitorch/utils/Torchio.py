@@ -397,7 +397,6 @@ TypeSextetFloat = Tuple[float, float, float, float, float, float]
 #         return torch.Tensor(results)
 
 
-@staticmethod
 def parse_range(
         nums_range: Union[TypeNumber, Tuple[TypeNumber, TypeNumber]],
         name: str,
@@ -524,7 +523,6 @@ def to_tuple(
     return value
 
 
-@staticmethod
 def to_range(n, around):
     if around is None:
         return 0, n
@@ -577,7 +575,7 @@ class Randomizeable(ABC):
         self.p = p
 
     def __call__(self, volume):
-        if torch.rand(1).item() < self.p:
+        if torch.rand(1).item() > self.p:
             return volume
         return self.apply_transform(volume)
 
@@ -856,7 +854,6 @@ class Ghosting(Transformable, FourierTransform):
         restore: Number between ``0`` and ``1`` indicating how much of the
             :math:`k`-space center should be restored after removing the planes
             that generate the artifact.
-        keys: See :class:`~torchio.transforms.Transform`.
 
     .. note:: The execution time of this transform does not depend on the
         number of ghosts.
@@ -867,7 +864,6 @@ class Ghosting(Transformable, FourierTransform):
             axis: Union[int, Dict[str, int]],
             intensity: Union[float, Dict[str, float]],
             restore: Union[float, Dict[str, float]],
-            keys: Optional[Sequence[str]] = None,
             ):
         self.axis = axis
         self.num_ghosts = num_ghosts
@@ -1087,37 +1083,50 @@ class RandomBiasField(Transformable):
                     random_coefficients.append(number.item())
         return random_coefficients
 
+    @staticmethod
+    def _parse_order(order):
+        if not isinstance(order, int):
+            raise TypeError(f'Order must be an int, not {type(order)}')
+        if order < 0:
+            raise ValueError(f'Order must be a positive int, not {order}')
+        return order
+
 
 class BiasField(Transformable):
     r"""Add MRI bias field artifact.
 
     Args:
-        coefficients: Magnitudes of the polinomial coefficients.
+        coefficient: Magnitudes of the polynomial coefficients.
         order: Order of the basis polynomial functions.
-        keys: See :class:`~torchio.transforms.Transform`.
     """
     def __init__(
             self,
-            coefficients: Union[List[float], Dict[str, List[float]]],
+            coefficient: Union[List[float], Dict[str, List[float]], int],
             order: Union[int, Dict[str, int]],
             ):
-        self.coefficients = coefficients
-        self.order = order
+        self.order = self._parse_order(order)
+        self.coefficients_range = parse_range(coefficient, 'coefficients_range')
         self.invert_transform = False
 
-    def apply_transform(self, volume: torch.tensor) -> torch.tensor:
-        coefficients, order = self.coefficients, self.order
+    def apply_transform(self, volume: torch.tensor, normalize: bool = False) -> torch.tensor:
+        coefficients_range, order = self.coefficients_range, self.order
+        coefficients = self.get_coefficients(self.order, coefficients_range)
         bias_field = self.generate_bias_field(volume, order, coefficients)
         if self.invert_transform:
             np.divide(1, bias_field, out=bias_field)
-        volume = volume * torch.from_numpy(bias_field)
+        bias_field = torch.from_numpy(bias_field)
+        if normalize:
+            bias_field -= bias_field.min()
+            if bias_field.max() > 0:
+                bias_field /= bias_field.max()
+        volume = volume * bias_field
         return volume
 
     @staticmethod
     def generate_bias_field(
             data: TypeData,
             order: int,
-            coefficients: TypeData,
+            coefficients: Union[TypeData, List],
             ) -> np.ndarray:
         # Create the bias field map using a linear combination of polynomial
         # functions and the coefficients previously sampled
@@ -1157,8 +1166,26 @@ class BiasField(Transformable):
             raise ValueError(f'Order must be a positive int, not {order}')
         return order
 
+    @staticmethod
+    def get_coefficients(
+            order: int,
+            coefficients_range: Union[List[float], float],
+    ) -> List[float]:
+        # if isinstance(coefficient, list):
+        #     return coefficient
 
-class RandomSwap(Transformable):
+        # Setting the appropriate number of coefficients for the creation of the bias field map
+        coefficients = []
+        for x_order in range(0, order + 1):
+            for y_order in range(0, order + 1 - x_order):
+                for _ in range(0, order + 1 - (x_order + y_order)):
+                    number = sample_uniform(*coefficients_range)
+                    coefficients.append(number.item())
+
+        return coefficients
+
+
+class RandomSwap(Randomizeable):
     r"""Randomly swap patches within an image.
 
     This is typically used in `context restoration for self-supervised learning
@@ -1277,11 +1304,9 @@ class Swap(Transformable):
             self,
             patch_size: Union[TypeTripletInt, Dict[str, TypeTripletInt]],
             locations: Union[TypeLocations, Dict[str, TypeLocations]],
-            keys: Optional[Sequence[str]] = None,
             ):
         self.locations = locations
         self.patch_size = patch_size
-        self.args_names = 'locations', 'patch_size'
         self.invert_transform = False
 
     def apply_transform(self, volume: torch.tensor) -> torch.tensor:

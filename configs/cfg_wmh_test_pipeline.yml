@@ -22,9 +22,17 @@ TEST:
     - 'hausdorff_distance'
     - 'rvd'
   ROBUST_EXP_LIST:
+    - - t_name: 'swap'
+        t_params:
+          patch_size:
+            - 16
+            - 32
+          num_iterations:
+            - 3
+            - 9
     - - t_name: 'biasfield'
         t_params:
-          coefficients:
+          coefficient:
             - 0.5
             - 1.0
             - 1.5

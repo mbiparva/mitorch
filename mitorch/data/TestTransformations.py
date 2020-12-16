@@ -20,7 +20,7 @@ __all__ = [
     'SpikeTestTransformations',
     'GhostingTestTransformations',
     'BlurTestTransformations',
-    'BiasFieldTestTransformations',
+    'BiasfieldTestTransformations',
     'SwapTestTransformations',
 ]
 
@@ -144,7 +144,7 @@ class BlurTestTransformations(BaseTransformations):
 
 
 @TESTPIPELINE_REGISTRY.register()
-class BiasFieldTestTransformations(BaseTransformations):
+class BiasfieldTestTransformations(BaseTransformations):
     def __init__(self, cfg, params):
         super().__init__(cfg, params)
 

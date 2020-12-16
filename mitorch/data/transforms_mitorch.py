@@ -1215,7 +1215,7 @@ class BiasField(Transformable):
 
 class Swap(Transformable):
     def __init__(self, **kwargs):
-        self.transform = tio.Swap(**kwargs)
+        self.transform = tio.RandomSwap(**kwargs)
 
     def apply(self, volume):
         image, annot, meta = volume
