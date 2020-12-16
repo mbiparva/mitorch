@@ -21,6 +21,7 @@ KNOWN_TRANSFORMATIONS = (
     'noise',
     'noisechannel',
     'contrast',
+    'contrastchannel',
     'rotate',
     'shear',
     'translate',

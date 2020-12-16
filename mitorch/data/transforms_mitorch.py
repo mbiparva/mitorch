@@ -709,6 +709,33 @@ class RandomContrast(RandomBrightness):
         return input_range, output_range
 
 
+class RandomContrastChannelWise(Transformable):
+    def __init__(self, value, *args, **kwargs):
+        assert isinstance(value, (list, tuple)), 'value must be sequential'
+        assert len(value) > 1, 'use RandomContrast if len(sigma) < 2'
+
+        self.num_channels = len(value)
+        self.transform = [
+            RandomContrast(v, channel_wise=False, *args, **kwargs)
+            for v in value
+        ]
+
+    def apply(self, volume):
+        image, annot, meta = volume
+        assert len(image) == len(annot) == self.num_channels, 'number of channels do not match'
+
+        for i in range(len(image)):
+            image_i = image[i]
+            volume_i = (image_i, None, None)
+            transform_i = self.transform[i]
+
+            image_i, _, _ = transform_i(volume_i)
+
+            image[i] = image_i
+
+        return image, annot, meta
+
+
 class RandomGamma(Randomizable):
     POWER_MAX = 6
 

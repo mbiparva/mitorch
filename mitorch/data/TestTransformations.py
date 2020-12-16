@@ -12,6 +12,7 @@ __all__ = [
     'NoiseTestTransformations',
     'NoisechannelTestTransformations',
     'ContrastTestTransformations',
+    'ContrastchannelTestTransformations',
     'RotateTestTransformations',
     'ShearTestTransformations',
     'TranslateTestTransformations',
@@ -67,6 +68,16 @@ class ContrastTestTransformations(BaseTransformations):
     def create_transform(self):
         value = self.params.pop('value')
         return tf.RandomContrast(value=value, **self.params)
+
+
+@TESTPIPELINE_REGISTRY.register()
+class ContrastchannelTestTransformations(BaseTransformations):
+    def __init__(self, cfg, params):
+        super().__init__(cfg, params)
+
+    def create_transform(self):
+        value = self.params.pop('value')
+        return tf.RandomContrastChannelWise(value=value, **self.params)
 
 
 @TESTPIPELINE_REGISTRY.register()

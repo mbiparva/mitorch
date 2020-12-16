@@ -22,6 +22,17 @@ TEST:
     - 'hausdorff_distance'
     - 'rvd'
   ROBUST_EXP_LIST:
+    - - t_name: 'contrastchannel'
+        t_params:
+          value:
+            - - -0.4
+              - -0.3
+            - - -0.1
+              - -0.0
+            - - +0.1
+              - +0.2
+            - - +0.4
+              - +0.45
     - - t_name: 'noisechannel'
         t_params:
           sigma:
