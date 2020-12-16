@@ -19,6 +19,7 @@ import pprint
 
 KNOWN_TRANSFORMATIONS = (
     'noise',
+    'noisechannel',
     'contrast',
     'rotate',
     'shear',

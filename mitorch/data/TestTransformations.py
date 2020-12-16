@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 
 __all__ = [
     'NoiseTestTransformations',
+    'NoisechannelTestTransformations',
     'ContrastTestTransformations',
     'RotateTestTransformations',
     'ShearTestTransformations',
@@ -46,6 +47,16 @@ class NoiseTestTransformations(BaseTransformations):
     def create_transform(self):
         sigma = self.params.pop('sigma')
         return tf.AdditiveNoise(sigma=sigma, **self.params)
+
+
+@TESTPIPELINE_REGISTRY.register()
+class NoisechannelTestTransformations(BaseTransformations):
+    def __init__(self, cfg, params):
+        super().__init__(cfg, params)
+
+    def create_transform(self):
+        sigma = self.params.pop('sigma')
+        return tf.AdditiveNoiseChannelWise(sigma=sigma, **self.params)
 
 
 @TESTPIPELINE_REGISTRY.register()
