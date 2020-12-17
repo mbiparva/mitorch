@@ -81,7 +81,7 @@ class Decoder(nn.Module):
                 self.add_module(
                     self.get_layer_name(i-1, 'upsampling'),
                     ParamUpSamplingBlock(in_channels, out_channels, scale_factor=(2, 2, 2)) if not i == 1 else
-                    LocalizationBlock(in_channels, out_channels),
+                    LocalizationBlock(in_channels, out_channels, dilation=(1, 1, 1)),
                 )
                 self.add_module(
                     self.get_layer_name(i-1, 'localization'),

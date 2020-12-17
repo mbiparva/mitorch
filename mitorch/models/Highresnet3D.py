@@ -26,13 +26,12 @@ class Encoder(nn.Module):
         self._create_net()
 
     def _create_net(self):
-        # TODO add them to net cfg settings for hpo
         self.net = HighResNet(
             spatial_dims=3,
             in_channels=self.cfg.MODEL.INPUT_CHANNELS,
             out_channels=self.cfg.MODEL.NUM_CLASSES,
-            norm_type=Normalisation.INSTANCE,
-            acti_type=Activation.PRELU,
+            norm_type=self.cfg.MODEL.SETTINGS.NORM_TYPE,
+            acti_type=self.cfg.MODEL.SETTINGS.ACTI_TYPE,
             dropout_prob=self.cfg.MODEL.DROPOUT_RATE,
             layer_params=DEFAULT_LAYER_PARAMS_3D,
         )
@@ -52,6 +51,7 @@ class Decoder(nn.Module):
         super().__init__()
         self.cfg = cfg.clone()
         self.block_features = reversed(block_features)
+        self.dilation = self.cfg.MODEL.SETTINGS.DECODER_DILATION
 
         self._create_net()
 
@@ -65,11 +65,11 @@ class Decoder(nn.Module):
             if i:
                 self.add_module(
                     self.get_layer_name(i-1, 'reduction'),
-                    LocalizationBlock(in_channels, out_channels),
+                    LocalizationBlock(in_channels, out_channels, dilation=(1, 1, 1)),
                 )
                 self.add_module(
                     self.get_layer_name(i-1, 'localization'),
-                    LocalizationBlock(2 * out_channels, out_channels),
+                    LocalizationBlock(2 * out_channels, out_channels, dilation=self.dilation),
                 )
             in_channels = out_channels
 

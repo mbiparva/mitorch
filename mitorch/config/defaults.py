@@ -348,6 +348,11 @@ _C.MODEL.SETTINGS = CfgNode({
         'GROWTH_RATE': 8,
         'DECODER_DILATION': (2, 2, 2),
     }),
+    'Highresnet3D': CfgNode({
+        'NORM_TYPE': ('batch', 'instance')[1],
+        'ACTI_TYPE': ('relu', 'prelu', 'relu6')[0],
+        'DECODER_DILATION': (2, 2, 2),
+    }),
 })
 
 
