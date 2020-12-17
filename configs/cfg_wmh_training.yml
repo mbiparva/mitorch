@@ -1,5 +1,15 @@
 MODEL:
   MODEL_NAME: Unet3D
+  LOSSES:
+    - name: 'DiceLoss'
+      weight: 1.0
+      with_logits: true
+#    - name: 'FocalLoss'
+#      weight: 0.1
+#      with_logits: true
+#    - name: 'MSELoss'
+#      weight: 0.1
+#      with_logits: true
 PROJECT:
   PA_INDICES: true
 TRAIN:

@@ -273,13 +273,16 @@ _C.MODEL.SETTINGS = CfgNode({
     }),
     'NestedUnet3D': CfgNode({
         'N_BASE_FILTERS': 16,
+        'ENCODER_STRIDE': (2, 2, 2),
+        'ENCODER_DILATION': (2, 2, 2),
         'DEEP_SUPERVISION': (False, True)[1],
         'N_HOP_DENSE_SKIP_CONNECTION': 2,  # must be > 0, 1 means no dense-skip-connections
         'MODULATION_TYPE': ('additive', 'multiplicative', 'mean', 'concatenation')[3],
-        'DECODER_DILATION': (2, 2, 2),
     }),
     'Unet3DCBAM': CfgNode({
         'N_BASE_FILTERS': 16,
+        'ENCODER_STRIDE': (2, 2, 2),
+        'ENCODER_DILATION': (2, 2, 2),
         'DECODER_DILATION': (2, 2, 2),
         'GAM': CfgNode({
             'BLOCKS': [3, 4],
@@ -311,6 +314,9 @@ _C.MODEL.SETTINGS = CfgNode({
         }),
     }),
     'DAUnet3D': CfgNode({
+        'N_BASE_FILTERS': 16,
+        'ENCODER_STRIDE': (2, 2, 2),
+        'ENCODER_DILATION': (2, 2, 2),
         'DECODER_DILATION': (2, 2, 2),
         'GAM': CfgNode({
             'BLOCKS': [-1],  # switches off Global Attention Module for DANet
