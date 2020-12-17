@@ -353,6 +353,15 @@ _C.MODEL.SETTINGS = CfgNode({
         'ACTI_TYPE': ('relu', 'prelu', 'relu6')[0],
         'DECODER_DILATION': (2, 2, 2),
     }),
+    'DYNUnet3D': CfgNode({
+        'KERNEL_SIZE': (3, 3, 3, 3, 3),
+        'STRIDES': (1, 2, 2, 2, 2),
+        'UPSAMPLE_KERNEL_SIZE': (2, 2, 2, 2),  # one size less than kernel size tuple
+        'NORM_NAME': ('instance', 'batch', 'group', 'layer')[0],
+        'DEEP_SUPERVISION': True,
+        'DEEP_SUPR_NUM': 2,
+        'RES_BLOCK': True,
+    }),
 })
 
 

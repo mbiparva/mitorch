@@ -23,18 +23,17 @@ class DYNUnet3D(NetABC):
         IS_3D = self.cfg.MODEL.PROCESSING_MODE == '3d'
 
     def _create_net(self):
-        # TODO add them to net cfg settings for hpo
         self.EncoDecoSeg = DynUNet(
             spatial_dims=3,
             in_channels=self.cfg.MODEL.INPUT_CHANNELS,
             out_channels=self.cfg.MODEL.NUM_CLASSES,
-            kernel_size=(3, 3, 3, 3, 3),
-            strides=(1, 2, 2, 2, 2),
-            upsample_kernel_size=(2, 2, 2, 2),  # one size less than kernel size tuple
-            norm_name="instance",
-            deep_supervision=True,
-            deep_supr_num=2,
-            res_block=True,
+            kernel_size=self.cfg.MODEL.SETTINGS.KERNEL_SIZE,
+            strides=self.cfg.MODEL.SETTINGS.STRIDES,
+            upsample_kernel_size=self.cfg.MODEL.SETTINGS.UPSAMPLE_KERNEL_SIZE,  # one size less than kernel size tuple
+            norm_name=self.cfg.MODEL.SETTINGS.NORM_NAME,
+            deep_supervision=self.cfg.MODEL.SETTINGS.DEEP_SUPERVISION,
+            deep_supr_num=self.cfg.MODEL.SETTINGS.DEEP_SUPR_NUM,
+            res_block=self.cfg.MODEL.SETTINGS.RES_BLOCK,
         )
 
     def forward_core(self, x):
