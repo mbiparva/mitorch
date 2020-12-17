@@ -71,7 +71,7 @@ class Encoder(Unet3DEncoder):
     def _create_net(self):
         in_channels = self.cfg.MODEL.INPUT_CHANNELS
         for i in range(self.cfg.MODEL.ENCO_DEPTH):
-            out_channels = self.cfg.MODEL.N_BASE_FILTERS * 2 ** i
+            out_channels = self.cfg.MODEL.SETTINGS.N_BASE_FILTERS * 2 ** i
             self.add_module(
                 self.get_layer_name(i),
                 CompoundBlock(i, in_channels, out_channels, stride=self.stride, dilation=self.dilation, p=self.p,

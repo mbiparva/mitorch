@@ -98,7 +98,7 @@ class Decoder(nn.Module):
 
     def _create_net(self):
         for i in range(self.cfg.MODEL.ENCO_DEPTH-1):
-            out_channels = self.cfg.MODEL.N_BASE_FILTERS * 2 ** i
+            out_channels = self.cfg.MODEL.SETTINGS.N_BASE_FILTERS * 2 ** i
             in_channels = out_channels * 2
             for j in range(1, self.cfg.MODEL.ENCO_DEPTH-i):  # 0_j is the encoding layer at depth j
                 ij_num_in_modal = self.get_ij_num_in_model(j, self.cfg.MODEL.SETTINGS.N_HOP_DENSE_SKIP_CONNECTION)
@@ -149,7 +149,7 @@ class SegHead(nn.Module):
         return 'seghead_layer{:03}_{}'.format(i, postfix)
 
     def _create_net(self):
-        in_channels = self.cfg.MODEL.N_BASE_FILTERS * 2 ** 0  # it is always row 0
+        in_channels = self.cfg.MODEL.SETTINGS.N_BASE_FILTERS * 2 ** 0  # it is always row 0
 
         self.lower_bound = 1 if self.cfg.MODEL.SETTINGS.DEEP_SUPERVISION else self.cfg.MODEL.ENCO_DEPTH - 1
         for j in range(self.lower_bound, self.cfg.MODEL.ENCO_DEPTH):

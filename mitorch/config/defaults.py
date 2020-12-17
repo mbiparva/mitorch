@@ -254,9 +254,6 @@ _C.MODEL.DROPOUT_RATE = 0.3  # according to TF implementation
 # The std to initialize the fc layer(s).
 _C.MODEL.FC_INIT_STD = 0.01
 
-# Number of base filters to the network
-_C.MODEL.N_BASE_FILTERS = 16
-
 # Encoder depth
 _C.MODEL.ENCO_DEPTH = 5
 
@@ -268,13 +265,20 @@ _C.MODEL.INPUT_CHANNELS = 0  # will set later in the init_dependencies
 
 # Model settings
 _C.MODEL.SETTINGS = CfgNode({
-    'Unet3D': CfgNode({}),
+    'Unet3D': CfgNode({
+        'N_BASE_FILTERS': 16,
+        'ENCODER_STRIDE': (2, 2, 2),
+        'ENCODER_DILATION': (2, 2, 2),
+        'DECODER_DILATION': (2, 2, 2),
+    }),
     'NestedUnet3D': CfgNode({
+        'N_BASE_FILTERS': 16,
         'DEEP_SUPERVISION': (False, True)[1],
         'N_HOP_DENSE_SKIP_CONNECTION': 2,  # must be > 0, 1 means no dense-skip-connections
         'MODULATION_TYPE': ('additive', 'multiplicative', 'mean', 'concatenation')[3],
     }),
     'Unet3DCBAM': CfgNode({
+        'N_BASE_FILTERS': 16,
         'GAM': CfgNode({
             'BLOCKS': [3, 4],
             'REDUCTION_RATIO': 16,

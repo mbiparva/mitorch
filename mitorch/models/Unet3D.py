@@ -116,8 +116,8 @@ class Encoder(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg.clone()
-        self.stride = (2, 2, 2)
-        self.dilation = (2, 2, 2)
+        self.stride = self.cfg.MODEL.SETTINGS.ENCODER_STRIDE
+        self.dilation = self.cfg.MODEL.SETTINGS.ENCODER_DILATION
         self.p = self.cfg.MODEL.DROPOUT_RATE
 
         self._create_net()
@@ -129,7 +129,7 @@ class Encoder(nn.Module):
     def _create_net(self):
         in_channels = self.cfg.MODEL.INPUT_CHANNELS
         for i in range(self.cfg.MODEL.ENCO_DEPTH):
-            out_channels = self.cfg.MODEL.N_BASE_FILTERS * 2 ** i
+            out_channels = self.cfg.MODEL.SETTINGS.N_BASE_FILTERS * 2 ** i
             self.add_module(
                 self.get_layer_name(i),
                 CompoundBlock(i, in_channels, out_channels, stride=self.stride, dilation=self.dilation, p=self.p),
@@ -148,6 +148,7 @@ class Decoder(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg.clone()
+        self.dilation = self.cfg.MODEL.SETTINGS.DECODER_DILATION
 
         self._create_net()
 
@@ -157,17 +158,17 @@ class Decoder(nn.Module):
 
     def _create_net(self):
         self.enco_depth = self.cfg.MODEL.ENCO_DEPTH - 1  # the for loop begins from 0 ends at d-1
-        in_channels = self.cfg.MODEL.N_BASE_FILTERS * 2 ** self.enco_depth
+        in_channels = self.cfg.MODEL.SETTINGS.N_BASE_FILTERS * 2 ** self.enco_depth
         for i in range(self.enco_depth):
             i_r = self.enco_depth - 1 - i
-            out_channels = self.cfg.MODEL.N_BASE_FILTERS * 2 ** i_r
+            out_channels = self.cfg.MODEL.SETTINGS.N_BASE_FILTERS * 2 ** i_r
             self.add_module(
                 self.get_layer_name(i, 'upsampling'),
                 ParamUpSamplingBlock(in_channels, out_channels, scale_factor=(2, 2, 2)),
             )
             self.add_module(
                 self.get_layer_name(i, 'localization'),
-                LocalizationBlock(2 * out_channels, out_channels),
+                LocalizationBlock(2 * out_channels, out_channels, dilation=self.dilation),
             )
             in_channels = out_channels
 
@@ -201,7 +202,7 @@ class SegHead(nn.Module):
         self.num_pred_levels = self.cfg.MODEL.NUM_PRED_LEVELS
         for i in range(self.num_pred_levels):
             i_r = self.num_pred_levels - 1 - i
-            in_channels = self.cfg.MODEL.N_BASE_FILTERS * 2 ** i_r
+            in_channels = self.cfg.MODEL.SETTINGS.N_BASE_FILTERS * 2 ** i_r
             self.add_module(
                 self.get_layer_name(i, 'conv'),
                 nn.Conv3d(in_channels, self.cfg.MODEL.NUM_CLASSES, kernel_size=is_3d((1, 1, 1), IS_3D)),
