@@ -921,7 +921,8 @@ class AdditiveNoiseChannelWise(Transformable):
 
     def apply(self, volume):
         image, annot, meta = volume
-        assert len(image) == len(annot) == self.num_channels, 'number of channels do not match'
+        assert len(image) == self.num_channels, f'number of channels do not match ' \
+                                                f'{len(image)} == {self.num_channels}'
 
         for i in range(len(image)):
             image_i = image[i]
