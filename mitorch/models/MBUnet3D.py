@@ -22,16 +22,15 @@ class MBUnet3D(NetABC):
         IS_3D = self.cfg.MODEL.PROCESSING_MODE == '3d'
 
     def _create_net(self):
-        # TODO add them to net cfg settings for hpo
         self.EncoDecoSeg = BasicUNet(
             dimensions=3,
             in_channels=self.cfg.MODEL.INPUT_CHANNELS,
             out_channels=self.cfg.MODEL.NUM_CLASSES,
-            features=(32, 32, 64, 128, 256, 32),
-            act=("LeakyReLU", {"negative_slope": 0.1, "inplace": True}),
-            norm=("instance", {"affine": True}),
+            features=self.cfg.MODEL.SETTINGS.FEATURES,
+            act=self.cfg.MODEL.SETTINGS.ACT,
+            norm=self.cfg.MODEL.SETTINGS.NORM,
             dropout=self.cfg.MODEL.DROPOUT_RATE,
-            upsample=("deconv", "nontrainable")[1],
+            upsample=self.cfg.MODEL.SETTINGS.UPSAMPLE,
         )
 
     def forward_core(self, x):

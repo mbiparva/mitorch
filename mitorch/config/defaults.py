@@ -326,6 +326,12 @@ _C.MODEL.SETTINGS = CfgNode({
             'KERNEL_SIZE': 3,
         }),
     }),
+    'MBUnet3D': CfgNode({
+        'FEATURES': (32, 32, 64, 128, 256, 32),
+        'ACT': ("LeakyReLU", {"negative_slope": 0.1, "inplace": True}),
+        'NORM': ("instance", {"affine": True}),
+        'UPSAMPLE': ("deconv", "nontrainable")[1],
+    }),
 })
 
 
