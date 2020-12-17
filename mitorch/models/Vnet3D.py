@@ -22,12 +22,11 @@ class Vnet3D(NetABC):
         IS_3D = self.cfg.MODEL.PROCESSING_MODE == '3d'
 
     def _create_net(self):
-        # TODO add them to net cfg settings for hpo
         self.EncoDecoSeg = VNet(
             spatial_dims=3,
             in_channels=self.cfg.MODEL.INPUT_CHANNELS,
             out_channels=self.cfg.MODEL.NUM_CLASSES,
-            act="prelu",
+            act=self.cfg.MODEL.SETTINGS.ACT,
             dropout_prob=self.cfg.MODEL.DROPOUT_RATE,
         )
 

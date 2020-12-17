@@ -366,6 +366,9 @@ _C.MODEL.SETTINGS = CfgNode({
         '_NET_SEL': (0, 1, 2, 3, 4, 5)[0],
         'DECODER_DILATION': (2, 2, 2),
     }),
+    'Vnet3D': CfgNode({
+        'ACT': ('relu', 'elu', 'leakyrelu', 'prelu', 'relu6', 'selu', 'celu', 'gelu', 'swish', 'mish')[2],
+    }),
 })
 
 
