@@ -31,8 +31,7 @@ class Encoder(nn.Module):
         self._create_net()
 
     def _create_net(self):
-        # TODO add them to net cfg settings for hpo
-        _net_sel = 3
+        _net_sel = self.cfg.MODEL.SETTINGS._NET_SEL
         _net_caller = (
             senet154,
             se_resnet50,
@@ -75,6 +74,7 @@ class Decoder(nn.Module):
         super().__init__()
         self.cfg = cfg.clone()
         self.block_features = reversed(block_features)
+        self.dilation = self.cfg.MODEL.SETTINGS.DECODER_DILATION
 
         self._create_net()
 
@@ -89,11 +89,11 @@ class Decoder(nn.Module):
                 self.add_module(
                     self.get_layer_name(i-1, 'upsampling'),
                     ParamUpSamplingBlock(in_channels, out_channels, scale_factor=(2, 2, 2)) if not i == 1 else
-                    LocalizationBlock(in_channels, out_channels),
+                    LocalizationBlock(in_channels, out_channels, dilation=(1, 1, 1)),
                 )
                 self.add_module(
                     self.get_layer_name(i-1, 'localization'),
-                    LocalizationBlock(2 * out_channels, out_channels),
+                    LocalizationBlock(2 * out_channels, out_channels, dilation=self.dilation),
                 )
             in_channels = out_channels
 

@@ -362,6 +362,10 @@ _C.MODEL.SETTINGS = CfgNode({
         'DEEP_SUPR_NUM': 2,
         'RES_BLOCK': True,
     }),
+    'SEUnet3D': CfgNode({
+        '_NET_SEL': (0, 1, 2, 3, 4, 5)[0],
+        'DECODER_DILATION': (2, 2, 2),
+    }),
 })
 
 
