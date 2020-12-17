@@ -23,6 +23,12 @@ MODEL:
     - name: 'DiceLoss'
       weight: 1.0
       with_logits: true
+#    - name: 'FocalLoss'
+#      weight: 0.1
+#      with_logits: true
+#    - name: 'MSELoss'
+#      weight: 0.1
+#      with_logits: true
 SOLVER:
   MAX_EPOCH: 200
   OPTIMIZING_METHOD: adam

@@ -332,6 +332,22 @@ _C.MODEL.SETTINGS = CfgNode({
         'NORM': ("instance", {"affine": True}),
         'UPSAMPLE': ("deconv", "nontrainable")[1],
     }),
+    'MUnet3D': CfgNode({
+        'CHANNELS': (32, 32, 64, 128, 256),
+        'STRIDES': (2, 2, 2, 2, 2),
+        'KERNEL_SIZE': 3,
+        'UP_KERNEL_SIZE': 3,
+        'NUM_RES_UNITS': 0,
+        'ACT': ('relu', 'elu', 'leakyrelu', 'prelu', 'relu6', 'selu', 'celu', 'gelu', 'swish', 'mish')[2],
+        'NORM': ('instance', 'batch', 'group', 'layer')[0],  # we can pass args like MBUnet3D
+    }),
+    'Densenet3D': CfgNode({
+        '_NET_SEL': (0, 1, 2, 3)[0],
+        'BN_SIZE': 4,
+        'INIT_FEATURES': 16,
+        'GROWTH_RATE': 8,
+        'DECODER_DILATION': (2, 2, 2),
+    }),
 })
 
 

@@ -23,18 +23,17 @@ class MUnet3D(NetABC):
         IS_3D = self.cfg.MODEL.PROCESSING_MODE == '3d'
 
     def _create_net(self):
-        # TODO add them to net cfg settings for hpo
         self.EncoDecoSeg = UNet(
             dimensions=3,
             in_channels=self.cfg.MODEL.INPUT_CHANNELS,
             out_channels=self.cfg.MODEL.NUM_CLASSES,
-            channels=(32, 32, 64, 128, 256),
-            strides=(2, 2, 2, 2, 2),
-            kernel_size=3,
-            up_kernel_size=3,
-            num_res_units=0,
-            act=Act.PRELU,
-            norm=Norm.INSTANCE,
+            channels=self.cfg.MODEL.SETTINGS.CHANNELS,
+            strides=self.cfg.MODEL.SETTINGS.STRIDES,
+            kernel_size=self.cfg.MODEL.SETTINGS.KERNEL_SIZE,
+            up_kernel_size=self.cfg.MODEL.SETTINGS.UP_KERNEL_SIZE,
+            num_res_units=self.cfg.MODEL.SETTINGS.NUM_RES_UNITS,
+            act=self.cfg.MODEL.SETTINGS.ACT,
+            norm=self.cfg.MODEL.SETTINGS.NORM,
             dropout=self.cfg.MODEL.DROPOUT_RATE,
         )
 

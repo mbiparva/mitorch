@@ -31,8 +31,7 @@ class Encoder(nn.Module):
         self._create_net()
 
     def _create_net(self):
-        # TODO add them to net cfg settings for hpo
-        _net_sel = 0
+        _net_sel = self.cfg.MODEL.SETTINGS._NET_SEL
         _net_caller = (
             densenet121,
             densenet169,
@@ -47,9 +46,9 @@ class Encoder(nn.Module):
                 'in_channels': self.cfg.MODEL.INPUT_CHANNELS,
                 'out_channels': self.cfg.MODEL.NUM_CLASSES,
                 'dropout_prob': self.cfg.MODEL.DROPOUT_RATE,
-                'bn_size': 4,
-                'init_features': 16,
-                'growth_rate': 8,
+                'bn_size': self.cfg.MODEL.SETTINGS.BN_SIZE,
+                'init_features': self.cfg.MODEL.SETTINGS.INIT_FEATURES,
+                'growth_rate': self.cfg.MODEL.SETTINGS.GROWTH_RATE,
             }
         )
 
@@ -67,6 +66,7 @@ class Decoder(nn.Module):
         super().__init__()
         self.cfg = cfg.clone()
         self.block_features = reversed(block_features)
+        self.dilation = self.cfg.MODEL.SETTINGS.DECODER_DILATION
 
         self._create_net()
 
@@ -85,7 +85,7 @@ class Decoder(nn.Module):
                 )
                 self.add_module(
                     self.get_layer_name(i-1, 'localization'),
-                    LocalizationBlock(2 * out_channels, out_channels),
+                    LocalizationBlock(2 * out_channels, out_channels, dilation=self.dilation),
                 )
             in_channels = out_channels
 
