@@ -617,11 +617,14 @@ def init_dependencies(cfg):
 
     cfg.HPSF.ENABLE = cfg.TRAIN.DATASET in ('HPSubfield',)
 
-    for l in cfg.MODEL.LOSSES:
-        l['with_logits'] = l['name'] in cfg.MODEL.LOSSES_WITH_LOGITS and l['with_logits']
+    for loss in cfg.MODEL.LOSSES:
+        loss['with_logits'] = loss['name'] in cfg.MODEL.LOSSES_WITH_LOGITS and loss['with_logits']
 
     if not cfg.HPSF.ENABLE:
         cfg.MODEL.NUM_CLASSES = 2 if cfg.MODEL.LOSSES[0]['name'] == 'CrossEntropyLoss' else 1
+
+    cfg.MODEL.SETTINGS = cfg.MODEL.SETTINGS[cfg.MODEL.MODEL_NAME] if cfg.MODEL.MODEL_NAME in cfg.MODEL.SETTINGS \
+        else CfgNode({})
 
     return cfg
 

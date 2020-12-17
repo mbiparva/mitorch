@@ -109,9 +109,6 @@ def save_checkpoint(path_to_ckpnt, model, optimizer, epoch, cfg, scaler=None, be
     # Omit the DDP wrapper in the multi-gpu setting.
     sd = model.module.state_dict() if cfg.DDP else model.state_dict()
     cfg = cfg.clone()
-    if isinstance(cfg.MODEL.SETTINGS, tuple):
-        cfg.MODEL.SETTINGS = dict(cfg.MODEL.SETTINGS)[cfg.MODEL.MODEL_NAME]
-
     # Record the state.
     checkpoint = {
         "epoch": epoch,

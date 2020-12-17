@@ -29,6 +29,12 @@ MODEL:
 #    - name: 'MSELoss'
 #      weight: 0.1
 #      with_logits: true
+  SETTINGS:
+    'Unet3D':
+      'N_BASE_FILTERS': 16
+      'ENCODER_STRIDE': (2, 2, 2)
+      'ENCODER_DILATION': (2, 2, 2)
+      'DECODER_DILATION': (2, 2, 2)
 SOLVER:
   MAX_EPOCH: 200
   OPTIMIZING_METHOD: adam

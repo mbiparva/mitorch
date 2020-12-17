@@ -51,8 +51,6 @@ class EpochLoop:
         with open(os.path.join(self.cfg.OUTPUT_DIR, 'cfg.yml'), 'w') as outfile:
             # pyyaml crashes on CfgNodes in tuples so I will narrow it down to the net name
             cfg = self.cfg.clone()
-            if isinstance(cfg.MODEL.SETTINGS, tuple):
-                cfg.MODEL.SETTINGS = dict(cfg.MODEL.SETTINGS)[cfg.MODEL.MODEL_NAME]
             cfg.dump(stream=outfile)
 
     def tb_logger_update(self, e, worker):
