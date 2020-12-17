@@ -30,6 +30,32 @@ TEST:
           num_iterations:
             - 3
             - 9
+    - - t_name: 'spike'
+        t_params:
+          spikes_positions:
+            - - 0.5
+              - 0.0
+              - 0.0
+            - - 0.5
+              - 0.5
+              - 0.0
+          intensity:
+            - 1.0
+            - 1.0
+    - - t_name: 'ghosting'
+        t_params:
+          num_ghosts:
+            - 5
+            - 10
+          axis:
+            - 1
+            - 2
+          intensity:
+            - 0.85
+            - 0.85
+          restore:
+            - 5
+            - 5
     - - t_name: 'biasfield'
         t_params:
           coefficient:
