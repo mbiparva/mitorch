@@ -17,6 +17,7 @@ import torch.nn.functional as F
 from torch import nn
 from torch.autograd import Function
 from ..MONAI_data import Enum
+from models.Unet3D import pad_if_necessary
 
 
 class SkipMode(Enum):
@@ -55,6 +56,8 @@ class SkipConnection(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         y = self.submodule(x)
+
+        y, x = pad_if_necessary(y, x)  # for fractional sizes, lets drop tensor elements
 
         if self.mode == "cat":
             return torch.cat([x, y], dim=self.dim)

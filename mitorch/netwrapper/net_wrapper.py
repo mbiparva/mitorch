@@ -15,6 +15,7 @@ from netwrapper.optimizer import construct_optimizer, construct_scheduler
 from netwrapper.build import build_loss
 from data.functional_mitorch import resize, pad
 from data.build_transformations import build_transformations
+from models.Unet3D import pad_if_necessary
 try:
     from torch.cuda.amp import autocast
     from torch.cuda.amp import GradScaler
@@ -169,6 +170,9 @@ class NetWrapperWMH(NetWrapper):
         x, annotation = self.hfb_extract(x)
 
         pred = self.net_core(x)
+
+        if not pred.shape[2:] == annotation.shape[2:]:
+            pred, annotation = pad_if_necessary(pred, annotation)
 
         if return_input:
             return pred, annotation, x
