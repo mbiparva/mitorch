@@ -296,6 +296,7 @@ _C.MODEL.SETTINGS = CfgNode({
             'CHANNEL': (False, True)[1],
             'SPATIAL': (False, True)[1],
             'SPATIAL_KERNEL_SIZE': 3,
+            'NORM_TYPE': ('batch', 'instance', 'layer', 'none')[0],
         }),
         'LAM': CfgNode({
             'BLOCKS': [3, 4],
@@ -619,6 +620,8 @@ def init_dependencies(cfg):
 
     cfg.WMH.ENABLE = cfg.TRAIN.DATASET in ('WMHSegmentationChallenge', 'SRIBIL')
     cfg.WMH.HFB_GT = cfg.TRAIN.DATASET == 'SRIBIL' and cfg.WMH.HFB_GT
+    if cfg.WMH.ENABLE and cfg.TRAIN.BATCH_SIZE == 1:  # if batch size is one, batchnorm throws error, hence instance
+        cfg.MODEL.SETTINGS.Unet3DCBAM.GAM.NORM_TYPE = 'layer'
 
     cfg.NVT.ENABLE = cfg.TRAIN.DATASET in ('TRAP', 'CAPTURE', 'TRACINGSEG', 'TRACING')
     if cfg.NVT.ENABLE and cfg.NVT.BINARY_SEG:

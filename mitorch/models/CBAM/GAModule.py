@@ -20,10 +20,20 @@ IS_3D = True
 
 
 class MLPModule(nn.Sequential):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, norm_type='batch'):
+        if norm_type == 'batch':
+            norm_layer = nn.BatchNorm1d(num_features=out_channels, affine=True, track_running_stats=True)
+        elif norm_type == 'instance':
+            norm_layer = nn.InstanceNorm1d(num_features=out_channels, affine=True, track_running_stats=True)
+        elif norm_type == 'layer':
+            norm_layer = nn.LayerNorm(normalized_shape =out_channels, elementwise_affine=True)
+        elif norm_type == 'none':
+            norm_layer = None
+        else:
+            raise NotImplementedError()
         super().__init__(
             nn.Linear(in_channels, out_channels),
-            nn.BatchNorm1d(num_features=out_channels),
+            norm_layer,
             nn.ReLU(),
             nn.Linear(out_channels, in_channels),
         )
@@ -36,13 +46,16 @@ class ChannelAttentionModule(nn.Module):
         self.pooling_type = self_attention_attr.CHANNEL_POOLING_TYPE
         assert self.pooling_type in ('max', 'average', 'pa', 'lse'), 'p is undefined'
         self.reduction_ratio = self_attention_attr.REDUCTION_RATIO
+        self.norm_type = self_attention_attr.NORM_TYPE
+        assert self.norm_type in ('batch', 'instance', 'layer', 'none')
 
         self._create_net()
 
     def _create_net(self):
         self.mlp_layer = MLPModule(
             in_channels=self.gate_channels,
-            out_channels=self.gate_channels // self.reduction_ratio
+            out_channels=self.gate_channels // self.reduction_ratio,
+            norm_type=self.norm_type,
         )
 
     def forward_pooling(self, pooling_type, x):

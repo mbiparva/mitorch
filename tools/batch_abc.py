@@ -134,9 +134,9 @@ class BatchBase(ABC):
         meters = dict()
 
         if self.cfg.WMH.ENABLE:
-            p, annotation = netwrapper.forward((x, annotation))
+            p, annotation = netwrapper((x, annotation))
         else:
-            p = netwrapper.forward(x)
+            p = netwrapper(x)
 
         a = self.generate_gt(annotation)
 
