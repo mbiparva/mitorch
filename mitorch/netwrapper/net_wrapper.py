@@ -171,7 +171,10 @@ class NetWrapperWMH(NetWrapper):
 
         pred = self.net_core(x)
 
-        if not pred.shape[2:] == annotation.shape[2:]:
+        if isinstance(pred, list):
+            for i in range(len(pred)):
+                pred[i], annotation = pad_if_necessary(pred[i], annotation)
+        else:
             pred, annotation = pad_if_necessary(pred, annotation)
 
         if return_input:

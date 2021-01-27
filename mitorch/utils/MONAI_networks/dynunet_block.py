@@ -17,6 +17,7 @@ import torch.nn as nn
 
 from .convolutions import Convolution
 from .factories import Act, Norm, split_args
+from models.Unet3D import pad_if_necessary
 
 
 class UnetResBlock(nn.Module):
@@ -203,6 +204,7 @@ class UnetUpBlock(nn.Module):
     def forward(self, inp, skip):
         # number of channels for skip should equals to out_channels
         out = self.transp_conv(inp)
+        out, skip = pad_if_necessary(out, skip)  # for fractional sizes, lets drop tensor elements
         out = torch.cat((out, skip), dim=1)
         out = self.conv_block(out)
         return out
