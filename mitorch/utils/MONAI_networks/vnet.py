@@ -11,6 +11,7 @@ import torch.nn as nn
 
 from .convolutions import Convolution
 from .factories import Act, Conv, Dropout, Norm, split_args
+from models.Unet3D import pad_if_necessary
 
 
 def get_acti_layer(act: Union[Tuple[str, Dict], str], nchan: int = 0):
@@ -142,6 +143,9 @@ class UpTransition(nn.Module):
             out = x
         skipxdo = self.dropout2(skipx)
         out = self.act_function1(self.bn1(self.up_conv(out)))
+
+        out, skipxdo = pad_if_necessary(out, skipxdo)  # for fractional sizes, lets drop tensor elements
+
         xcat = torch.cat((out, skipxdo), 1)
         out = self.ops(xcat)
         out = self.act_function2(torch.add(out, xcat))
