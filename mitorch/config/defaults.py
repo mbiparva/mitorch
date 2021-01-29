@@ -353,7 +353,7 @@ _C.MODEL.SETTINGS = CfgNode({
     }),
     'Densenet3D': CfgNode({
         '_NET_SEL': (0, 1, 2, 3)[0],
-        'BN_SIZE': 4,
+        'BN_SIZE': (3, 4)[0],
         'INIT_FEATURES': 16,
         'GROWTH_RATE': 8,
         'DECODER_DILATION': (2, 2, 2),
