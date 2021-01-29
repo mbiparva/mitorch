@@ -62,13 +62,13 @@ SUPPORTED_ACTI = {
 
 DEFAULT_LAYER_PARAMS_3D = (
     # initial conv layer
-    {"name": "conv_0", "n_features": 16, "kernel_size": 3},
+    {"name": "conv_0", "n_features": 16//2, "kernel_size": 3},
     # residual blocks
-    {"name": "res_1", "n_features": 16, "kernels": (3, 3), "repeat": 3},
-    {"name": "res_2", "n_features": 32, "kernels": (3, 3), "repeat": 3},
-    {"name": "res_3", "n_features": 64, "kernels": (3, 3), "repeat": 3},
+    {"name": "res_1", "n_features": 16//2, "kernels": (3, 3), "repeat": 1},  # default repeat value is 3, get OOM error!
+    {"name": "res_2", "n_features": 32//2, "kernels": (3, 3), "repeat": 1},
+    {"name": "res_3", "n_features": 64//2, "kernels": (3, 3), "repeat": 1},
     # final conv layers
-    {"name": "conv_1", "n_features": 80, "kernel_size": 1},
+    {"name": "conv_1", "n_features": 80//2, "kernel_size": 1},
     {"name": "conv_2", "kernel_size": 1},
 )
 

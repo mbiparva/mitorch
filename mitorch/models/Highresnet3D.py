@@ -67,10 +67,10 @@ class Decoder(nn.Module):
                     self.get_layer_name(i-1, 'reduction'),
                     LocalizationBlock(in_channels, out_channels, dilation=(1, 1, 1)),
                 )
-                self.add_module(
-                    self.get_layer_name(i-1, 'localization'),
-                    LocalizationBlock(2 * out_channels, out_channels, dilation=self.dilation),
-                )
+                # self.add_module(
+                #     self.get_layer_name(i-1, 'localization'),
+                #     LocalizationBlock(2 * out_channels, out_channels, dilation=self.dilation),
+                # )
             in_channels = out_channels
 
     def forward(self, x_input):
@@ -81,9 +81,9 @@ class Decoder(nn.Module):
                 x = x_input_i
                 continue
             x = getattr(self, self.get_layer_name(i-1, 'reduction'))(x)
-            x, x_input_i = pad_if_necessary(x, x_input_i)
-            x = torch.cat((x, x_input_i), dim=1)
-            x = getattr(self, self.get_layer_name(i-1, 'localization'))(x)
+            # x, x_input_i = pad_if_necessary(x, x_input_i)
+            # x = torch.cat((x, x_input_i), dim=1)
+            # x = getattr(self, self.get_layer_name(i-1, 'localization'))(x)
             if len(x_input)-1-i < self.cfg.MODEL.NUM_PRED_LEVELS:
                 outputs.append(x)
 
