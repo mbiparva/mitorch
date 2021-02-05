@@ -25,6 +25,6 @@ SOLVER:
 
 USE_GPU: true
 GPU_ID: 0
-AMP: false
+AMP: true
 DP: false
 DDP: false
