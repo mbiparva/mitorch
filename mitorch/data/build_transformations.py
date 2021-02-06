@@ -35,7 +35,7 @@ def build_transformations(dataset_name, cfg, mode):
         name = 'WMHTransformations'
     elif dataset_name in ('WMHSkullStrippingTransformations', ):
         name = 'WMHSkullStrippingTransformations'
-    elif dataset_name in ('TRAP', 'CAPTURE', 'TRACING'):
+    elif dataset_name in ('TRAP', 'CAPTURE', 'TRACING', 'TRACINGSEG'):
         name = 'NVTTransformations'
     elif dataset_name in ('HPSubfield', ):
         name = 'HPSFTransformations'

@@ -96,6 +96,10 @@ class AutoPatching(ABC, data.Dataset):
 
         return dirs_dict
 
+    @staticmethod
+    def index_patch_files(s, s_path):
+        return [os.path.join(s, i) for i in sorted(os.listdir(s_path))]
+
     def list_pro_patches(self):
         patch_list = list()
         for s in os.listdir(self.processed_dir_path):
@@ -105,9 +109,7 @@ class AutoPatching(ABC, data.Dataset):
             s_path = os.path.join(self.processed_dir_path, s)
 
             # (1) Index Files for all patches
-            patch_list.extend([
-                os.path.join(s, i) for i in sorted(os.listdir(s_path))
-            ])
+            patch_list.extend(self.index_patch_files(s, s_path))
 
         return patch_list
 
@@ -384,7 +386,9 @@ class AutoPatching(ABC, data.Dataset):
         return selected_patches
 
     def load_save_selections(self):
-        selected_patch_path = os.path.join(self.dataset_path, f'patch_selection_policy_{self.cfg.NVT.SELECTION_LB}.csv')
+        selected_patch_path = os.path.join(
+            self.dataset_path, f'patch_selection_policy_{self.__class__.__name__}_{self.cfg.NVT.SELECTION_LB}.csv'
+        )
         if self.cfg.NVT.ENFORCE_SELECTION_POLICY or not os.path.exists(selected_patch_path):
             self.cfg.NVT.ENFORCE_SELECTION_POLICY = False  # once done in training, don't need to repeat in valid
             patch_list = self.select_patches()
@@ -504,3 +508,35 @@ class TRACING(AutoPatching):
         s_images = s_images.transpose(1, 0, 2, 3)  # ZxCxHxW
 
         tiff.imwrite(patch_path, s_images, **{'bigtiff': False, 'imagej': True, 'metadata': {'axes': 'ZCYX'}})
+
+
+@DATASET_REGISTRY.register()
+class TRACINGSEG(AutoPatching):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def image_annot_ready(self):
+        return True  # it is already prepared in the offline pipeline
+
+    def is_data_dir(self, sample_dir_name):
+        return re.match(r'^[a-zA-Z]\d+$', sample_dir_name) is not None
+
+    @staticmethod
+    def index_patch_files(s, s_path):
+        sub_dir = 'trainpatches'
+        s_path = os.path.join(s_path, sub_dir)
+        return [os.path.join(s, sub_dir, i) for i in sorted(os.listdir(s_path))]
+
+    def list_files(self, s_path):
+        raise NotImplementedError('Not implemented for this dataset')
+
+    @staticmethod
+    def load_annot(basename_path, image_shape):
+        raise NotImplementedError('Not implemented for this dataset')
+
+    @staticmethod
+    def annot_sanity_check(annot_tensor):
+        annot_unq = torch.unique(annot_tensor)
+        assert all([i in (0, 1, 2, 3) for i in annot_unq]), 'undefined label values in ground truth'
+
+        return annot_tensor

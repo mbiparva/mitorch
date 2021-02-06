@@ -62,7 +62,9 @@ _C.TRAIN.ENABLE = True
 _C.TRAIN.HPO = (False, True)[0]
 
 # Dataset.
-_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb', 'TRAP', 'CAPTURE', 'TRACING', 'HPSubfield')[1]
+_C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb',
+                    'TRAP', 'CAPTURE', 'TRACING', 'TRACINGSEG',
+                    'HPSubfield')[6]
 
 # Input Modalities
 _C.TRAIN.IN_MOD = tuple({
@@ -84,6 +86,7 @@ _C.TRAIN.IN_MOD = tuple({
         ],
     'TRAP': [[], [], []],  # just to imitate the typical behaviour for INPUT_CHANNELS
     'CAPTURE': [[], []],
+    'TRACINGSEG': [[], []],
     'TRACING': [[], []],
     'HPSubfield': [
         ('t1', 't1.nii.gz'),
@@ -454,9 +457,9 @@ _C.HPO.EVAL_METRIC = _C.PROJECT.METERS[1]
 _C.HPO.TOTAL_TRIALS = 100
 
 
-# # ---------------------------------------------------------------------------- #
-# # WMH options
-# # ---------------------------------------------------------------------------- #
+# ---------------------------------------------------------------------------- #
+# WMH options
+# ---------------------------------------------------------------------------- #
 _C.WMH = CfgNode()
 
 # Whether WMH is enabled
@@ -483,13 +486,13 @@ _C.WMH.CROPPING = (False, True)[0]
 _C.WMH.RESIZING_PADDING = (False, True)[0]
 
 
-# # ---------------------------------------------------------------------------- #
-# # Neuron and Virus Tracing Segmentation options
-# # ---------------------------------------------------------------------------- #
+# ---------------------------------------------------------------------------- #
+# Neuron and Virus Tracing Segmentation options
+# ---------------------------------------------------------------------------- #
 _C.NVT = CfgNode()
 
 # Whether NVT is enabled
-_C.NVT.ENABLE = _C.TRAIN.DATASET in ('TRAP', 'CAPTURE', 'TRACING')
+_C.NVT.ENABLE = _C.TRAIN.DATASET in ('TRAP', 'CAPTURE', 'TRACINGSEG', 'TRACING')
 
 _C.NVT.NUM_MULTI_PATCHES = 16
 
@@ -506,7 +509,7 @@ _C.NVT.REPEAT_DATASET = 0  # < 2 is off
 
 
 # ---------------------------------------------------------------------------- #
-# HP Sub-filed Segmentation options
+# Hippocampus Subfield Segmentation options
 # ---------------------------------------------------------------------------- #
 _C.HPSF = CfgNode()
 
@@ -528,7 +531,7 @@ def init_dependencies(cfg):
     cfg.WMH.ENABLE = cfg.TRAIN.DATASET in ('WMHSegmentationChallenge', 'SRIBIL')
     cfg.WMH.HFB_GT = cfg.TRAIN.DATASET == 'SRIBIL' and cfg.WMH.HFB_GT
 
-    cfg.NVT.ENABLE = cfg.TRAIN.DATASET in ('TRAP', 'CAPTURE', 'TRACING')
+    cfg.NVT.ENABLE = cfg.TRAIN.DATASET in ('TRAP', 'CAPTURE', 'TRACINGSEG', 'TRACING')
 
     cfg.HPSF.ENABLE = cfg.TRAIN.DATASET in ('HPSubfield',)
 
