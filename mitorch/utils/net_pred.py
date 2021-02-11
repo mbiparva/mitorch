@@ -18,7 +18,7 @@ def cel_prep(p):
 def post_proc_pred(p, a, cfg):
     assert isinstance(p, (tuple, list)), 'pack p even if not using Deep_supervision'
 
-    if cfg.AMP and p.dtype is torch.float16:  # dice has one sum that hit inf
+    if cfg.AMP and any([i.dtype is torch.float16 for i in p]):  # dice has one sum that hit inf
         p = [i.to(dtype=torch.float32) for i in p]
         a = a.to(dtype=torch.float32)
 
