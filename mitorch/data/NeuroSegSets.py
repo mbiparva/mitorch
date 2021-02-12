@@ -375,7 +375,7 @@ class AutoPatching(ABC, data.Dataset):
                 if patch_sum > self.cfg.NVT.SELECTION_LB:
                     selected_patches.append(p)
 
-        patch_sums_path = os.path.join(self.dataset_path, 'patch_sums.csv')
+        patch_sums_path = os.path.join(self.dataset_path, f'patch_sums_{self.__class__.__name__}.csv')
         if not os.path.exists(patch_sums_path):
             with open(patch_sums_path, 'w') as fh:
                 csv.writer(fh).writerow(patch_sums)
