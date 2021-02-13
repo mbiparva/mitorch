@@ -157,6 +157,7 @@ class NVTTransformations(BaseTransformations):
         # --- BODY ---
         if self.mode == 'train':
             transformations_body = [
+                tf.OneHotAnnot(self.cfg.MODEL.NUM_CLASSES),
                 tf.RandomCropImageVolumeConditional(self.cfg.DATA.CROP_SIZE, prand=True,
                                                     num_attemps=self.cfg.NVT.RANDOM_CROP_NUM_ATTEMPS,
                                                     threshold=self.cfg.NVT.RANDOM_CROP_THRESHOLD),
@@ -164,6 +165,7 @@ class NVTTransformations(BaseTransformations):
             ]
         elif self.mode in ('valid', 'test'):
             transformations_body = [
+                tf.OneHotAnnot(self.cfg.MODEL.NUM_CLASSES),
                 tf.RandomCropImageVolumeConditional(self.cfg.DATA.CROP_SIZE, prand=True,
                                                     num_attemps=self.cfg.NVT.RANDOM_CROP_NUM_ATTEMPS,
                                                     threshold=self.cfg.NVT.RANDOM_CROP_THRESHOLD),

@@ -56,7 +56,7 @@ class BatchBase(ABC):
         return netwrapper.scheduler.get_last_lr() if self.cfg.SOLVER.SCHEDULER_MODE else self.cfg.SOLVER.BASE_LR
 
     def generate_gt(self, annotation):
-        if not self.cfg.HPSF.ENABLE:
+        if not (self.cfg.HPSF.ENABLE or (self.cfg.NVT.ENABLE and self.cfg.MODEL.NUM_CLASSES > 1)):
             assert annotation.size(1) == 1
         if self.cfg.MODEL.LOSS_FUNC == 'CrossEntropyLoss':
             assert annotation.size(1) == 1
