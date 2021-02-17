@@ -177,9 +177,6 @@ class BatchBase(ABC):
             if self.cfg.MODEL.PROCESSING_MODE == '2d':
                 image, annotation = self.depth_sampling(image, annotation)
 
-            if cur_iter < 24:
-                continue
-            print('*** started', cur_iter, meta)
             self.batch_main_mode(netwrapper, image, annotation)
 
             self.meters.log_iter_stats(cur_epoch, cur_iter, self.mode)
