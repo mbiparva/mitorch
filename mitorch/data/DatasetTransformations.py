@@ -100,6 +100,9 @@ class WMHTransformations(BaseTransformations):
         # --- TAIL ---
         transformations_tail = [
             tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
+            # tf.NormalizeMeanStdSingleVolume(nonzero=False, channel_wise=True),
+            # tf.ScaleIntensityRangePercentilesVolume(lower=0.0, upper=99.99, b_min=0, b_max=1,
+            #                                         clip=False, relative=False),
         ]
 
         return torch_tf.Compose(

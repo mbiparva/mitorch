@@ -1141,24 +1141,6 @@ class AffineScale(Transformable):
         )
 
 
-class NormalizeMeanStdSingleVolume(Transformable):
-    def __init__(
-            self,
-            nonzero: bool = False,
-            channel_wise: bool = True,
-    ):
-        self.transform = mn.NormalizeIntensity(nonzero=nonzero, channel_wise=channel_wise)
-
-    def apply(self, volume):
-        image, annot, meta = volume
-
-        return (
-            self.transform(image),
-            annot,
-            meta
-        )
-
-
 class Spike(Transformable):
     def __init__(self, **kwargs):
         self.transform = tio.Spike(**kwargs)
@@ -1227,6 +1209,50 @@ class Swap(Transformable):
             annot,
             meta
         )
+
+
+class MONAITransformVolume(Transformable):
+    def __init__(self, transform, *args, **kwargs):
+        self.transform = transform(*args, **kwargs)
+
+    def apply(self, volume):
+        image, annot, meta = volume
+        image = torch.as_tensor(self.transform(image.numpy()))
+
+        return (
+            image,
+            annot,
+            meta
+        )
+
+
+class NormalizeMeanStdSingleVolume(MONAITransformVolume):
+    def __init__(self, *args, **kwargs):
+        super().__init__(
+            mn.NormalizeIntensity,
+            *args,
+            **kwargs,
+        )
+
+
+class ScaleIntensityRangeVolume(MONAITransformVolume):
+    def __init__(self, *args, **kwargs):
+        super().__init__(
+            mn.ScaleIntensityRange,
+            *args,
+            **kwargs,
+        )
+
+
+class ScaleIntensityRangePercentilesVolume(MONAITransformVolume):
+    def __init__(self, *args, **kwargs):
+        super().__init__(
+            mn.ScaleIntensityRangePercentiles,
+            *args,
+            **kwargs,
+        )
+
+
 
 # TODO Implement CropTightVolume based off of
 #  https://github.com/nilearn/nilearn/blob/c10248e43769f37eaea804f64d44a7816e3c6e03/nilearn/image/image.py
