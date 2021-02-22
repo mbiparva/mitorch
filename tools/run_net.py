@@ -11,7 +11,7 @@
 import _init_lib_path
 import os
 import argparse
-from config.defaults import get_cfg, init_cfg
+from config.defaults import get_cfg, init_cfg, init_dependencies
 from test_net import test
 from train_net import train as train_single
 from train_net_hpo import hpo_main as train_hpo
@@ -81,6 +81,7 @@ def load_config(args):
             cfg = init_cfg(cfg)
         else:
             cfg.OUTPUT_DIR = ''
+            cfg = init_dependencies(cfg)
     else:
         cfg = init_cfg(cfg)
 
