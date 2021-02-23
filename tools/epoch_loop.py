@@ -62,7 +62,7 @@ class EpochLoop:
     def save_checkpoint(self, cur_epoch):
         # TODO add if it is the best, save it separately too
         if checkops.is_checkpoint_epoch(cur_epoch, self.cfg.TRAIN.CHECKPOINT_PERIOD):
-            if self.cfg.DDP and self.cfg.RANK:
+            if not (self.cfg.DDP and self.cfg.DDP_CFG.RANK):
                 return
             self.net_wrapper.save_checkpoint(self.cfg.OUTPUT_DIR, cur_epoch)
 
