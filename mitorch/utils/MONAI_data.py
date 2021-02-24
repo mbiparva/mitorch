@@ -22,14 +22,17 @@
 
 import collections
 from abc import ABC, abstractmethod
+import math
 import random
 import warnings
-from typing import Callable, List, Optional, Sequence, Tuple, Union, Iterable, Any
+from typing import Callable, List, Optional, Sequence, Tuple, Union, Iterable, Any, Generator, Dict, cast
 from enum import Enum
 import numpy as np
 import torch
 import torch.nn as nn
 from warnings import warn
+from itertools import product, starmap
+import torch.nn.functional as F
 
 
 MAX_SEED = np.iinfo(np.uint32).max + 1  # 2**32, the actual seed should be in [0, MAX_SEED - 1] for uint32
@@ -44,43 +47,13 @@ container must be iterable.
 """
 
 
-def get_valid_patch_size(image_size: Sequence[int], patch_size: Union[Sequence[int], int]) -> Tuple[int, ...]:
+def first(iterable, default=None):
     """
-    Given an image of dimensions `image_size`, return a patch size tuple taking the dimension from `patch_size` if this is
-    not 0/None. Otherwise, or if `patch_size` is shorter than `image_size`, the dimension from `image_size` is taken. This ensures
-    the returned patch size is within the bounds of `image_size`. If `patch_size` is a single number this is interpreted as a
-    patch of the same dimensionality of `image_size` with that size in each dimension.
+    Returns the first item in the given iterable or `default` if empty, meaningful mostly with 'for' expressions.
     """
-    ndim = len(image_size)
-    patch_size_ = ensure_tuple_size(patch_size, ndim)
-
-    # ensure patch size dimensions are not larger than image dimension, if a dimension is None or 0 use whole dimension
-    return tuple(min(ms, ps or ms) for ms, ps in zip(image_size, patch_size_))
-
-
-def get_random_patch(
-    dims: Sequence[int], patch_size: Sequence[int], rand_state: Optional[np.random.RandomState] = None
-) -> Tuple[slice, ...]:
-    """
-    Returns a tuple of slices to define a random patch in an array of shape `dims` with size `patch_size` or the as
-    close to it as possible within the given dimension. It is expected that `patch_size` is a valid patch for a source
-    of shape `dims` as returned by `get_valid_patch_size`.
-
-    Args:
-        dims: shape of source array
-        patch_size: shape of patch size to generate
-        rand_state: a random state object to generate random numbers from
-
-    Returns:
-        (tuple of slice): a tuple of slice objects defining the patch
-    """
-
-    # choose the minimal corner of the patch
-    rand_int = np.random.randint if rand_state is None else rand_state.randint
-    min_corner = tuple(rand_int(0, ms - ps + 1) if ms > ps else 0 for ms, ps in zip(dims, patch_size))
-
-    # create the slices for each dimension which define the patch in the source array
-    return tuple(slice(mc, mc + ps) for mc, ps in zip(min_corner, patch_size))
+    for i in iterable:
+        return i
+    return default
 
 
 class NumpyPadMode(Enum):
@@ -880,6 +853,26 @@ class GridSamplePadMode(Enum):
     ZEROS = "zeros"
     BORDER = "border"
     REFLECTION = "reflection"
+
+
+class BlendMode(Enum):
+    """
+    See also: :py:class:`monai.data.utils.compute_importance_map`
+    """
+
+    CONSTANT = "constant"
+    GAUSSIAN = "gaussian"
+
+
+class PytorchPadMode(Enum):
+    """
+    See also: https://pytorch.org/docs/stable/nn.functional.html#pad
+    """
+
+    CONSTANT = "constant"
+    REFLECT = "reflect"
+    REPLICATE = "replicate"
+    CIRCULAR = "circular"
 
 
 def normalize_transform(
@@ -2238,3 +2231,489 @@ class ResizeWithPadOrCrop(Transform):
                 See also: https://numpy.org/doc/1.18/reference/generated/numpy.pad.html
         """
         return self.padder(self.cropper(img), mode=mode)
+
+
+# ---------------------------------------------------------------
+# ---------------- Patching and Sliding-Window ------------------
+# ---------------------------------------------------------------
+
+
+def get_random_patch(
+    dims: Sequence[int], patch_size: Sequence[int], rand_state: Optional[np.random.RandomState] = None
+) -> Tuple[slice, ...]:
+    """
+    Returns a tuple of slices to define a random patch in an array of shape `dims` with size `patch_size` or the as
+    close to it as possible within the given dimension. It is expected that `patch_size` is a valid patch for a source
+    of shape `dims` as returned by `get_valid_patch_size`.
+
+    Args:
+        dims: shape of source array
+        patch_size: shape of patch size to generate
+        rand_state: a random state object to generate random numbers from
+
+    Returns:
+        (tuple of slice): a tuple of slice objects defining the patch
+    """
+
+    # choose the minimal corner of the patch
+    rand_int = np.random.randint if rand_state is None else rand_state.randint
+    min_corner = tuple(rand_int(0, ms - ps + 1) if ms > ps else 0 for ms, ps in zip(dims, patch_size))
+
+    # create the slices for each dimension which define the patch in the source array
+    return tuple(slice(mc, mc + ps) for mc, ps in zip(min_corner, patch_size))
+
+
+def iter_patch_slices(
+    dims: Sequence[int], patch_size: Union[Sequence[int], int], start_pos: Sequence[int] = ()
+) -> Generator[Tuple[slice, ...], None, None]:
+    """
+    Yield successive tuples of slices defining patches of size `patch_size` from an array of dimensions `dims`. The
+    iteration starts from position `start_pos` in the array, or starting at the origin if this isn't provided. Each
+    patch is chosen in a contiguous grid using a first dimension as least significant ordering.
+
+    Args:
+        dims: dimensions of array to iterate over
+        patch_size: size of patches to generate slices for, 0 or None selects whole dimension
+        start_pos: starting position in the array, default is 0 for each dimension
+
+    Yields:
+        Tuples of slice objects defining each patch
+    """
+
+    # ensure patchSize and startPos are the right length
+    ndim = len(dims)
+    patch_size_ = get_valid_patch_size(dims, patch_size)
+    start_pos = ensure_tuple_size(start_pos, ndim)
+
+    # collect the ranges to step over each dimension
+    ranges = tuple(starmap(range, zip(start_pos, dims, patch_size_)))
+
+    # choose patches by applying product to the ranges
+    for position in product(*ranges[::-1]):  # reverse ranges order to iterate in index order
+        yield tuple(slice(s, s + p) for s, p in zip(position[::-1], patch_size_))
+
+
+def dense_patch_slices(
+    image_size: Sequence[int],
+    patch_size: Sequence[int],
+    scan_interval: Sequence[int],
+) -> List[Tuple[slice, ...]]:
+    """
+    Enumerate all slices defining ND patches of size `patch_size` from an `image_size` input image.
+
+    Args:
+        image_size: dimensions of image to iterate over
+        patch_size: size of patches to generate slices
+        scan_interval: dense patch sampling interval
+
+    Returns:
+        a list of slice objects defining each patch
+
+    """
+    num_spatial_dims = len(image_size)
+    patch_size = get_valid_patch_size(image_size, patch_size)
+    scan_interval = ensure_tuple_size(scan_interval, num_spatial_dims)
+
+    scan_num = []
+    for i in range(num_spatial_dims):
+        if scan_interval[i] == 0:
+            scan_num.append(1)
+        else:
+            num = int(math.ceil(float(image_size[i]) / scan_interval[i]))
+            scan_dim = first(d for d in range(num) if d * scan_interval[i] + patch_size[i] >= image_size[i])
+            scan_num.append(scan_dim + 1 if scan_dim is not None else 1)
+
+    starts = []
+    for dim in range(num_spatial_dims):
+        dim_starts = []
+        for idx in range(scan_num[dim]):
+            start_idx = idx * scan_interval[dim]
+            start_idx -= max(start_idx + patch_size[dim] - image_size[dim], 0)
+            dim_starts.append(start_idx)
+        starts.append(dim_starts)
+    out = np.asarray([x.flatten() for x in np.meshgrid(*starts, indexing="ij")]).T
+    slices = [tuple(slice(s, s + patch_size[d]) for d, s in enumerate(x)) for x in out]
+    return slices
+
+
+def iter_patch(
+    arr: np.ndarray,
+    patch_size: Union[Sequence[int], int] = 0,
+    start_pos: Sequence[int] = (),
+    copy_back: bool = True,
+    mode: Union[NumpyPadMode, str] = NumpyPadMode.WRAP,
+    **pad_opts: Dict,
+) -> Generator[np.ndarray, None, None]:
+    """
+    Yield successive patches from `arr` of size `patch_size`. The iteration can start from position `start_pos` in `arr`
+    but drawing from a padded array extended by the `patch_size` in each dimension (so these coordinates can be negative
+    to start in the padded region). If `copy_back` is True the values from each patch are written back to `arr`.
+
+    Args:
+        arr: array to iterate over
+        patch_size: size of patches to generate slices for, 0 or None selects whole dimension
+        start_pos: starting position in the array, default is 0 for each dimension
+        copy_back: if True data from the yielded patches is copied back to `arr` once the generator completes
+        mode: {``"constant"``, ``"edge"``, ``"linear_ramp"``, ``"maximum"``, ``"mean"``,
+            ``"median"``, ``"minimum"``, ``"reflect"``, ``"symmetric"``, ``"wrap"``, ``"empty"``}
+            One of the listed string values or a user supplied function. Defaults to ``"wrap"``.
+            See also: https://numpy.org/doc/1.18/reference/generated/numpy.pad.html
+        pad_opts: padding options, see `numpy.pad`
+
+    Yields:
+        Patches of array data from `arr` which are views into a padded array which can be modified, if `copy_back` is
+        True these changes will be reflected in `arr` once the iteration completes.
+    """
+    # ensure patchSize and startPos are the right length
+    patch_size_ = get_valid_patch_size(arr.shape, patch_size)
+    start_pos = ensure_tuple_size(start_pos, arr.ndim)
+
+    # pad image by maximum values needed to ensure patches are taken from inside an image
+    arrpad = np.pad(arr, tuple((p, p) for p in patch_size_), NumpyPadMode(mode).value, **pad_opts)
+
+    # choose a start position in the padded image
+    start_pos_padded = tuple(s + p for s, p in zip(start_pos, patch_size_))
+
+    # choose a size to iterate over which is smaller than the actual padded image to prevent producing
+    # patches which are only in the padded regions
+    iter_size = tuple(s + p for s, p in zip(arr.shape, patch_size_))
+
+    for slices in iter_patch_slices(iter_size, patch_size_, start_pos_padded):
+        yield arrpad[slices]
+
+    # copy back data from the padded image if required
+    if copy_back:
+        slices = tuple(slice(p, p + s) for p, s in zip(patch_size_, arr.shape))
+        arr[...] = arrpad[slices]
+
+
+def get_valid_patch_size(image_size: Sequence[int], patch_size: Union[Sequence[int], int]) -> Tuple[int, ...]:
+    """
+    Given an image of dimensions `image_size`, return a patch size tuple taking the dimension from `patch_size` if this is
+    not 0/None. Otherwise, or if `patch_size` is shorter than `image_size`, the dimension from `image_size` is taken. This ensures
+    the returned patch size is within the bounds of `image_size`. If `patch_size` is a single number this is interpreted as a
+    patch of the same dimensionality of `image_size` with that size in each dimension.
+    """
+    ndim = len(image_size)
+    patch_size_ = ensure_tuple_size(patch_size, ndim)
+
+    # ensure patch size dimensions are not larger than image dimension, if a dimension is None or 0 use whole dimension
+    return tuple(min(ms, ps or ms) for ms, ps in zip(image_size, patch_size_))
+
+
+def compute_importance_map(
+    patch_size: Tuple[int, ...],
+    mode: Union[BlendMode, str] = BlendMode.CONSTANT,
+    sigma_scale: Union[Sequence[float], float] = 0.125,
+    device: Union[torch.device, int, str] = "cpu",
+) -> torch.Tensor:
+    """Get importance map for different weight modes.
+
+    Args:
+        patch_size: Size of the required importance map. This should be either H, W [,D].
+        mode: {``"constant"``, ``"gaussian"``}
+            How to blend output of overlapping windows. Defaults to ``"constant"``.
+
+            - ``"constant``": gives equal weight to all predictions.
+            - ``"gaussian``": gives less weight to predictions on edges of windows.
+
+        sigma_scale: Sigma_scale to calculate sigma for each dimension
+            (sigma = sigma_scale * dim_size). Used for gaussian mode only.
+        device: Device to put importance map on.
+
+    Raises:
+        ValueError: When ``mode`` is not one of ["constant", "gaussian"].
+
+    Returns:
+        Tensor of size patch_size.
+
+    """
+    mode = BlendMode(mode)
+    device = torch.device(device)  # type: ignore[arg-type]
+    if mode == BlendMode.CONSTANT:
+        importance_map = torch.ones(patch_size, device=device).float()
+    elif mode == BlendMode.GAUSSIAN:
+        center_coords = [i // 2 for i in patch_size]
+        sigma_scale = ensure_tuple_rep(sigma_scale, len(patch_size))
+        sigmas = [i * sigma_s for i, sigma_s in zip(patch_size, sigma_scale)]
+
+        importance_map = torch.zeros(patch_size, device=device)
+        importance_map[tuple(center_coords)] = 1
+        pt_gaussian = GaussianFilter(len(patch_size), sigmas).to(device=device, dtype=torch.float)
+        importance_map = pt_gaussian(importance_map.unsqueeze(0).unsqueeze(0))
+        importance_map = importance_map.squeeze(0).squeeze(0)
+        importance_map = importance_map / torch.max(importance_map)
+        importance_map = importance_map.float()
+
+        # importance_map cannot be 0, otherwise we may end up with nans!
+        min_non_zero = importance_map[importance_map != 0].min().item()
+        importance_map = torch.clamp(importance_map, min=min_non_zero)
+    else:
+        raise ValueError(
+            f"Unsupported mode: {mode}, available options are [{BlendMode.CONSTANT}, {BlendMode.CONSTANT}]."
+        )
+
+    return importance_map
+
+def same_padding(
+    kernel_size: Union[Sequence[int], int], dilation: Union[Sequence[int], int] = 1
+) -> Union[Tuple[int, ...], int]:
+    """
+    Return the padding value needed to ensure a convolution using the given kernel size produces an output of the same
+    shape as the input for a stride of 1, otherwise ensure a shape of the input divided by the stride rounded down.
+
+    Raises:
+        NotImplementedError: When ``np.any((kernel_size - 1) * dilation % 2 == 1)``.
+
+    """
+
+    kernel_size_np = np.atleast_1d(kernel_size)
+    dilation_np = np.atleast_1d(dilation)
+
+    if np.any((kernel_size_np - 1) * dilation % 2 == 1):
+        raise NotImplementedError(
+            f"Same padding not available for kernel_size={kernel_size_np} and dilation={dilation_np}."
+        )
+
+    padding_np = (kernel_size_np - 1) / 2 * dilation_np
+    padding = tuple(int(p) for p in padding_np)
+
+    return padding if len(padding) > 1 else padding[0]
+
+
+def separable_filtering(x: torch.Tensor, kernels: Union[Sequence[torch.Tensor], torch.Tensor]) -> torch.Tensor:
+    """
+    Apply 1-D convolutions along each spatial dimension of `x`.
+
+    Args:
+        x: the input image. must have shape (batch, channels, H[, W, ...]).
+        kernels: kernel along each spatial dimension.
+            could be a single kernel (duplicated for all dimension), or `spatial_dims` number of kernels.
+
+    Raises:
+        TypeError: When ``x`` is not a ``torch.Tensor``.
+    """
+    if not torch.is_tensor(x):
+        raise TypeError(f"x must be a torch.Tensor but is {type(x).__name__}.")
+
+    spatial_dims = len(x.shape) - 2
+    _kernels = [
+        torch.as_tensor(s, dtype=torch.float, device=s.device if torch.is_tensor(s) else None)
+        for s in ensure_tuple_rep(kernels, spatial_dims)
+    ]
+    _paddings = [cast(int, (same_padding(k.shape[0]))) for k in _kernels]
+    n_chns = x.shape[1]
+
+    def _conv(input_: torch.Tensor, d: int) -> torch.Tensor:
+        if d < 0:
+            return input_
+        s = [1] * len(input_.shape)
+        s[d + 2] = -1
+        _kernel = kernels[d].reshape(s)
+        _kernel = _kernel.repeat([n_chns, 1] + [1] * spatial_dims)
+        _padding = [0] * spatial_dims
+        _padding[d] = _paddings[d]
+        conv_type = [F.conv1d, F.conv2d, F.conv3d][spatial_dims - 1]
+        return conv_type(input=_conv(input_, d - 1), weight=_kernel, padding=_padding, groups=n_chns)
+
+    return _conv(x, spatial_dims - 1)
+
+
+class GaussianFilter(nn.Module):
+    def __init__(
+        self,
+        spatial_dims: int,
+        sigma: Union[Sequence[float], float, Sequence[torch.Tensor], torch.Tensor],
+        truncated: float = 4.0,
+        approx: str = "erf",
+        requires_grad: bool = False,
+    ) -> None:
+        """
+        Args:
+            spatial_dims: number of spatial dimensions of the input image.
+                must have shape (Batch, channels, H[, W, ...]).
+            sigma: std. could be a single value, or `spatial_dims` number of values.
+            truncated: spreads how many stds.
+            approx: discrete Gaussian kernel type, available options are "erf", "sampled", and "scalespace".
+
+                - ``erf`` approximation interpolates the error function;
+                - ``sampled`` uses a sampled Gaussian kernel;
+                - ``scalespace`` corresponds to
+                  https://en.wikipedia.org/wiki/Scale_space_implementation#The_discrete_Gaussian_kernel
+                  based on the modified Bessel functions.
+
+            requires_grad: whether to store the gradients for sigma.
+                if True, `sigma` will be the initial value of the parameters of this module
+                (for example `parameters()` iterator could be used to get the parameters);
+                otherwise this module will fix the kernels using `sigma` as the std.
+        """
+        super().__init__()
+        self.sigma = [
+            torch.nn.Parameter(
+                torch.as_tensor(s, dtype=torch.float, device=s.device if torch.is_tensor(s) else None),
+                requires_grad=requires_grad,
+            )
+            for s in ensure_tuple_rep(sigma, int(spatial_dims))
+        ]
+        self.truncated = truncated
+        self.approx = approx
+        for idx, param in enumerate(self.sigma):
+            self.register_parameter(f"kernel_sigma_{idx}", param)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x: in shape [Batch, chns, H, W, D].
+        """
+        _kernel = [gaussian_1d(s, truncated=self.truncated, approx=self.approx) for s in self.sigma]
+        return separable_filtering(x=x, kernels=_kernel)
+
+
+def polyval(coef, x) -> torch.Tensor:
+    """
+    Evaluates the polynomial defined by `coef` at `x`.
+
+    For a 1D sequence of coef (length n), evaluate::
+
+        y = coef[n-1] + x * (coef[n-2] + ... + x * (coef[1] + x * coef[0]))
+
+    Args:
+        coef: a sequence of floats representing the coefficients of the polynomial
+        x: float or a sequence of floats representing the variable of the polynomial
+
+    Returns:
+        1D torch tensor
+    """
+    device = x.device if torch.is_tensor(x) else None
+    coef = torch.as_tensor(coef, dtype=torch.float, device=device)
+    if coef.ndim == 0 or (len(coef) < 1):
+        return torch.zeros(x.shape)
+    x = torch.as_tensor(x, dtype=torch.float, device=device)
+    ans = coef[0]
+    for c in coef[1:]:
+        ans = ans * x + c
+    return ans  # type: ignore
+
+
+def _modified_bessel_0(x: torch.Tensor) -> torch.Tensor:
+    x = torch.as_tensor(x, dtype=torch.float, device=x.device if torch.is_tensor(x) else None)
+    if torch.abs(x) < 3.75:
+        y = x * x / 14.0625
+        return polyval([0.45813e-2, 0.360768e-1, 0.2659732, 1.2067492, 3.0899424, 3.5156229, 1.0], y)
+    ax = torch.abs(x)
+    y = 3.75 / ax
+    _coef = [
+        0.392377e-2,
+        -0.1647633e-1,
+        0.2635537e-1,
+        -0.2057706e-1,
+        0.916281e-2,
+        -0.157565e-2,
+        0.225319e-2,
+        0.1328592e-1,
+        0.39894228,
+    ]
+    return polyval(_coef, y) * torch.exp(ax) / torch.sqrt(ax)
+
+
+def _modified_bessel_1(x: torch.Tensor) -> torch.Tensor:
+    x = torch.as_tensor(x, dtype=torch.float, device=x.device if torch.is_tensor(x) else None)
+    if torch.abs(x) < 3.75:
+        y = x * x / 14.0625
+        _coef = [0.32411e-3, 0.301532e-2, 0.2658733e-1, 0.15084934, 0.51498869, 0.87890594, 0.5]
+        return torch.abs(x) * polyval(_coef, y)
+    ax = torch.abs(x)
+    y = 3.75 / ax
+    _coef = [
+        -0.420059e-2,
+        0.1787654e-1,
+        -0.2895312e-1,
+        0.2282967e-1,
+        -0.1031555e-1,
+        0.163801e-2,
+        -0.362018e-2,
+        -0.3988024e-1,
+        0.39894228,
+    ]
+    ans = polyval(_coef, y) * torch.exp(ax) / torch.sqrt(ax)
+    return -ans if x < 0.0 else ans
+
+
+def gaussian_1d(
+    sigma: torch.Tensor, truncated: float = 4.0, approx: str = "erf", normalize: bool = False
+) -> torch.Tensor:
+    """
+    one dimensional Gaussian kernel.
+
+    Args:
+        sigma: std of the kernel
+        truncated: tail length
+        approx: discrete Gaussian kernel type, available options are "erf", "sampled", and "scalespace".
+
+            - ``erf`` approximation interpolates the error function;
+            - ``sampled`` uses a sampled Gaussian kernel;
+            - ``scalespace`` corresponds to
+              https://en.wikipedia.org/wiki/Scale_space_implementation#The_discrete_Gaussian_kernel
+              based on the modified Bessel functions.
+
+        normalize: whether to normalize the kernel with `kernel.sum()`.
+
+    Raises:
+        ValueError: When ``truncated`` is non-positive.
+
+    Returns:
+        1D torch tensor
+
+    """
+    sigma = torch.as_tensor(sigma, dtype=torch.float, device=sigma.device if torch.is_tensor(sigma) else None)
+    device = sigma.device
+    if truncated <= 0.0:
+        raise ValueError(f"truncated must be positive, got {truncated}.")
+    tail = int(max(float(sigma) * truncated, 0.5) + 0.5)
+    if approx.lower() == "erf":
+        x = torch.arange(-tail, tail + 1, dtype=torch.float, device=device)
+        t = 0.70710678 / torch.abs(sigma)
+        out = 0.5 * ((t * (x + 0.5)).erf() - (t * (x - 0.5)).erf())
+        out = out.clamp(min=0)
+    elif approx.lower() == "sampled":
+        x = torch.arange(-tail, tail + 1, dtype=torch.float, device=sigma.device)
+        out = torch.exp(-0.5 / (sigma * sigma) * x ** 2)
+        if not normalize:  # compute the normalizer
+            out = out / (2.5066282 * sigma)
+    elif approx.lower() == "scalespace":
+        sigma2 = sigma * sigma
+        out_pos: List[Optional[torch.Tensor]] = [None] * (tail + 1)
+        out_pos[0] = _modified_bessel_0(sigma2)
+        out_pos[1] = _modified_bessel_1(sigma2)
+        for k in range(2, len(out_pos)):
+            out_pos[k] = _modified_bessel_i(k, sigma2)
+        out = out_pos[:0:-1]
+        out.extend(out_pos)
+        out = torch.stack(out) * torch.exp(-sigma2)
+    else:
+        raise NotImplementedError(f"Unsupported option: approx='{approx}'.")
+    return out / out.sum() if normalize else out  # type: ignore
+
+
+def _modified_bessel_i(n: int, x: torch.Tensor) -> torch.Tensor:
+    if n < 2:
+        raise ValueError(f"n must be greater than 1, got n={n}.")
+    x = torch.as_tensor(x, dtype=torch.float, device=x.device if torch.is_tensor(x) else None)
+    if x == 0.0:
+        return x
+    device = x.device
+    tox = 2.0 / torch.abs(x)
+    ans, bip, bi = torch.tensor(0.0, device=device), torch.tensor(0.0, device=device), torch.tensor(1.0, device=device)
+    m = int(2 * (n + np.floor(np.sqrt(40.0 * n))))
+    for j in range(m, 0, -1):
+        bim = bip + float(j) * tox * bi
+        bip = bi
+        bi = bim
+        if abs(bi) > 1.0e10:
+            ans = ans * 1.0e-10
+            bi = bi * 1.0e-10
+            bip = bip * 1.0e-10
+        if j == n:
+            ans = bip
+    ans = ans * _modified_bessel_0(x) / bi
+    return -ans if x < 0.0 and (n % 2) == 1 else ans
