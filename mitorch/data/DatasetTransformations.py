@@ -121,15 +121,15 @@ class WMHSkullStrippingTransformations(BaseTransformations):
             transformations_body = [
                 tf.MaskIntensityVolume(mask_data=None),  # crop a tight 3D box
                 tf.CropForegroundVolume(margin=2),  # prune the input using the mask
-                tf.DivisiblePadVolume(k=64, mode='constant'),  # pad +/ resize
-                None,  # resize
+                # tf.DivisiblePadVolume(k=64, mode='constant'),  # pad +/ resize
+                # None,  # resize
             ]
         elif self.mode in ('valid', 'test'):
             transformations_body = [
                 tf.MaskIntensityVolume(mask_data=None),  # crop a tight 3D box
                 tf.CropForegroundVolume(margin=2),  # prune the input using the mask
-                tf.DivisiblePadVolume(k=64, mode='constant'),  # pad +/ resize
-                None,  # resize
+                # tf.DivisiblePadVolume(k=64, mode='constant'),  # pad +/ resize
+                # None,  # resize
             ]
         else:
             raise NotImplementedError

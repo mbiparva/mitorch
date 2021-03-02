@@ -89,11 +89,11 @@ class SRIBIL(SRIBILBase):
         return image_tensor, annot_tensor, hfb_tensor
 
     def hfb_extract_pipeline(self, x, pred, annotation):
-        x_annotation = torch.stack((x, annotation), dim=1)
+        x_annotation = torch.cat((x, annotation.unsqueeze(dim=0)), dim=0)
 
-        x_annotation = self.hfb_transformations(x_annotation, pred)
+        x_annotation, _, _ = self.hfb_transformations((x_annotation, pred, None))  # meta is None
 
-        x, annotation = x_annotation[:, :-1], x_annotation[:, -1]
+        x, annotation = x_annotation[:-1], x_annotation[-1]
 
         return x, annotation
 
@@ -121,9 +121,9 @@ class SRIBIL(SRIBILBase):
 
         if self.hfb_transformations is not None:
             assert hfb_tensor is not None
-            annotation, pred = annot_tensor[:, 0], annot_tensor[:, 1]
+            annotation, pred = annot_tensor[0], annot_tensor[1]
             image_tensor, annot_tensor = self.hfb_extract_pipeline(image_tensor, pred, annotation)
-            annot_tensor = torch.stack((annot_tensor, torch.zeros_like(annot_tensor)))
+            annot_tensor = torch.stack((annot_tensor, torch.zeros_like(annot_tensor)))  # pass zero tensor as for pred
 
         return image_tensor, annot_tensor, in_pipe_meta
 

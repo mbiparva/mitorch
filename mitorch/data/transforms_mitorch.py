@@ -1261,6 +1261,21 @@ class MaskIntensityVolume(MONAITransformVolume):
             **kwargs,
         )
 
+    def apply(self, volume):
+        image, annot, meta = volume
+        image = torch.as_tensor(
+            self.transform(
+                image.numpy(),
+                annot.unsqueeze(dim=0).numpy()
+            )
+        )
+
+        return (
+            image,
+            annot,
+            meta
+        )
+
 
 class CropForegroundVolume(MONAITransformVolume):
     def __init__(self, *args, **kwargs):
