@@ -111,6 +111,38 @@ class WMHTransformations(BaseTransformations):
 
 
 @TRANSFORMATION_REGISTRY.register()
+class WMHSkullStrippingTransformations(BaseTransformations):
+    def __init__(self, cfg, mode):
+        super().__init__(cfg, mode)
+
+    def create_transform(self):
+        # --- BODY ---
+        if self.mode == 'train':
+            transformations_body = [
+                tf.MaskIntensityVolume(mask_data=None),  # crop a tight 3D box
+                tf.CropForegroundVolume(margin=2),  # prune the input using the mask
+                tf.DivisiblePadVolume(k=64, mode='constant'),  # pad +/ resize
+                None,  # resize
+            ]
+        elif self.mode in ('valid', 'test'):
+            transformations_body = [
+                tf.MaskIntensityVolume(mask_data=None),  # crop a tight 3D box
+                tf.CropForegroundVolume(margin=2),  # prune the input using the mask
+                tf.DivisiblePadVolume(k=64, mode='constant'),  # pad +/ resize
+                None,  # resize
+            ]
+        else:
+            raise NotImplementedError
+
+        # --- TAIL ---
+        transformations_tail = []
+
+        return torch_tf.Compose(
+            transformations_body + transformations_tail
+        )
+
+
+@TRANSFORMATION_REGISTRY.register()
 class NVTTransformations(BaseTransformations):
     def __init__(self, cfg, mode):
         super().__init__(cfg, mode)

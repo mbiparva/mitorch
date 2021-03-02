@@ -469,6 +469,8 @@ _C.WMH.HFB_CHECKPOINT = os.path.join(_C.PROJECT.EXPERIMENT_DIR,
 # Whether to use ground-truth HFB masks
 _C.WMH.HFB_GT = _C.TRAIN.DATASET == 'SRIBIL' and (False, True)[1]  # must be True only when SRIBIL
 
+_C.WMH.HFB_MASKING_MODE = ['manual', 'pipeline'][0]
+
 _C.WMH.BINARIZE_THRESHOLD = 0.5
 
 _C.WMH.MAX_SIDE_SIZE = 160

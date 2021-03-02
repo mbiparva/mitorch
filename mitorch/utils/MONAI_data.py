@@ -1623,6 +1623,46 @@ class ScaleIntensityRangePercentiles(Transform):
         return img
 
 
+class MaskIntensity(Transform):
+    """
+    Mask the intensity values of input image with the specified mask data.
+    Mask data must have the same spatial size as the input image, and all
+    the intensity values of input image corresponding to `0` in the mask
+    data will be set to `0`, others will keep the original value.
+
+    Args:
+        mask_data: if mask data is single channel, apply to evey channel
+            of input image. if multiple channels, the channel number must
+            match input data. mask_data will be converted to `bool` values
+            by `mask_data > 0` before applying transform to input image.
+
+    """
+
+    def __init__(self, mask_data: np.ndarray) -> None:
+        self.mask_data = mask_data
+
+    def __call__(self, img: np.ndarray, mask_data: Optional[np.ndarray] = None) -> np.ndarray:
+        """
+        Args:
+            mask_data: if mask data is single channel, apply to evey channel
+                of input image. if multiple channels, the channel number must
+                match input data. mask_data will be converted to `bool` values
+                by `mask_data > 0` before applying transform to input image.
+
+        Raises:
+            ValueError: When ``mask_data`` and ``img`` channels differ and ``mask_data`` is not single channel.
+
+        """
+        mask_data_ = self.mask_data > 0 if mask_data is None else mask_data > 0
+        if mask_data_.shape[0] != 1 and mask_data_.shape[0] != img.shape[0]:
+            raise ValueError(
+                "When mask_data is not single channel, mask_data channels must match img, "
+                f"got img={img.shape[0]} mask_data={mask_data_.shape[0]}."
+            )
+
+        return img * mask_data_
+
+
 # ---------------------------------------------------------------
 # ------------------------- CROP AND PAD ------------------------
 # ---------------------------------------------------------------
@@ -2455,6 +2495,7 @@ def compute_importance_map(
 
     return importance_map
 
+
 def same_padding(
     kernel_size: Union[Sequence[int], int], dilation: Union[Sequence[int], int] = 1
 ) -> Union[Tuple[int, ...], int]:
@@ -2479,44 +2520,6 @@ def same_padding(
     padding = tuple(int(p) for p in padding_np)
 
     return padding if len(padding) > 1 else padding[0]
-
-
-def separable_filtering(x: torch.Tensor, kernels: Union[Sequence[torch.Tensor], torch.Tensor]) -> torch.Tensor:
-    """
-    Apply 1-D convolutions along each spatial dimension of `x`.
-
-    Args:
-        x: the input image. must have shape (batch, channels, H[, W, ...]).
-        kernels: kernel along each spatial dimension.
-            could be a single kernel (duplicated for all dimension), or `spatial_dims` number of kernels.
-
-    Raises:
-        TypeError: When ``x`` is not a ``torch.Tensor``.
-    """
-    if not torch.is_tensor(x):
-        raise TypeError(f"x must be a torch.Tensor but is {type(x).__name__}.")
-
-    spatial_dims = len(x.shape) - 2
-    _kernels = [
-        torch.as_tensor(s, dtype=torch.float, device=s.device if torch.is_tensor(s) else None)
-        for s in ensure_tuple_rep(kernels, spatial_dims)
-    ]
-    _paddings = [cast(int, (same_padding(k.shape[0]))) for k in _kernels]
-    n_chns = x.shape[1]
-
-    def _conv(input_: torch.Tensor, d: int) -> torch.Tensor:
-        if d < 0:
-            return input_
-        s = [1] * len(input_.shape)
-        s[d + 2] = -1
-        _kernel = kernels[d].reshape(s)
-        _kernel = _kernel.repeat([n_chns, 1] + [1] * spatial_dims)
-        _padding = [0] * spatial_dims
-        _padding[d] = _paddings[d]
-        conv_type = [F.conv1d, F.conv2d, F.conv3d][spatial_dims - 1]
-        return conv_type(input=_conv(input_, d - 1), weight=_kernel, padding=_padding, groups=n_chns)
-
-    return _conv(x, spatial_dims - 1)
 
 
 class GaussianFilter(nn.Module):
@@ -2567,6 +2570,44 @@ class GaussianFilter(nn.Module):
         """
         _kernel = [gaussian_1d(s, truncated=self.truncated, approx=self.approx) for s in self.sigma]
         return separable_filtering(x=x, kernels=_kernel)
+
+
+def separable_filtering(x: torch.Tensor, kernels: Union[Sequence[torch.Tensor], torch.Tensor]) -> torch.Tensor:
+    """
+    Apply 1-D convolutions along each spatial dimension of `x`.
+
+    Args:
+        x: the input image. must have shape (batch, channels, H[, W, ...]).
+        kernels: kernel along each spatial dimension.
+            could be a single kernel (duplicated for all dimension), or `spatial_dims` number of kernels.
+
+    Raises:
+        TypeError: When ``x`` is not a ``torch.Tensor``.
+    """
+    if not torch.is_tensor(x):
+        raise TypeError(f"x must be a torch.Tensor but is {type(x).__name__}.")
+
+    spatial_dims = len(x.shape) - 2
+    _kernels = [
+        torch.as_tensor(s, dtype=torch.float, device=s.device if torch.is_tensor(s) else None)
+        for s in ensure_tuple_rep(kernels, spatial_dims)
+    ]
+    _paddings = [cast(int, (same_padding(k.shape[0]))) for k in _kernels]
+    n_chns = x.shape[1]
+
+    def _conv(input_: torch.Tensor, d: int) -> torch.Tensor:
+        if d < 0:
+            return input_
+        s = [1] * len(input_.shape)
+        s[d + 2] = -1
+        _kernel = kernels[d].reshape(s)
+        _kernel = _kernel.repeat([n_chns, 1] + [1] * spatial_dims)
+        _padding = [0] * spatial_dims
+        _padding[d] = _paddings[d]
+        conv_type = [F.conv1d, F.conv2d, F.conv3d][spatial_dims - 1]
+        return conv_type(input=_conv(input_, d - 1), weight=_kernel, padding=_padding, groups=n_chns)
+
+    return _conv(x, spatial_dims - 1)
 
 
 def polyval(coef, x) -> torch.Tensor:
@@ -2639,6 +2680,30 @@ def _modified_bessel_1(x: torch.Tensor) -> torch.Tensor:
     return -ans if x < 0.0 else ans
 
 
+def _modified_bessel_i(n: int, x: torch.Tensor) -> torch.Tensor:
+    if n < 2:
+        raise ValueError(f"n must be greater than 1, got n={n}.")
+    x = torch.as_tensor(x, dtype=torch.float, device=x.device if torch.is_tensor(x) else None)
+    if x == 0.0:
+        return x
+    device = x.device
+    tox = 2.0 / torch.abs(x)
+    ans, bip, bi = torch.tensor(0.0, device=device), torch.tensor(0.0, device=device), torch.tensor(1.0, device=device)
+    m = int(2 * (n + np.floor(np.sqrt(40.0 * n))))
+    for j in range(m, 0, -1):
+        bim = bip + float(j) * tox * bi
+        bip = bi
+        bi = bim
+        if abs(bi) > 1.0e10:
+            ans = ans * 1.0e-10
+            bi = bi * 1.0e-10
+            bip = bip * 1.0e-10
+        if j == n:
+            ans = bip
+    ans = ans * _modified_bessel_0(x) / bi
+    return -ans if x < 0.0 and (n % 2) == 1 else ans
+
+
 def gaussian_1d(
     sigma: torch.Tensor, truncated: float = 4.0, approx: str = "erf", normalize: bool = False
 ) -> torch.Tensor:
@@ -2695,25 +2760,3 @@ def gaussian_1d(
     return out / out.sum() if normalize else out  # type: ignore
 
 
-def _modified_bessel_i(n: int, x: torch.Tensor) -> torch.Tensor:
-    if n < 2:
-        raise ValueError(f"n must be greater than 1, got n={n}.")
-    x = torch.as_tensor(x, dtype=torch.float, device=x.device if torch.is_tensor(x) else None)
-    if x == 0.0:
-        return x
-    device = x.device
-    tox = 2.0 / torch.abs(x)
-    ans, bip, bi = torch.tensor(0.0, device=device), torch.tensor(0.0, device=device), torch.tensor(1.0, device=device)
-    m = int(2 * (n + np.floor(np.sqrt(40.0 * n))))
-    for j in range(m, 0, -1):
-        bim = bip + float(j) * tox * bi
-        bip = bi
-        bi = bim
-        if abs(bi) > 1.0e10:
-            ans = ans * 1.0e-10
-            bi = bi * 1.0e-10
-            bip = bip * 1.0e-10
-        if j == n:
-            ans = bip
-    ans = ans * _modified_bessel_0(x) / bi
-    return -ans if x < 0.0 and (n % 2) == 1 else ans

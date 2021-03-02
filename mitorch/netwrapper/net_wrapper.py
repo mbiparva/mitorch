@@ -14,6 +14,7 @@ import utils.checkpoint as checkops
 from netwrapper.optimizer import construct_optimizer, construct_scheduler
 from netwrapper.build import build_loss
 from data.functional_mitorch import resize, pad
+from data.build_transformations import build_transformations
 try:
     from torch.cuda.amp import autocast
     from torch.cuda.amp import GradScaler
@@ -133,10 +134,11 @@ class NetWrapperHFB(NetWrapper):
 class NetWrapperWMH(NetWrapper):
     def __init__(self, device, cfg):
         super().__init__(device, cfg)
+        self.hfb_transformations = None
 
-        # TODO create hfb transformations pipeline (Compose) here
-        # TODO then in the forward use it to pre-process x and annot
-        # TODO instead of doing it using monkey patching hard-coded here
+        # create hfb transformations pipeline (Compose) here then in the forward use it to pre-process x and annot
+        if self.cfg.WMH.HFB_MASKING_MODE == 'pipeline':
+            self.hfb_transformations = build_transformations('WMHSkullStrippingTransformations', self.cfg, self.mode)()
 
     def _create_net(self, device):
         if not self.cfg.WMH.HFB_GT:
@@ -278,13 +280,7 @@ class NetWrapperWMH(NetWrapper):
 
         return annotation
 
-    def hfb_extract(self, x):
-        # REMOVE IT
-        # from test_net import save_pred
-        # import time
-        # time_id = str(int(time.time()))
-        # save_dir = '/gpfs/fs0/scratch/m/mgoubran/mbiparva/wmh_pytorch/tools/samples'
-
+    def unpack_predict_mask(self, x):
         x, annotation = x
 
         if self.cfg.WMH.HFB_GT:
@@ -295,6 +291,15 @@ class NetWrapperWMH(NetWrapper):
         annotation = annotation.unsqueeze(1)
         # save_pred(pred.unsqueeze(1), save_dir, time_id+'_hfb', *[x])
         # save_pred(annotation, save_dir, time_id+'_wmh')
+
+        return x, pred, annotation
+
+    def hfb_extract_manual(self, x, pred, annotation):
+        # REMOVE IT
+        # from test_net import save_pred
+        # import time
+        # time_id = str(int(time.time()))
+        # save_dir = '/gpfs/fs0/scratch/m/mgoubran/mbiparva/wmh_pytorch/tools/samples'
 
         # generate cropping_box
         cropping_box = self.gen_cropping_box(pred)
@@ -312,3 +317,20 @@ class NetWrapperWMH(NetWrapper):
         # save_pred(annotation, save_dir, time_id, *[x])
 
         return x, annotation
+
+    def hfb_extract_pipeline(self, x, pred, annotation):
+        x_annotation = torch.stack((x, annotation), dim=1)
+
+        x_annotation = self.hfb_transformations(x_annotation, pred)
+
+        x, annotation = x_annotation[:, :-1], x_annotation[:, -1]
+
+        return x, annotation
+
+    def hfb_extract(self, x):
+        x, pred, annotation = self.unpack_predict_mask(x)
+
+        if self.hfb_transformations:
+            return self.hfb_extract_pipeline(x, pred, annotation)
+        else:
+            return self.hfb_extract_manual(x, pred, annotation)

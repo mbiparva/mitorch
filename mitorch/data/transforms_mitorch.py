@@ -1253,6 +1253,29 @@ class ScaleIntensityRangePercentilesVolume(MONAITransformVolume):
         )
 
 
+class MaskIntensityVolume(MONAITransformVolume):
+    def __init__(self, *args, **kwargs):
+        super().__init__(
+            mn.MaskIntensity,
+            *args,
+            **kwargs,
+        )
 
-# TODO Implement CropTightVolume based off of
-#  https://github.com/nilearn/nilearn/blob/c10248e43769f37eaea804f64d44a7816e3c6e03/nilearn/image/image.py
+
+class CropForegroundVolume(MONAITransformVolume):
+    def __init__(self, *args, **kwargs):
+        super().__init__(
+            mn.CropForeground,
+            *args,
+            **kwargs,
+        )
+
+
+class DivisiblePadVolume(MONAITransformVolume):
+    def __init__(self, *args, **kwargs):
+        super().__init__(
+            mn.DivisiblePad,
+            *args,
+            **kwargs,
+        )
+
