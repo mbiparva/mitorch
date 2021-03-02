@@ -316,8 +316,11 @@ class NetWrapperWMH(NetWrapper):
     def hfb_extract_pipeline(self, x, pred, annotation):
         if not self.cfg.WMH.HFB_GT:
             hfb_transformations = build_transformations('WMHSkullStrippingTransformations', self.cfg, 'train')()
+
             x_annotation = torch.stack((x, annotation), dim=1)
-            x_annotation = hfb_transformations(x_annotation, pred)
+
+            x_annotation, _, _ = hfb_transformations((x_annotation, pred, None))  # meta is None
+
             x, annotation = x_annotation[:, :-1], x_annotation[:, -1]
 
         return x, annotation

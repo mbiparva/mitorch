@@ -16,6 +16,7 @@ import re
 from torch._six import container_abcs
 from .VolSet import VolSetABC
 from data.build_transformations import build_transformations
+import data.transforms_mitorch as tf
 
 
 # noinspection PyBroadException
@@ -122,7 +123,12 @@ class SRIBIL(SRIBILBase):
         if self.hfb_transformations is not None:
             assert hfb_tensor is not None
             annotation, pred = annot_tensor[0], annot_tensor[1]
+
             image_tensor, annot_tensor = self.hfb_extract_pipeline(image_tensor, pred, annotation)
+
+            # image_tensor, _, _ = tf.NormalizeMeanStdSingleVolume(nonzero=False,
+            #                                                      channel_wise=True)((image_tensor, None, None))
+
             annot_tensor = torch.stack((annot_tensor, torch.zeros_like(annot_tensor)))  # pass zero tensor as for pred
 
         return image_tensor, annot_tensor, in_pipe_meta
