@@ -134,11 +134,6 @@ class NetWrapperHFB(NetWrapper):
 class NetWrapperWMH(NetWrapper):
     def __init__(self, device, cfg):
         super().__init__(device, cfg)
-        self.hfb_transformations = None
-
-        # create hfb transformations pipeline (Compose) here then in the forward use it to pre-process x and annot
-        if self.cfg.WMH.HFB_MASKING_MODE == 'pipeline':
-            self.hfb_transformations = build_transformations('WMHSkullStrippingTransformations', self.cfg, self.mode)()
 
     def _create_net(self, device):
         if not self.cfg.WMH.HFB_GT:
@@ -319,18 +314,18 @@ class NetWrapperWMH(NetWrapper):
         return x, annotation
 
     def hfb_extract_pipeline(self, x, pred, annotation):
-        x_annotation = torch.stack((x, annotation), dim=1)
-
-        x_annotation = self.hfb_transformations(x_annotation, pred)
-
-        x, annotation = x_annotation[:, :-1], x_annotation[:, -1]
+        if not self.cfg.WMH.HFB_GT:
+            hfb_transformations = build_transformations('WMHSkullStrippingTransformations', self.cfg, 'train')()
+            x_annotation = torch.stack((x, annotation), dim=1)
+            x_annotation = hfb_transformations(x_annotation, pred)
+            x, annotation = x_annotation[:, :-1], x_annotation[:, -1]
 
         return x, annotation
 
     def hfb_extract(self, x):
         x, pred, annotation = self.unpack_predict_mask(x)
 
-        if self.hfb_transformations:
-            return self.hfb_extract_pipeline(x, pred, annotation)
-        else:
+        if self.cfg.WMH.HFB_MASKING_MODE == 'manual':
             return self.hfb_extract_manual(x, pred, annotation)
+        else:
+            return self.hfb_extract_pipeline(x, pred, annotation)

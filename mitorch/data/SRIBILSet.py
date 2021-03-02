@@ -15,6 +15,7 @@ import SimpleITK as sitk
 import re
 from torch._six import container_abcs
 from .VolSet import VolSetABC
+from data.build_transformations import build_transformations
 
 
 # noinspection PyBroadException
@@ -61,8 +62,12 @@ class SRIBIL(SRIBILBase):
     def __init__(self, cfg, mode, transform):
         super().__init__(cfg, mode, transform)
         self.prefix_name = True
+        self.hfb_transformations = None
         if self.cfg.WMH.HFB_GT:
             self.in_modalities['hfb'] = 'T1acq_nu_HfBd.nii.gz'
+            if self.cfg.WMH.HFB_MASKING_MODE == 'pipeline':  # for efficiency, to benefit from multi-threading
+                self.hfb_transformations = build_transformations('WMHSkullStrippingTransformations',
+                                                                 self.cfg, self.mode)()
 
     def get_data_tensor(self, in_pipe_data):
         in_pipe_data = {
@@ -82,6 +87,15 @@ class SRIBIL(SRIBILBase):
         annot_tensor = self.curate_annotation(annot_tensor, ignore_index=self.cfg.MODEL.IGNORE_INDEX)
 
         return image_tensor, annot_tensor, hfb_tensor
+
+    def hfb_extract_pipeline(self, x, pred, annotation):
+        x_annotation = torch.stack((x, annotation), dim=1)
+
+        x_annotation = self.hfb_transformations(x_annotation, pred)
+
+        x, annotation = x_annotation[:, :-1], x_annotation[:, -1]
+
+        return x, annotation
 
     def __getitem__(self, index):
         sample_path = self.sample_path_list[index]
@@ -104,6 +118,12 @@ class SRIBIL(SRIBILBase):
 
         if self.transform is not None:
             image_tensor, annot_tensor, in_pipe_meta = self.transform((image_tensor, annot_tensor, in_pipe_meta))
+
+        if self.hfb_transformations is not None:
+            assert hfb_tensor is not None
+            annotation, pred = annot_tensor[:, 0], annot_tensor[:, 1]
+            image_tensor, annot_tensor = self.hfb_extract_pipeline(image_tensor, pred, annotation)
+            annot_tensor = torch.stack((annot_tensor, torch.zeros_like(annot_tensor)))
 
         return image_tensor, annot_tensor, in_pipe_meta
 
