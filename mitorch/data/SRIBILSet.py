@@ -71,6 +71,7 @@ class SRIBIL(SRIBILBase):
                                                                  self.cfg, self.mode)()
 
     def get_data_tensor(self, in_pipe_data):
+        # load data tensors
         in_pipe_data = {
             u: torch.tensor(
                 data=v,
@@ -81,13 +82,19 @@ class SRIBIL(SRIBILBase):
             for u, v in in_pipe_data.items()
         }
 
-        annot_tensor = in_pipe_data.pop('annot')
-        hfb_tensor = in_pipe_data.pop('hfb') if 'hfb' in in_pipe_data else None
+        # pack annotation
+        annot_tensor = in_pipe_data.pop('annot').unsqueeze(dim=0)
+        if 'hfb' in in_pipe_data:
+            hfb_tensor = in_pipe_data.pop('hfb').unsqueeze(dim=0)
+            annot_tensor = torch.cat((annot_tensor, hfb_tensor), dim=0)
+
+        # pack image
         image_tensor = list(in_pipe_data.values())
+        image_tensor = torch.stack(image_tensor, dim=-1)  # D x H x W x C
 
         annot_tensor = self.curate_annotation(annot_tensor, ignore_index=self.cfg.MODEL.IGNORE_INDEX)
 
-        return image_tensor, annot_tensor, hfb_tensor
+        return image_tensor, annot_tensor
 
     def hfb_extract_pipeline(self, x, pred, annotation):
         x_annotation = torch.cat((x, annotation.unsqueeze(dim=0)), dim=0)
@@ -111,17 +118,12 @@ class SRIBIL(SRIBILBase):
         in_pipe_meta = self.run_sanity_checks(in_pipe_meta)
         in_pipe_meta['sample_path'] = sample_path
 
-        image_tensor, annot_tensor, hfb_tensor = self.get_data_tensor(in_pipe_data)
-
-        image_tensor = torch.stack(image_tensor, dim=-1)  # D x H x W x C
-        # put hfb in annot since both are label tensor
-        annot_tensor = annot_tensor.unsqueeze(dim=0) if hfb_tensor is None else torch.stack((annot_tensor, hfb_tensor))
+        image_tensor, annot_tensor = self.get_data_tensor(in_pipe_data)
 
         if self.transform is not None:
             image_tensor, annot_tensor, in_pipe_meta = self.transform((image_tensor, annot_tensor, in_pipe_meta))
 
         if self.hfb_transformations is not None:
-            assert hfb_tensor is not None
             annotation, pred = annot_tensor[0], annot_tensor[1]
 
             image_tensor, annot_tensor = self.hfb_extract_pipeline(image_tensor, pred, annotation)

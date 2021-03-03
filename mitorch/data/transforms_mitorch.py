@@ -1294,3 +1294,62 @@ class DivisiblePadVolume(MONAITransformVolume):
             **kwargs,
         )
 
+
+class ConcatAnnot2ImgVolume(Transformable):
+    """
+    concatenate the first to last channels of annot to the last channel of image.
+    num_task_masks_cat is added to meta to track back the number fo channels concatenated
+    """
+    def apply(self, volume):
+        """
+        Args:
+            volume (tuple(torch.tensor, torch.tensor, dict)): Image and mask volumes to be cropped. Size is (C, T, H, W)
+        Return:
+            volume (tuple(torch.tensor, torch.tensor, dict)): Output image and mask volumes. Size is (C, T, H, W)
+        """
+        image, annot, meta = volume
+
+        assert len(annot) > 1 and annot.ndim == 4, 'improper annotation tensor is passed'
+
+        task_masks, hfb_mask = annot[:-1], annot[-1:]
+        image = torch.cat((image, task_masks), dim=0)
+        meta['num_task_masks_cat'] = len(task_masks)
+
+        return (
+            image,
+            annot,
+            meta
+        )
+
+    def __repr__(self):
+        return self.__class__.__name__
+
+
+class ConcatImg2AnnotVolume(Transformable):
+    """
+    concatenate the last num_task_masks_cat channels of image to the first of annot
+    """
+    def apply(self, volume):
+        """
+        Args:
+            volume (tuple(torch.tensor, torch.tensor, dict)): Image and mask volumes to be cropped. Size is (C, T, H, W)
+        Return:
+            volume (tuple(torch.tensor, torch.tensor, dict)): Output image and mask volumes. Size is (C, T, H, W)
+        """
+        image, annot, meta = volume
+
+        assert len(annot) == 1 and annot.ndim == 4, 'improper annotation tensor is passed'
+
+        num = meta['num_task_masks_cat']
+        image, task_masks = image[:-num], image[-num:]
+        annot = torch.cat((task_masks, annot), dim=0)
+        meta.pop('num_task_masks_cat')
+
+        return (
+            image,
+            annot,
+            meta
+        )
+
+    def __repr__(self):
+        return self.__class__.__name__

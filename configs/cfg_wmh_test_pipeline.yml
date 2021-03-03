@@ -1,4 +1,5 @@
 WMH:
+  HFB_MASKING_MODE: 'manual'  # manual, pipeline
   BINARIZE_THRESHOLD: 0.5
   PADDING_MODE: mean
   FILL: 0

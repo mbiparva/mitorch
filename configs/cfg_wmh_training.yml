@@ -24,7 +24,7 @@ TRAIN:
   DATASET: 'SRIBIL'
   CHECKPOINT_PERIOD: 10
 WMH:
-  HFB_MASKING_MODE: 'pipeline'  # manula, pipeline
+  HFB_MASKING_MODE: 'pipeline'  # manual, pipeline
   BINARIZE_THRESHOLD: 0.5
   ENABLE: true
   HFB_GT: true
