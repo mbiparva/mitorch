@@ -1654,7 +1654,8 @@ class MaskIntensity(Transform):
 
         """
         mask_data_ = self.mask_data > 0 if mask_data is None else mask_data > 0
-        if mask_data_.shape[0] != 1 and mask_data_.shape[0] != img.shape[0]:
+        assert mask_data_.ndim in (img.ndim-1, img.ndim)
+        if mask_data_.ndim == img.ndim and mask_data_.shape[0] != 1 and mask_data_.shape[0] != img.shape[0]:
             raise ValueError(
                 "When mask_data is not single channel, mask_data channels must match img, "
                 f"got img={img.shape[0]} mask_data={mask_data_.shape[0]}."

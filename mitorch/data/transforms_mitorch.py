@@ -1266,7 +1266,7 @@ class MaskIntensityVolume(MONAITransformVolume):
         image = torch.as_tensor(
             self.transform(
                 image.numpy(),
-                annot.unsqueeze(dim=0).numpy()
+                annot.numpy()
             )
         )
 

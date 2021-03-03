@@ -315,6 +315,8 @@ class NetWrapperWMH(NetWrapper):
 
     def hfb_extract_pipeline(self, x, pred, annotation):
         if not self.cfg.WMH.HFB_GT:
+            raise NotImplementedError('check me if you want to use this, it might need to get updated')
+
             hfb_transformations = build_transformations('WMHSkullStrippingTransformations', self.cfg, 'train')()
 
             x_annotation = torch.stack((x, annotation), dim=1)
