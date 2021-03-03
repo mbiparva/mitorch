@@ -1300,6 +1300,9 @@ class ConcatAnnot2ImgVolume(Transformable):
     concatenate the first to last channels of annot to the last channel of image.
     num_task_masks_cat is added to meta to track back the number fo channels concatenated
     """
+    def __init__(self, num_channels=1):
+        self.num_channels = num_channels
+
     def apply(self, volume):
         """
         Args:
@@ -1309,11 +1312,17 @@ class ConcatAnnot2ImgVolume(Transformable):
         """
         image, annot, meta = volume
 
-        assert len(annot) > 1 and annot.ndim == 4, 'improper annotation tensor is passed'
+        assert annot.ndim == 4, 'improper annotation tensor is passed'
+        assert 0 <= abs(self.num_channels) <= len(annot), 'improper annotation tensor is passed'
+        if 'num_task_masks_cat' not in meta:
+            meta['num_task_masks_cat'] = 0
 
-        task_masks, hfb_mask = annot[:-1], annot[-1:]
+        task_masks, subtask_mask = annot[:self.num_channels], annot[self.num_channels:]
+        if not len(task_masks):
+            task_masks, subtask_mask = subtask_mask, task_masks
         image = torch.cat((image, task_masks), dim=0)
-        meta['num_task_masks_cat'] = len(task_masks)
+        annot = None if not len(subtask_mask) else subtask_mask
+        meta['num_task_masks_cat'] += len(task_masks)
 
         return (
             image,
@@ -1329,6 +1338,10 @@ class ConcatImg2AnnotVolume(Transformable):
     """
     concatenate the last num_task_masks_cat channels of image to the first of annot
     """
+    def __init__(self, num_channels=1):
+        assert num_channels > 0, 'undefined values for num_channels'
+        self.num_channels = num_channels
+
     def apply(self, volume):
         """
         Args:
@@ -1338,12 +1351,18 @@ class ConcatImg2AnnotVolume(Transformable):
         """
         image, annot, meta = volume
 
-        assert len(annot) == 1 and annot.ndim == 4, 'improper annotation tensor is passed'
+        if annot is not None:
+            assert annot.ndim == 4, 'improper annotation tensor is passed'
 
-        num = meta['num_task_masks_cat']
-        image, task_masks = image[:-num], image[-num:]
-        annot = torch.cat((task_masks, annot), dim=0)
-        meta.pop('num_task_masks_cat')
+        assert 'num_task_masks_cat' in meta and meta['num_task_masks_cat'] > 0
+        assert self.num_channels <= meta['num_task_masks_cat'] and self.num_channels < len(image)
+
+        num_channels = self.num_channels
+        image, task_masks = image[:-num_channels], image[-num_channels:]
+        annot = task_masks if annot is None else torch.cat((task_masks, annot), dim=0)
+        meta['num_task_masks_cat'] -= len(task_masks)
+        if not meta['num_task_masks_cat']:
+            meta.pop('num_task_masks_cat')
 
         return (
             image,

@@ -123,16 +123,6 @@ class SRIBIL(SRIBILBase):
         if self.transform is not None:
             image_tensor, annot_tensor, in_pipe_meta = self.transform((image_tensor, annot_tensor, in_pipe_meta))
 
-        if self.hfb_transformations is not None:
-            annotation, pred = annot_tensor[0], annot_tensor[1]
-
-            image_tensor, annot_tensor = self.hfb_extract_pipeline(image_tensor, pred, annotation)
-
-            # image_tensor, _, _ = tf.NormalizeMeanStdSingleVolume(nonzero=False,
-            #                                                      channel_wise=True)((image_tensor, None, None))
-
-            annot_tensor = torch.stack((annot_tensor, torch.zeros_like(annot_tensor)))  # pass zero tensor as for pred
-
         return image_tensor, annot_tensor, in_pipe_meta
 
 
