@@ -87,14 +87,14 @@ class WMHTransformations(BaseTransformations):
             tf.ToTensorImageVolume(),
             tf.RandomOrientationTo('RPI'),
             # tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
-            tf.NormalizeMeanStdSingleVolume(nonzero=False, channel_wise=True),
             # tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
+            tf.NormalizeMeanStdSingleVolume(nonzero=False, channel_wise=True),
             tf.ConcatAnnot2ImgVolume(num_channels=-1),  # concat all except the last to the image
             tf.MaskIntensityVolume(mask_data=None),  # crop a tight 3D box
             tf.ConcatAnnot2ImgVolume(num_channels=-1),  # concat all annot to the image
             tf.CropForegroundVolume(margin=1),  # crop the brain region
-            # tf.DivisiblePadVolume(k=64, mode='constant'),  # pad +/ resize such as it is divisible by K
-            tf.ConcatImg2AnnotVolume(num_channels=2)
+            # tf.DivisiblePadVolume(k=32, mode='constant'),  # pad +/ resize such as it is divisible by K
+            tf.ConcatImg2AnnotVolume(num_channels=2),
             # tf.NormalizeMeanStdSingleVolume(nonzero=False, channel_wise=True),
         ]
         if self.mode == 'train':
