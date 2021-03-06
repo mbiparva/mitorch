@@ -100,6 +100,11 @@ class WMHTransformations(BaseTransformations):
         else:
             raise NotImplementedError
 
+        # TODO check me next
+        transformations_body = ([] if self.cfg.NVT.ENABLE and self.cfg.NVT.BINARY_SEG else [
+            tf.OneHotAnnot(self.cfg.MODEL.NUM_CLASSES)
+        ]) + transformations_body
+
         # --- TAIL ---
         transformations_tail = [
             # tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
@@ -157,7 +162,6 @@ class NVTTransformations(BaseTransformations):
         # --- BODY ---
         if self.mode == 'train':
             transformations_body = [
-                tf.OneHotAnnot(self.cfg.MODEL.NUM_CLASSES),
                 tf.RandomCropImageVolumeConditional(self.cfg.DATA.CROP_SIZE, prand=True,
                                                     num_attemps=self.cfg.NVT.RANDOM_CROP_NUM_ATTEMPS,
                                                     threshold=self.cfg.NVT.RANDOM_CROP_THRESHOLD),
@@ -165,7 +169,6 @@ class NVTTransformations(BaseTransformations):
             ]
         elif self.mode in ('valid', 'test'):
             transformations_body = [
-                tf.OneHotAnnot(self.cfg.MODEL.NUM_CLASSES),
                 tf.RandomCropImageVolumeConditional(self.cfg.DATA.CROP_SIZE, prand=True,
                                                     num_attemps=self.cfg.NVT.RANDOM_CROP_NUM_ATTEMPS,
                                                     threshold=self.cfg.NVT.RANDOM_CROP_THRESHOLD),

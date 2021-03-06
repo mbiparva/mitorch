@@ -507,6 +507,9 @@ _C.NVT.RANDOM_CROP_THRESHOLD = 0
 
 _C.NVT.REPEAT_DATASET = 0  # < 2 is off
 
+_C.NVT.BINARY_SEG = (False, True)[1]
+
+
 
 # ---------------------------------------------------------------------------- #
 # Hippocampus Subfield Segmentation options

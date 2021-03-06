@@ -347,7 +347,7 @@ class AutoPatching(ABC, data.Dataset):
         def par_job(p, cfg_nvt_selection_lb, annot_sanity_check, processed_dir_path):
             p_abs_path_ = os.path.join(processed_dir_path, p)
             patch_pj = annot_sanity_check(torch.tensor(tiff.imread(p_abs_path_)[:, -1, :, :].astype(np.float)))
-            patch_sum_pj = patch_pj.sum().int().item()
+            patch_sum_pj = patch_pj.ne(0).sum().int().item()
             if patch_sum_pj > cfg_nvt_selection_lb:
                 return p, patch_sum_pj
 
@@ -370,12 +370,13 @@ class AutoPatching(ABC, data.Dataset):
             for p in tqdm(self.patch_list):
                 p_abs_path = os.path.join(self.processed_dir_path, p)
                 patch = self.annot_sanity_check(torch.tensor(tiff.imread(p_abs_path)[:, -1, :, :].astype(np.float)))
-                patch_sum = patch.sum().int().item()
+                patch_sum = patch.ne(0).sum().int().item()
                 patch_sums.append(patch_sum)
                 if patch_sum > self.cfg.NVT.SELECTION_LB:
                     selected_patches.append(p)
 
-        patch_sums_path = os.path.join(self.dataset_path, f'patch_sums_{self.__class__.__name__}.csv')
+        patch_sums_path = os.path.join(self.dataset_path, f'patch_sums_{self.__class__.__name__}_'
+                                                          f'bin_{self.cfg.NVT.ENABLE and self.cfg.NVT.BINARY_SEG}.csv')
         if not os.path.exists(patch_sums_path):
             with open(patch_sums_path, 'w') as fh:
                 csv.writer(fh).writerow(patch_sums)
@@ -387,7 +388,8 @@ class AutoPatching(ABC, data.Dataset):
 
     def load_save_selections(self):
         selected_patch_path = os.path.join(
-            self.dataset_path, f'patch_selection_policy_{self.__class__.__name__}_{self.cfg.NVT.SELECTION_LB}.csv'
+            self.dataset_path, f'patch_selection_policy_{self.__class__.__name__}_{self.cfg.NVT.SELECTION_LB}'
+                               f'bin_{self.cfg.NVT.ENABLE and self.cfg.NVT.BINARY_SEG}.csv'
         )
         if self.cfg.NVT.ENFORCE_SELECTION_POLICY or not os.path.exists(selected_patch_path):
             self.cfg.NVT.ENFORCE_SELECTION_POLICY = False  # once done in training, don't need to repeat in valid
@@ -535,8 +537,18 @@ class TRACINGSEG(AutoPatching):
         raise NotImplementedError('Not implemented for this dataset')
 
     @staticmethod
-    def annot_sanity_check(annot_tensor):
+    def convert_to_binary(annot_tensor):
+        annot_tensor[annot_tensor == 3] = 0  # label 3 is noise
+        annot_tensor[annot_tensor == 2] = 1  # label 2 is edge
+
+        return annot_tensor
+
+    def annot_sanity_check(self, annot_tensor):
+        if self.cfg.NVT.BINARY_SEG:
+            annot_tensor = self.convert_to_binary(annot_tensor)
+
         annot_unq = torch.unique(annot_tensor)
-        assert all([i in (0, 1, 2, 3) for i in annot_unq]), 'undefined label values in ground truth'
+        available_labels = (0, 1) if self.cfg.NVT.BINARY_SEG else (0, 1, 2, 3)
+        assert all([i in available_labels for i in annot_unq]), 'undefined label values in ground truth'
 
         return annot_tensor
