@@ -65,6 +65,8 @@ class AutoPatching(ABC, data.Dataset):
         if not self.image_annot_ready():
             self.dirs_dict = self.list_raw_dirs()
 
+            print('dirs listed ...')
+
             self.load_patch_save()
 
         self.patch_list = self.list_pro_patches()
@@ -82,8 +84,13 @@ class AutoPatching(ABC, data.Dataset):
 
     def list_raw_dirs(self):
         dirs_dict = dict()
+        processed_dir = os.listdir(self.processed_dir_path)
+
         for s in os.listdir(self.raw_dir_path):
             if not self.is_data_dir(s):
+                continue
+
+            if s in processed_dir:
                 continue
 
             s_path = os.path.join(self.raw_dir_path, s)
@@ -150,8 +157,9 @@ class AutoPatching(ABC, data.Dataset):
     def load_patch_save(self):
         for u, v in self.dirs_dict.items():
             u_raw_path = os.path.join(self.raw_dir_path, u)
-            if not os.path.exists(self.processed_dir_path):
-                os.mkdir(self.processed_dir_path)
+            processed_dir_path = os.path.join(self.processed_dir_path, u)
+            if not os.path.exists(processed_dir_path):
+                os.mkdir(processed_dir_path)
 
             depth, height, width = self.get_volume_size(u_raw_path, v)
 
@@ -184,7 +192,7 @@ class AutoPatching(ABC, data.Dataset):
                             grid_generator_list,
                             [u]*len(grid_generator_list),
                             [v]*len(grid_generator_list),
-                            [self.processed_dir_path]*len(grid_generator_list),
+                            [processed_dir_path]*len(grid_generator_list),
                             [u_raw_path]*len(grid_generator_list),
                             [self.block_size]*len(grid_generator_list),
                             [annot]*len(grid_generator_list),
@@ -200,7 +208,7 @@ class AutoPatching(ABC, data.Dataset):
                     # save them in their corresponding directories.
                     print(f'{u}: processing the patch @ {p}')
 
-                    p_path = self.gen_patch_path(p, self.processed_dir_path)
+                    p_path = self.gen_patch_path(p, processed_dir_path)
 
                     if os.path.exists(p_path):
                         print(f'{p_path} exits and skipped.')
