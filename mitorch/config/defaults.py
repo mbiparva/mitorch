@@ -64,7 +64,7 @@ _C.TRAIN.HPO = (False, True)[0]
 # Dataset.
 _C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb',
                     'TRAP', 'CAPTURE', 'TRACING', 'TRACINGSEG',
-                    'HPSubfield')[5]
+                    'HPSubfield')[6]
 
 # Input Modalities
 _C.TRAIN.IN_MOD = tuple({
@@ -510,7 +510,6 @@ _C.NVT.REPEAT_DATASET = 0  # < 2 is off
 _C.NVT.BINARY_SEG = (False, True)[1]
 
 
-
 # ---------------------------------------------------------------------------- #
 # Hippocampus Subfield Segmentation options
 # ---------------------------------------------------------------------------- #
@@ -535,6 +534,8 @@ def init_dependencies(cfg):
     cfg.WMH.HFB_GT = cfg.TRAIN.DATASET == 'SRIBIL' and cfg.WMH.HFB_GT
 
     cfg.NVT.ENABLE = cfg.TRAIN.DATASET in ('TRAP', 'CAPTURE', 'TRACINGSEG', 'TRACING')
+    if cfg.NVT.ENABLE and cfg.NVT.BINARY_SEG:
+        cfg.MODEL.NUM_CLASSES = 1
 
     cfg.HPSF.ENABLE = cfg.TRAIN.DATASET in ('HPSubfield',)
 
