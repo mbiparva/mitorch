@@ -84,14 +84,14 @@ class AutoPatching(ABC, data.Dataset):
 
     def list_raw_dirs(self):
         dirs_dict = dict()
-        processed_dir = os.listdir(self.processed_dir_path)
+        # processed_dir = os.listdir(self.processed_dir_path)
 
         for s in os.listdir(self.raw_dir_path):
             if not self.is_data_dir(s):
                 continue
 
-            if s in processed_dir:
-                continue
+            # if s in processed_dir:
+            #     continue
 
             s_path = os.path.join(self.raw_dir_path, s)
 
