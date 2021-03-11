@@ -9,14 +9,31 @@
             https://github.com/fepegar/torchio
 """
 
-from typing import Tuple, Optional, Union, Sequence, Dict
 import torch
 import numpy as np
 import numbers
 from abc import ABC, abstractmethod
-from typing import Optional, Union, Tuple, Sequence, Iterable, List
+from typing import Optional, Union, Tuple, Sequence, Iterable, List, Dict
 import nibabel as nib
 import scipy.ndimage as ndi
+
+IMPORT_TORCHIO = (False, True)[1]
+if IMPORT_TORCHIO:
+
+    import os.path
+    import sys
+
+    def add_path(path):
+        if path not in sys.path:
+            sys.path.insert(0, path)
+
+    this_dir = os.path.dirname(__file__)
+    lib_path = os.path.join(this_dir, '..', '..', 'torchio_package')
+    assert os.path.exists(lib_path)
+    add_path(os.path.normpath(lib_path))
+
+    from torchio.transforms.augmentation.spatial.random.elastic_deformation import ElasticDeformation as ElasticDeformationTIO
+    from torchio.transforms.augmentation.intensity.random_motion import Motion as MotionTIO
 
 TypeTripletInt = Tuple[int, int, int]
 TypeTuple = Union[int, TypeTripletInt]
@@ -919,7 +936,7 @@ class Ghosting(Transformable, FourierTransform):
             restore = spectrum[:, :, mk].copy()
         else:
             raise NotImplementedError
-        
+
         # Multiply by 0 if intensity is 1
         planes *= 1 - intensity
 
@@ -1351,3 +1368,76 @@ class Swap(Transformable):
         i_ini, j_ini, k_ini = index_ini
         i_fin, j_fin, k_fin = index_fin
         return image[:, i_ini:i_fin, j_ini:j_fin, k_ini:k_fin]
+
+
+if IMPORT_TORCHIO:
+    class ElasticDeformation(ElasticDeformationTIO):
+        r"""Apply dense elastic deformation.
+
+        Args:
+            control_points:
+            max_displacement:
+            image_interpolation: See :ref:`Interpolation`.
+            keys: See :class:`~torchio.transforms.Transform`.
+        """
+
+        def __init__(
+                self,
+                control_points,
+                max_displacement: TypeTripletFloat,
+                image_interpolation: str = 'linear',
+                keys: Optional[Sequence[str]] = None,
+                ):
+            if isinstance(control_points, (tuple, list)):
+                control_points = np.asarray(control_points)
+            super().__init__(
+                control_points=control_points,
+                max_displacement=max_displacement,
+                image_interpolation=image_interpolation,
+                keys=keys
+            )
+
+    class Motion(MotionTIO):
+        r"""Add MRI motion artifact.
+
+        Magnetic resonance images suffer from motion artifacts when the subject
+        moves during image acquisition. This transform follows
+        `Shaw et al., 2019 <http://proceedings.mlr.press/v102/shaw19a.html>`_ to
+        simulate motion artifacts for data augmentation.
+
+        Args:
+            degrees: Sequence of rotations :math:`(\theta_1, \theta_2, \theta_3)`.
+            translation: Sequence of translations :math:`(t_1, t_2, t_3)` in mm.
+            times: Sequence of times from 0 to 1 at which the motions happen.
+            image_interpolation: See :ref:`Interpolation`.
+            keys: See :class:`~torchio.transforms.Transform`.
+        """
+        def __init__(
+                self,
+                degrees: Union[TypeTripletFloat, Dict[str, TypeTripletFloat]],
+                translation: Union[TypeTripletFloat, Dict[str, TypeTripletFloat]],
+                times: Union[Sequence[float], Dict[str, Sequence[float]]],
+                image_interpolation: Union[Sequence[str], Dict[str, Sequence[str]]],
+                keys: Optional[Sequence[str]] = None,
+                ):
+            super().__init__(
+                degrees=degrees,
+                translation=translation,
+                times=times,
+                image_interpolation=image_interpolation,
+                keys=keys
+            )
+else:
+    class ElasticDeformation(ElasticDeformationTIO):
+        def __init__(self):
+            raise NotImplementedError('if you want to call this, set the flag to true')
+
+        def __call__(self, *args, **kwargs):
+            pass
+
+    class Motion(ElasticDeformationTIO):
+        def __init__(self):
+            raise NotImplementedError('if you want to call this, set the flag to true')
+
+        def __call__(self, *args, **kwargs):
+            pass

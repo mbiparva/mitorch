@@ -1372,3 +1372,103 @@ class ConcatImg2AnnotVolume(Transformable):
 
     def __repr__(self):
         return self.__class__.__name__
+
+
+class AnisotropyVolume(Transformable):
+    r"""Downsample an image along an axis and upsample to initial space.
+
+    This transform simulates an image that has been acquired using anisotropic
+    spacing and resampled back to its original spacing.
+
+    Similar to the work by Billot et al.: `Partial Volume Segmentation of Brain
+    MRI Scans of any Resolution and
+    Contrast <https://link.springer.com/chapter/10.1007/978-3-030-59728-3_18>`_.
+
+    Args:
+        axes: Axis or tuple of axes along which the image will be downsampled.
+        downsampling: Downsampling factor :math:`m \gt 1`. If a tuple
+            :math:`(a, b)` is provided then :math:`m \sim \mathcal{U}(a, b)`.
+        interpolation_mode (str): algorithm used for upsampling:
+        ``'nearest'`` | ``'linear'`` | ``'bilinear'`` | ``'bicubic'`` |
+        ``'trilinear'`` | ``'area'``. Default: ``'nearest'``
+    """
+    def __init__(self, axes, downsampling, interpolation_mode='linear', annot=False):
+        assert isinstance(axes, (list, tuple))
+        assert len(axes) in (1, 2, 3)
+        assert axes == list(set(axes))
+        assert isinstance(downsampling, float), 1 < downsampling <= 5
+        assert isinstance(interpolation_mode, str)
+        assert isinstance(annot, bool)
+
+        self.axes = sorted(axes)
+        self.downsampling = downsampling
+        self.interpolation_mode = interpolation_mode
+        self.annot = annot
+
+    def apply(self, volume):
+        """
+        Args:
+            volume (tuple(torch.tensor, torch.tensor, dict)): Image and mask volumes to be cropped. Size is (C, T, H, W)
+        Return:
+            volume (tuple(torch.tensor, torch.tensor, dict)): Output image and mask volumes. Size is (C, T, H, W)
+        """
+        image, annot, meta = volume
+
+        ref_shape_tensor = torch.tensor(image.shape[1:])
+        target_shape_tensor = (ref_shape_tensor / self.downsampling).int()
+        for i in self.axes:
+            target_shape_tensor[i] = ref_shape_tensor[i]
+
+        image = F.resize(image, target_shape_tensor, self.interpolation_mode)
+        image = F.resize(image, ref_shape_tensor, self.interpolation_mode)
+
+        if self.annot:
+            annot = F.resize(annot, target_shape_tensor, 'nearest')
+            annot = F.resize(annot, ref_shape_tensor, 'nearest')
+
+        return (
+            image,
+            annot,
+            meta
+        )
+
+    def __repr__(self):
+        return self.__class__.__name__
+
+
+class ElasticDeformationVolume(Transformable):
+    def __init__(self, **kwargs):
+        self.transform = tio.ElasticDeformation(**kwargs)
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        return (
+            self.transform(image),
+            self.transform(annot),
+            meta
+        )
+
+
+class MotionVolume(Transformable):
+    def __init__(self, **kwargs):
+        self.transform = tio.Motion(**kwargs)
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        return (
+            self.transform(image),
+            annot,
+            meta
+        )
+
+
+class ZoomVolume(MONAITransformVolume):
+    def __init__(self, *args, **kwargs):
+        super().__init__(
+            mn.Zoom,
+            *args,
+            **kwargs,
+        )
+

@@ -7,6 +7,7 @@
 from .build_test_pipeline import TESTPIPELINE_REGISTRY
 import data.transforms_mitorch as tf
 from abc import ABC, abstractmethod
+import torch
 
 __all__ = [
     'NoiseTestTransformations',
@@ -19,9 +20,13 @@ __all__ = [
     'ScaleTestTransformations',
     'SpikeTestTransformations',
     'GhostingTestTransformations',
+    'MotionTestTransformations',
     'BlurTestTransformations',
     'BiasfieldTestTransformations',
     'SwapTestTransformations',
+    'AnisotropyTestTransformations',
+    'ElasticdeformationTestTransformations',
+    'ZoomTestTransformations',
 ]
 
 
@@ -80,12 +85,18 @@ class ContrastchannelTestTransformations(BaseTransformations):
         return tf.RandomContrastChannelWise(value=value, **self.params)
 
 
+# noinspection PyTypeChecker
 @TESTPIPELINE_REGISTRY.register()
 class RotateTestTransformations(BaseTransformations):
     def __init__(self, cfg, params):
         super().__init__(cfg, params)
 
     def create_transform(self):
+        self.params['padding_mode'] = 'zero'
+        radian = self.params.pop('radian')
+        radian_ls = [0]*3
+        radian_ls[torch.randint(0, 3, size=[1]).tolist()] = radian
+        self.params['rotate_params'] = radian_ls
         return tf.AffineRotate(**self.params)
 
 
@@ -131,6 +142,8 @@ class GhostingTestTransformations(BaseTransformations):
         super().__init__(cfg, params)
 
     def create_transform(self):
+        self.params['restore'] = 0.5
+        self.params['axes'] = torch.randint(0, 3, size=[1]).tolist()
         return tf.Ghosting(**self.params)
 
 
@@ -167,4 +180,40 @@ class MotionTestTransformations(BaseTransformations):
         super().__init__(cfg, params)
 
     def create_transform(self):
-        return tf.PresetMotionArtifact(**self.params)
+        self.params['image_interpolation'] = 'sitkBSpline'
+        return tf.MotionVolume(**self.params)
+
+
+@TESTPIPELINE_REGISTRY.register()
+class AnisotropyTestTransformations(BaseTransformations):
+    def __init__(self, cfg, params):
+        super().__init__(cfg, params)
+
+    def create_transform(self):
+        downsampling = self.params.pop('downsampling')
+        axes = torch.randint(0, 3, size=[1]).tolist()
+        return tf.AnisotropyVolume(axes, downsampling, **self.params)
+
+
+@TESTPIPELINE_REGISTRY.register()
+class ElasticdeformationTestTransformations(BaseTransformations):
+    def __init__(self, cfg, params):
+        super().__init__(cfg, params)
+
+    def create_transform(self):
+        control_points = [self.params.pop('cp')]
+        max_displacement = self.params.pop('md')
+        self.params['image_interpolation'] = 'sitkBSpline'
+        return tf.ElasticDeformationVolume(control_points, max_displacement, **self.params)
+
+
+@TESTPIPELINE_REGISTRY.register()
+class ZoomTestTransformations(BaseTransformations):
+    def __init__(self, cfg, params):
+        super().__init__(cfg, params)
+
+    def create_transform(self):
+        factor = self.params.pop('factor')
+        self.params['mode'] = 'trilinear'
+        self.params['padding_mode'] = 'constant'
+        return tf.ZoomVolume(zoom=factor, **self.params)

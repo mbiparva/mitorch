@@ -32,6 +32,9 @@ KNOWN_TRANSFORMATIONS = (
     'biasfield',
     'swap',
     'motion',
+    'anisotropy',
+    'elasticdeformation',
+    'zoom',
 )
 KNOWN_T_KEYS = (
     't_name',
@@ -66,6 +69,9 @@ logger = setup_logger()
 def sanity_check_exp(exp):
     exp_perm_len = None
     for t in exp:
+
+        assert t['t_name'] in KNOWN_TRANSFORMATIONS, 'requested transformation is unknown'
+
         assert all(
             i in KNOWN_T_KEYS for i in t.keys()
         ), f'unknown keys are defined in the transformations {t}'
