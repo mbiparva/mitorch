@@ -22,6 +22,10 @@ import shutil
 import csv
 from tqdm import tqdm
 from joblib import Parallel, delayed
+import logging
+
+pil_logger = logging.getLogger('PIL')
+pil_logger.setLevel(logging.WARNING)
 
 
 # noinspection PyUnresolvedReferences
@@ -165,8 +169,8 @@ class AutoPatching(ABC, data.Dataset):
 
             annot = self.load_annot(u_raw_path, (depth, height, width))
 
-            parallel = False
-            PARALLEL_JOBS = 2  # self.cfg.DATA_LOADER.NUM_WORKERS
+            parallel = True
+            PARALLEL_JOBS = 4  # self.cfg.DATA_LOADER.NUM_WORKERS
 
             def par_job(
                     p_in, u_in, v_in, processed_path_in, u_path_in, block_size_in, annot_in,
