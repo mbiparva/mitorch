@@ -17,7 +17,7 @@ from typing import Optional, Union, Tuple, Sequence, Iterable, List, Dict
 import nibabel as nib
 import scipy.ndimage as ndi
 
-IMPORT_TORCHIO = (False, True)[1]
+IMPORT_TORCHIO = (False, True)[0]
 if IMPORT_TORCHIO:
 
     import os.path
@@ -1438,14 +1438,14 @@ if IMPORT_TORCHIO:
             data = Subject(data=ScalarImage(tensor=data))
             return super().__call__(data, **kwargs).get_first_image()['DATA']
 else:
-    class ElasticDeformation(ElasticDeformationTIO):
+    class ElasticDeformation:
         def __init__(self):
             raise NotImplementedError('if you want to call this, set the flag to true')
 
         def __call__(self, *args, **kwargs):
             pass
 
-    class Motion(ElasticDeformationTIO):
+    class Motion:
         def __init__(self):
             raise NotImplementedError('if you want to call this, set the flag to true')
 
