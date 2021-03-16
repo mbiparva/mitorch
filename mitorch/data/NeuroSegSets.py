@@ -185,7 +185,7 @@ class AutoPatching(ABC, data.Dataset):
                             [self.processed_dir_path]*len(grid_generator_list),
                             [u_raw_path]*len(grid_generator_list),
                             [self.block_size]*len(grid_generator_list),
-                            [self.load_annot]*len(grid_generator_list),
+                            [annot]*len(grid_generator_list),
                             [self.gen_patch_path]*len(grid_generator_list),
                             [self.load_extract_save_patch]*len(grid_generator_list),
                         )
