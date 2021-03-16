@@ -1442,6 +1442,7 @@ class ElasticDeformationVolume(Transformable):
 
     def apply(self, volume):
         image, annot, meta = volume
+        # TODO pass Subject instance
 
         return (
             self.transform(image),
@@ -1456,6 +1457,7 @@ class MotionVolume(Transformable):
 
     def apply(self, volume):
         image, annot, meta = volume
+        # TODO pass Subject instance
 
         return (
             self.transform(image),

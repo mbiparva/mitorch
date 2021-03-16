@@ -34,6 +34,7 @@ if IMPORT_TORCHIO:
 
     from torchio.transforms.augmentation.spatial.random.elastic_deformation import ElasticDeformation as ElasticDeformationTIO
     from torchio.transforms.augmentation.intensity.random_motion import Motion as MotionTIO
+    from torchio import Subject, ScalarImage
 
 TypeTripletInt = Tuple[int, int, int]
 TypeTuple = Union[int, TypeTripletInt]
@@ -1397,6 +1398,11 @@ if IMPORT_TORCHIO:
                 keys=keys
             )
 
+        def __call__(self, data, **kwargs):
+            data = Subject(data=ScalarImage(tensor=data))
+            return super().__call__(data, **kwargs).get_first_image()['DATA']
+
+
     class Motion(MotionTIO):
         r"""Add MRI motion artifact.
 
@@ -1427,6 +1433,10 @@ if IMPORT_TORCHIO:
                 image_interpolation=image_interpolation,
                 keys=keys
             )
+
+        def __call__(self, data, **kwargs):
+            data = Subject(data=ScalarImage(tensor=data))
+            return super().__call__(data, **kwargs).get_first_image()['DATA']
 else:
     class ElasticDeformation(ElasticDeformationTIO):
         def __init__(self):
