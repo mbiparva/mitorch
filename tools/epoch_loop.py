@@ -68,9 +68,9 @@ class EpochLoop:
             logger.info(f'checkpoint saved at epoch {cur_epoch} in the path {self.cfg.OUTPUT_DIR}')
 
             # add if it is the best, save it separately too
-            print('----------------', eval_metric, self.best_eval_metric)
             self.best_eval_metric = min(eval_metric, self.best_eval_metric)
             if eval_metric == self.best_eval_metric:
+                logger.info('--- best snapshot taken. current {} | best {}'.format(eval_metric, self.best_eval_metric))
                 self.net_wrapper.save_checkpoint(self.cfg.OUTPUT_DIR, cur_epoch, best=True)
                 logger.info(f'best checkpoint saved at epoch {cur_epoch} in the path {self.cfg.OUTPUT_DIR}')
 
