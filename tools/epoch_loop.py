@@ -31,6 +31,7 @@ class EpochLoop:
         self.trainer, self.evaluator = None, None
         self.device, self.net_wrapper = None, None
         self.tb_logger_writer = None
+        self.best_eval_metric = float('inf')
 
         self.setup_gpu()
 
@@ -59,12 +60,19 @@ class EpochLoop:
                 self.setup_tb_logger()
         worker.tb_logger_update(self.tb_logger_writer, e)
 
-    def save_checkpoint(self, cur_epoch):
-        # TODO add if it is the best, save it separately too
+    def save_checkpoint(self, cur_epoch, eval_metric):
         if checkops.is_checkpoint_epoch(cur_epoch, self.cfg.TRAIN.CHECKPOINT_PERIOD):
-            if not (self.cfg.DDP and self.cfg.DDP_CFG.RANK):
+            if self.cfg.DDP and self.cfg.DDP_CFG.RANK:
                 return
-            self.net_wrapper.save_checkpoint(self.cfg.OUTPUT_DIR, cur_epoch)
+            self.net_wrapper.save_checkpoint(self.cfg.OUTPUT_DIR, cur_epoch, best=False)
+            logger.info(f'checkpoint saved at epoch {cur_epoch} in the path {self.cfg.OUTPUT_DIR}')
+
+            # add if it is the best, save it separately too
+            print('----------------', eval_metric, self.best_eval_metric)
+            self.best_eval_metric = min(eval_metric, self.best_eval_metric)
+            if eval_metric == self.best_eval_metric:
+                self.net_wrapper.save_checkpoint(self.cfg.OUTPUT_DIR, cur_epoch, best=True)
+                logger.info(f'best checkpoint saved at epoch {cur_epoch} in the path {self.cfg.OUTPUT_DIR}')
 
     def load_checkpoint(self):
         if self.cfg.TRAIN.AUTO_RESUME and checkops.has_checkpoint(self.cfg.OUTPUT_DIR):
@@ -107,11 +115,11 @@ class EpochLoop:
 
             self.trainer.meters.log_epoch_stats(cur_epoch, 'train')
 
-            self.save_checkpoint(cur_epoch)
-
             self.tb_logger_update(cur_epoch, self.trainer)
 
             eval_loss_avg_last = self.check_if_validating(cur_epoch)
+
+            self.save_checkpoint(cur_epoch, eval_metric=eval_loss_avg_last)
 
             self.lr_scheduling(eval_loss_avg_last)
 

@@ -43,14 +43,15 @@ def get_checkpoint_dir(path_to_job):
     return os.path.join(path_to_job, "checkpoints")
 
 
-def get_path_to_checkpoint(path_to_job, epoch):
+def get_path_to_checkpoint(path_to_job, epoch, best=False):
     """
     Get the full path to a checkpoint file.
     Args:
         path_to_job (string): the path to the folder of the current job.
         epoch (int): the number of epoch for the checkpoint.
+        best (bool): best performing so far
     """
-    name = "checkpoint_epoch_{:05d}.pyth".format(epoch)
+    name = "checkpoint_epoch_{:05d}{}.pyth".format(epoch, '_BEST' if best else '')
     return os.path.join(get_checkpoint_dir(path_to_job), name)
 
 
@@ -91,7 +92,7 @@ def is_checkpoint_epoch(cur_epoch, checkpoint_period):
     return checkpoint_period > 0 and (cur_epoch + 1) % checkpoint_period == 0
 
 
-def save_checkpoint(path_to_ckpnt, model, optimizer, epoch, cfg, scaler=None):
+def save_checkpoint(path_to_ckpnt, model, optimizer, epoch, cfg, scaler=None, best=False):
     """
     Save a checkpoint.
     Args:
@@ -101,6 +102,7 @@ def save_checkpoint(path_to_ckpnt, model, optimizer, epoch, cfg, scaler=None):
         epoch (int): current number of epoch of the model.
         cfg (CfgNode): configs to save.
         scaler (amp scaler): gradient scaler in case AMP is on
+        best (bool): is it best performing model?
     """
     # Ensure that the checkpoint dir exists.
     os.makedirs(get_checkpoint_dir(path_to_ckpnt), exist_ok=True)
@@ -118,7 +120,7 @@ def save_checkpoint(path_to_ckpnt, model, optimizer, epoch, cfg, scaler=None):
     if scaler is not None:
         checkpoint['scaler'] = scaler.state_dict()
     # Write the checkpoint.
-    path_to_checkpoint = get_path_to_checkpoint(path_to_ckpnt, epoch + 1)
+    path_to_checkpoint = get_path_to_checkpoint(path_to_ckpnt, epoch + 1, best=best)
     torch.save(checkpoint, path_to_checkpoint)
     return path_to_checkpoint
 

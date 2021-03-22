@@ -7,7 +7,7 @@ TRAIN:
 TEST:
   ENABLE: true
   DATASET: 'SRIBILTest'
-  BATCH_MODE: true
+  BATCH_MODE: false
   BINARIZE_THRESHOLD: 0.50
   CHECKPOINT_FILE_PATH: ''
   DATA_PATH: ''
@@ -26,18 +26,18 @@ TEST:
             - +0.58
             - +0.72
             - +0.86
-    - - t_name: 'noise'
-        t_params:
-          sigma:
-            - 0.04
-            - 0.08
-            - 0.12
-            - 0.16
-            - 0.20
-          noise_type:
-            - 'rician'
-            - 'rician'
-            - 'rician'
+#    - - t_name: 'noise'
+#        t_params:
+#          sigma:
+#            - 0.04
+#            - 0.08
+#            - 0.12
+#            - 0.16
+#            - 0.20
+#          noise_type:
+#            - 'rician'
+#            - 'rician'
+#            - 'rician'
 #    - - t_name: 'blur'
 #        t_params:
 #          std:

@@ -63,7 +63,7 @@ class NetWrapper(nn.Module):
             else:
                 self.scheduler.step()
 
-    def save_checkpoint(self, ckpnt_path, cur_epoch):
+    def save_checkpoint(self, ckpnt_path, cur_epoch, best=False):
         checkops.save_checkpoint(
             ckpnt_path,
             self.net_core,
@@ -71,6 +71,7 @@ class NetWrapper(nn.Module):
             cur_epoch,
             self.cfg,
             scaler=self.grad_scaler,
+            best=best
         )
 
     def load_checkpoint(self, ckpnt_path):
