@@ -1023,7 +1023,7 @@ class PresetMotionArtifact(Transformable):
         self.mode = mode
         self.padding_mode = padding_mode
         self.align_corners = align_corners
-        
+
     def apply(self, volume):
         image, annot, meta = volume
         assert image.shape[1:] == annot.shape[1:], 'Image and ground-truth annotation should have the same shape.'
@@ -1395,7 +1395,7 @@ class AnisotropyVolume(Transformable):
     def __init__(self, axes, downsampling, interpolation_mode='linear', annot=False):
         assert isinstance(axes, (list, tuple))
         assert len(axes) in (1, 2, 3)
-        assert axes == list(set(axes))
+        assert list(axes) == list(set(axes))
         assert isinstance(downsampling, float), 1 < downsampling <= 5
         assert isinstance(interpolation_mode, str)
         assert isinstance(annot, bool)
@@ -1416,11 +1416,12 @@ class AnisotropyVolume(Transformable):
 
         ref_shape_tensor = torch.tensor(image.shape[1:])
         target_shape_tensor = (ref_shape_tensor / self.downsampling).int()
-        for i in self.axes:
-            target_shape_tensor[i] = ref_shape_tensor[i]
+        for i in range(image.ndim - 1):  # first dim is always channels
+            if i not in self.axes:
+                target_shape_tensor[i] = ref_shape_tensor[i]
 
-        image = F.resize(image, target_shape_tensor, self.interpolation_mode)
-        image = F.resize(image, ref_shape_tensor, self.interpolation_mode)
+        image = F.resize(image, list(target_shape_tensor), self.interpolation_mode)
+        image = F.resize(image, list(ref_shape_tensor), self.interpolation_mode)
 
         if self.annot:
             annot = F.resize(annot, target_shape_tensor, 'nearest')
@@ -1437,8 +1438,8 @@ class AnisotropyVolume(Transformable):
 
 
 class ElasticDeformationVolume(Transformable):
-    def __init__(self, **kwargs):
-        self.transform = tio.ElasticDeformation(**kwargs)
+    def __init__(self, *args, **kwargs):
+        self.transform = tio.ElasticDeformation(*args, **kwargs)
 
     def apply(self, volume):
         image, annot, meta = volume

@@ -17,7 +17,7 @@ from typing import Optional, Union, Tuple, Sequence, Iterable, List, Dict
 import nibabel as nib
 import scipy.ndimage as ndi
 
-IMPORT_TORCHIO = (False, True)[0]
+IMPORT_TORCHIO = (False, True)[1]
 if IMPORT_TORCHIO:
 
     import os.path
@@ -28,12 +28,12 @@ if IMPORT_TORCHIO:
             sys.path.insert(0, path)
 
     this_dir = os.path.dirname(__file__)
-    lib_path = os.path.join(this_dir, '..', '..', 'torchio_package')
+    lib_path = os.path.normpath(os.path.join(this_dir, '..', '..', '..', 'torchio_package'))
     assert os.path.exists(lib_path)
     add_path(os.path.normpath(lib_path))
 
-    from torchio.transforms.augmentation.spatial.random.elastic_deformation import ElasticDeformation as ElasticDeformationTIO
-    from torchio.transforms.augmentation.intensity.random_motion import Motion as MotionTIO
+    from torchio.transforms.augmentation.spatial.random_elastic_deformation import RandomElasticDeformation as ElasticDeformationTIO
+    from torchio.transforms.augmentation.intensity.random_motion import RandomMotion as MotionTIO
     from torchio import Subject, ScalarImage
 
 TypeTripletInt = Tuple[int, int, int]
@@ -1373,26 +1373,108 @@ class Swap(Transformable):
 
 if IMPORT_TORCHIO:
     class ElasticDeformation(ElasticDeformationTIO):
-        r"""Apply dense elastic deformation.
+        r"""Apply dense random elastic deformation.
+
+        A random displacement is assigned to a coarse grid of control points around
+        and inside the image. The displacement at each voxel is interpolated from
+        the coarse grid using cubic B-splines.
+
+        The `'Deformable Registration' <https://www.sciencedirect.com/topics/computer-science/deformable-registration>`_
+        topic on ScienceDirect contains useful articles explaining interpolation of
+        displacement fields using cubic B-splines.
 
         Args:
-            control_points:
-            max_displacement:
+            num_control_points: Number of control points along each dimension of
+                the coarse grid :math:`(n_x, n_y, n_z)`.
+                If a single value :math:`n` is passed,
+                then :math:`n_x = n_y = n_z = n`.
+                Smaller numbers generate smoother deformations.
+                The minimum number of control points is ``4`` as this transform
+                uses cubic B-splines to interpolate displacement.
+            max_displacement: Maximum displacement along each dimension at each
+                control point :math:`(D_x, D_y, D_z)`.
+                The displacement along dimension :math:`i` at each control point is
+                :math:`d_i \sim \mathcal{U}(0, D_i)`.
+                If a single value :math:`D` is passed,
+                then :math:`D_x = D_y = D_z = D`.
+                Note that the total maximum displacement would actually be
+                :math:`D_{max} = \sqrt{D_x^2 + D_y^2 + D_z^2}`.
+            locked_borders: If ``0``, all displacement vectors are kept.
+                If ``1``, displacement of control points at the
+                border of the coarse grid will be set to ``0``.
+                If ``2``, displacement of control points at the border of the image
+                (red dots in the image below) will also be set to ``0``.
             image_interpolation: See :ref:`Interpolation`.
+                Note that this is the interpolation used to compute voxel
+                intensities when resampling using the dense displacement field.
+                The value of the dense displacement at each voxel is always
+                interpolated with cubic B-splines from the values at the control
+                points of the coarse grid.
+            p: Probability that this transform will be applied.
             keys: See :class:`~torchio.transforms.Transform`.
+
+        `This gist <https://gist.github.com/fepegar/b723d15de620cd2a3a4dbd71e491b59d>`_
+        can also be used to better understand the meaning of the parameters.
+
+        This is an example from the
+        `3D Slicer registration FAQ <https://www.slicer.org/wiki/Documentation/4.10/FAQ/Registration#What.27s_the_BSpline_Grid_Size.3F>`_.
+
+        .. image:: https://www.slicer.org/w/img_auth.php/6/6f/RegLib_BSplineGridModel.png
+            :alt: B-spline example from 3D Slicer documentation
+
+        To generate a similar grid of control points with TorchIO,
+        the transform can be instantiated as follows::
+
+            >>> from torchio import RandomElasticDeformation
+            >>> transform = RandomElasticDeformation(
+            ...     num_control_points=(7, 7, 7),  # or just 7
+            ...     locked_borders=2,
+            ... )
+
+        Note that control points outside the image bounds are not showed in the
+        example image (they would also be red as we set :attr:`locked_borders`
+        to ``2``).
+
+        .. warning:: Image folding may occur if the maximum displacement is larger
+            than half the coarse grid spacing. The grid spacing can be computed
+            using the image bounds in physical space [#]_ and the number of control
+            points::
+
+                >>> import numpy as np
+                >>> import torchio as tio
+                >>> image = tio.datasets.Slicer().MRHead.as_sitk()
+                >>> image.GetSize()  # in voxels
+                (256, 256, 130)
+                >>> image.GetSpacing()  # in mm
+                (1.0, 1.0, 1.2999954223632812)
+                >>> bounds = np.array(image.GetSize()) * np.array(image.GetSpacing())
+                >>> bounds  # mm
+                array([256.        , 256.        , 168.99940491])
+                >>> num_control_points = np.array((7, 7, 6))
+                >>> grid_spacing = bounds / (num_control_points - 2)
+                >>> grid_spacing
+                array([51.2       , 51.2       , 42.24985123])
+                >>> potential_folding = grid_spacing / 2
+                >>> potential_folding  # mm
+                array([25.6       , 25.6       , 21.12492561])
+
+            Using a :attr:`max_displacement` larger than the computed
+            :attr:`potential_folding` will raise a :class:`RuntimeWarning`.
+
+            .. [#] Technically, :math:`2 \epsilon` should be added to the
+                image bounds, where :math:`\epsilon = 2^{-3}` `according to ITK
+                source code <https://github.com/InsightSoftwareConsortium/ITK/blob/633f84548311600845d54ab2463d3412194690a8/Modules/Core/Transform/include/itkBSplineTransformInitializer.hxx#L116-L138>`_.
         """
 
         def __init__(
                 self,
-                control_points,
+                num_control_points,
                 max_displacement: TypeTripletFloat,
                 image_interpolation: str = 'linear',
                 keys: Optional[Sequence[str]] = None,
                 ):
-            if isinstance(control_points, (tuple, list)):
-                control_points = np.asarray(control_points)
             super().__init__(
-                control_points=control_points,
+                num_control_points=num_control_points,
                 max_displacement=max_displacement,
                 image_interpolation=image_interpolation,
                 keys=keys
@@ -1400,11 +1482,11 @@ if IMPORT_TORCHIO:
 
         def __call__(self, data, **kwargs):
             data = Subject(data=ScalarImage(tensor=data))
-            return super().__call__(data, **kwargs).get_first_image()['DATA']
+            return super(ElasticDeformation, self).__call__(data, **kwargs).get_first_image().data
 
 
     class Motion(MotionTIO):
-        r"""Add MRI motion artifact.
+        r"""Add random MRI motion artifact.
 
         Magnetic resonance images suffer from motion artifacts when the subject
         moves during image acquisition. This transform follows
@@ -1412,31 +1494,48 @@ if IMPORT_TORCHIO:
         simulate motion artifacts for data augmentation.
 
         Args:
-            degrees: Sequence of rotations :math:`(\theta_1, \theta_2, \theta_3)`.
-            translation: Sequence of translations :math:`(t_1, t_2, t_3)` in mm.
-            times: Sequence of times from 0 to 1 at which the motions happen.
+            degrees: Tuple :math:`(a, b)` defining the rotation range in degrees of
+                the simulated movements. The rotation angles around each axis are
+                :math:`(\theta_1, \theta_2, \theta_3)`,
+                where :math:`\theta_i \sim \mathcal{U}(a, b)`.
+                If only one value :math:`d` is provided,
+                :math:`\theta_i \sim \mathcal{U}(-d, d)`.
+                Larger values generate more distorted images.
+            translation: Tuple :math:`(a, b)` defining the translation in mm of
+                the simulated movements. The translations along each axis are
+                :math:`(t_1, t_2, t_3)`,
+                where :math:`t_i \sim \mathcal{U}(a, b)`.
+                If only one value :math:`t` is provided,
+                :math:`t_i \sim \mathcal{U}(-t, t)`.
+                Larger values generate more distorted images.
+            num_transforms: Number of simulated movements.
+                Larger values generate more distorted images.
             image_interpolation: See :ref:`Interpolation`.
+            p: Probability that this transform will be applied.
             keys: See :class:`~torchio.transforms.Transform`.
+
+        .. warning:: Large numbers of movements lead to longer execution times for
+            3D images.
         """
         def __init__(
                 self,
                 degrees: Union[TypeTripletFloat, Dict[str, TypeTripletFloat]],
                 translation: Union[TypeTripletFloat, Dict[str, TypeTripletFloat]],
-                times: Union[Sequence[float], Dict[str, Sequence[float]]],
+                num_transforms: Union[Sequence[float], Dict[str, Sequence[float]]],
                 image_interpolation: Union[Sequence[str], Dict[str, Sequence[str]]],
                 keys: Optional[Sequence[str]] = None,
                 ):
             super().__init__(
                 degrees=degrees,
                 translation=translation,
-                times=times,
+                num_transforms=num_transforms,
                 image_interpolation=image_interpolation,
                 keys=keys
             )
 
         def __call__(self, data, **kwargs):
             data = Subject(data=ScalarImage(tensor=data))
-            return super().__call__(data, **kwargs).get_first_image()['DATA']
+            return super(Motion, self).__call__(data, **kwargs).get_first_image().data
 else:
     class ElasticDeformation:
         def __init__(self):

@@ -7,153 +7,196 @@ TRAIN:
 TEST:
   ENABLE: true
   DATASET: 'SRIBILTest'
-  BATCH_MODE: false
+  BATCH_MODE: true
   BINARIZE_THRESHOLD: 0.50
   CHECKPOINT_FILE_PATH: ''
   DATA_PATH: ''
-  ROBUST_EXP: false
+  ROBUST_EXP: true
   EVAL_METRICS:
     - 'dice_coefficient'
     - 'jaccard_index'
     - 'hausdorff_distance'
     - 'rvd'
   ROBUST_EXP_LIST:
+    - - t_name: 'anisotropy'
+        t_params:
+          downsampling:
+            - 2.0
+            - 4.0
+            - 6.0
+            - 8.0
+            - 10.0
+    - - t_name: 'biasfield'
+        t_params:
+          coefficient:
+            - 0.3
+            - 0.6
+            - 0.8999999999999999
+            - 1.2
+            - 1.5
+          order:
+            - 3
+            - 3
+            - 3
+            - 3
+            - 3
+    - - t_name: 'blur'
+        t_params:
+          std:
+            - 0.8
+            - 1.6
+            - 2.4000000000000004
+            - 3.2
+            - 4.0
+    - - t_name: 'gamma'
+        t_params:
+          value:
+            - 0.86
+            - 0.72
+            - 0.5800000000000001
+            - 0.44000000000000006
+            - 0.3
+    - - t_name: 'gamma'
+        t_params:
+          value:
+            - 1.4
+            - 1.8
+            - 2.2
+            - 2.6
+            - 3.0
+    - - t_name: 'zoom'
+        t_params:
+          factor:
+            - 0.5
+            - 0.75
+            - 1.0
+            - 1.25
+            - 1.50
+    - - t_name: 'elasticdeformation'
+        t_params:
+          md:
+            - 6.0
+            - 12.0
+            - 18.0
+            - 24.0
+            - 30.0
+    - - t_name: 'ghosting'
+        t_params:
+          num_ghosts:
+            - 3.0
+            - 5.0
+            - 7.0
+            - 9.0
+            - 11.0
+          intensity:
+            - 0.5
+            - 1.0
+            - 1.5
+            - 2.0
+            - 2.5
+    - - t_name: 'motion'
+        t_params:
+          degrees:
+            - 1.0
+            - 2.0
+            - 3.0
+            - 4.0
+            - 5.0
+          translation:
+            - 2.0
+            - 4.0
+            - 6.0
+            - 8.0
+            - 10.0
+          num_transforms:
+            - 2
+            - 4
+            - 6
+            - 8
+            - 10
+    - - t_name: 'noise'
+        t_params:
+          sigma:
+            - 0.02
+            - 0.04
+            - 0.06
+            - 0.08
+            - 0.1
+          noise_type:
+            - 'rician'
+            - 'rician'
+            - 'rician'
+            - 'rician'
+            - 'rician'
+    - - t_name: 'rotate'
+        t_params:
+          radian:
+            - 0.3141592653589793
+            - 0.6283185307179586
+            - 0.9424777960769379
+            - 1.2566370614359172
+            - 1.5707963267948966
     - - t_name: 'contrast'
         t_params:
           value:
-            - -0.30
-            - -0.44
-            - +0.58
-            - +0.72
-            - +0.86
-#    - - t_name: 'noise'
-#        t_params:
-#          sigma:
-#            - 0.04
-#            - 0.08
-#            - 0.12
-#            - 0.16
-#            - 0.20
-#          noise_type:
-#            - 'rician'
-#            - 'rician'
-#            - 'rician'
-#    - - t_name: 'blur'
-#        t_params:
-#          std:
-#            - 0.5
-#            - 1.0
-#            - 1.5
-#            - 2.0
-#            - 2.5
-#    - - t_name: 'anisotropy'
-#        t_params:
-#          downsampling:
-#            - 2.4
-#            - 3.8
-#            - 5.2
-#            - 6.6
-#            - 8.0
-#    - - t_name: 'biasfield'
-#        t_params:
-#          coefficient:
-#            - 0.3
-#            - 0.4
-#            - 0.6
-#            - 0.8
-#            - 1.0
-#          order:
-#            - 3
-#            - 3
-#            - 3
-#            - 3
-#            - 3
-#    - - t_name: 'elasticdeformation'
-#        t_params:
-#          cp:
-#            - 7
-#            - 7
-#            - 7
-#            - 7
-#            - 7
-#          md:
-#            - 4.0
-#            - 8.0
-#            - 12.0
-#            - 16.0
-#            - 20.0
-#    - - t_name: 'rotate'
-#        t_params:
-#          radian:
-#            - 0.31415926535
-#            - 0.62831853071
-#            - 0.94247779607
-#            - 1.25663706144
-#            - 1.57079632679
-#    - - t_name: 'zoom'
-#        t_params:
-#          factor:
-#            - 0.5
-#            - 0.75
-#            - 1.0
-#            - 1.25
-#            - 1.50
-#    - - t_name: 'ghosting'
-#        t_params:
-#          num_ghosts:
-#            - 4
-#            - 5
-#            - 6
-#            - 7
-#            - 8
-#          intensity:
-#            - 0.25
-#            - 0.55
-#            - 0.65
-#            - 0.90
-#            - 1.10
-#    - - t_name: 'motion'
-#        t_params:
-#          degrees:
-#            - 1.0
-#            - 2.0
-#            - 3.0
-#            - 4.0
-#            - 5.0
-#          translation:
-#            - 2.0
-#            - 4.0
-#            - 6.0
-#            - 8.0
-#            - 10.0
-#          times:
-#            - 2
-#            - 4
-#            - 6
-#            - 8
-#            - 10
+            - -0.25
+            - -0.10
+            - +0.05
+            - +0.20
+            - +0.35
+    - - t_name: 'swap'
+        t_params:
+          patch_size:
+            - 4
+            - 16
+            - 32
+            - 64
+            - 128
+          num_iterations:
+            - 4
+            - 4
+            - 4
+            - 4
+            - 4
+    - - t_name: 'swap'
+        t_params:
+          patch_size:
+            - 4
+            - 16
+            - 32
+            - 64
+            - 128
+          num_iterations:
+            - 16
+            - 16
+            - 16
+            - 16
+            - 16
+    - - t_name: 'spike'
+        t_params:
+          spikes_positions:
+            - - 0.0
+              - 0.0
+              - 0.0
+            - - 0.5
+              - 0.5
+              - 0.0
+            - - 0.5
+              - 0.5
+              - 0.5
+            - - 0.5
+              - 0.0
+              - 0.5
+            - - 0.0
+              - 0.5
+              - 0.5
+          intensity:
+            - 1.0
+            - 1.0
+            - 1.0
+            - 1.0
+            - 1.0
 
-
-#    - - t_name: 'spike'
-#        t_params:
-#          spikes_positions:
-#            - - 0.5
-#              - 0.0
-#              - 0.0
-#            - - 0.5
-#              - 0.5
-#              - 0.0
-#          intensity:
-#            - 1.0
-#            - 1.0
-#    - - t_name: 'swap'
-#        t_params:
-#          patch_size:
-#            - 16
-#            - 32
-#          num_iterations:
-#            - 3
-#            - 9
 #    - - t_name: 'contrastchannel'
 #        t_params:
 #          value:

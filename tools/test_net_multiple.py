@@ -6,6 +6,7 @@
 #  Implemented by Mahdi Biparva, May 2020
 #  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
+import os
 import pandas as pd
 import data.transforms_mitorch as tf
 import torchvision.transforms as torch_tf
@@ -15,6 +16,7 @@ import copy
 import logging
 from datetime import datetime
 import pprint
+import pickle as pkl
 
 
 KNOWN_TRANSFORMATIONS = (
@@ -22,6 +24,7 @@ KNOWN_TRANSFORMATIONS = (
     'noisechannel',
     'contrast',
     'contrastchannel',
+    'gamma',
     'rotate',
     'shear',
     'translate',
@@ -93,13 +96,19 @@ def create_transformations(cfg, exp):
     transformations_head = [
         tf.ToTensorImageVolume(),
         tf.RandomOrientationTo('RPI'),
-        tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
+        # tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
     ]
 
     transformations_body = build_transformations(cfg, exp)
 
     transformations_tail = [
-        tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
+        tf.NormalizeMeanStdSingleVolume(nonzero=False, channel_wise=True),
+        tf.ConcatAnnot2ImgVolume(num_channels=-1),  # concat all except the last to the image
+        tf.MaskIntensityVolume(mask_data=None),  # crop a tight 3D box
+        tf.ConcatAnnot2ImgVolume(num_channels=-1),  # concat all annot to the image
+        tf.CropForegroundVolume(margin=1),  # crop the brain region
+        tf.ConcatImg2AnnotVolume(num_channels=2),
+        # tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
     ]
 
     return torch_tf.Compose(
@@ -135,7 +144,7 @@ def test_single_exp(cfg, exp):
 
         transformations = create_transformations(cfg, exp_current)
 
-        output_single = test_single(cfg, transformations=transformations, save_pred_flag=True, eval_pred_flag=True)
+        output_single = test_single(cfg, transformations=transformations, save_pred_flag=False, eval_pred_flag=True)
 
         output_single.update(exp_description)
 
@@ -146,8 +155,12 @@ def test_single_exp(cfg, exp):
     return exp_results
 
 
-def process_output_results(exp_ls_results):
+def process_output_results(exp_ls_results, file_path, save=False):
     # TODO whatever you want with exp_ls_results, e.g. save it to disk, visualize in graphs etc. I just print it.
+    if save:
+        file_path = os.path.join(file_path, 'exp_ls_results.pkl')
+        with open(file_path, 'wb') as fh:
+            pkl.dump(exp_ls_results, fh)
     for i, exp, output_df in exp_ls_results:
         logger.info(f'{i} --- \n{pprint.pformat(exp)}:\n{output_df}\n\n')
 
@@ -167,4 +180,4 @@ def test(cfg):
 
         logger.info(f'experiment {i} is done --- \n{output_df}\n')
 
-    process_output_results(exp_ls_results)
+    process_output_results(exp_ls_results, cfg.OUTPUT_DIR, save=True)

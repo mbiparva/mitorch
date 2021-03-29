@@ -14,6 +14,7 @@ __all__ = [
     'NoisechannelTestTransformations',
     'ContrastTestTransformations',
     'ContrastchannelTestTransformations',
+    'GammaTestTransformations',
     'RotateTestTransformations',
     'ShearTestTransformations',
     'TranslateTestTransformations',
@@ -85,6 +86,18 @@ class ContrastchannelTestTransformations(BaseTransformations):
         return tf.RandomContrastChannelWise(value=value, **self.params)
 
 
+@TESTPIPELINE_REGISTRY.register()
+class GammaTestTransformations(BaseTransformations):
+    def __init__(self, cfg, params):
+        super().__init__(cfg, params)
+
+    def create_transform(self):
+        value = self.params.pop('value')
+        self.params['channel_wise'] = True
+        self.params['prand'] = False
+        return tf.RandomGamma(value=value, **self.params)
+
+
 # noinspection PyTypeChecker
 @TESTPIPELINE_REGISTRY.register()
 class RotateTestTransformations(BaseTransformations):
@@ -92,10 +105,10 @@ class RotateTestTransformations(BaseTransformations):
         super().__init__(cfg, params)
 
     def create_transform(self):
-        self.params['padding_mode'] = 'zero'
+        self.params['padding_mode'] = 'zeros'
         radian = self.params.pop('radian')
         radian_ls = [0]*3
-        radian_ls[torch.randint(0, 3, size=[1]).tolist()] = radian
+        radian_ls[torch.randint(0, 3, size=[1]).item()] = radian
         self.params['rotate_params'] = radian_ls
         return tf.AffineRotate(**self.params)
 
@@ -143,7 +156,8 @@ class GhostingTestTransformations(BaseTransformations):
 
     def create_transform(self):
         self.params['restore'] = 0.5
-        self.params['axes'] = torch.randint(0, 3, size=[1]).tolist()
+        self.params['axis'] = torch.randint(0, 3, size=[1]).item()
+        self.params['num_ghosts'] = int(self.params['num_ghosts'])
         return tf.Ghosting(**self.params)
 
 
@@ -180,7 +194,7 @@ class MotionTestTransformations(BaseTransformations):
         super().__init__(cfg, params)
 
     def create_transform(self):
-        self.params['image_interpolation'] = 'sitkBSpline'
+        self.params['image_interpolation'] = 'bspline'
         return tf.MotionVolume(**self.params)
 
 
@@ -191,7 +205,8 @@ class AnisotropyTestTransformations(BaseTransformations):
 
     def create_transform(self):
         downsampling = self.params.pop('downsampling')
-        axes = torch.randint(0, 3, size=[1]).tolist()
+        axes = (0, 1, 2)  # torch.randint(0, 3, size=[1]).item()
+        self.params['interpolation_mode'] = 'trilinear'
         return tf.AnisotropyVolume(axes, downsampling, **self.params)
 
 
@@ -201,10 +216,10 @@ class ElasticdeformationTestTransformations(BaseTransformations):
         super().__init__(cfg, params)
 
     def create_transform(self):
-        control_points = [self.params.pop('cp')]
-        max_displacement = self.params.pop('md')
-        self.params['image_interpolation'] = 'sitkBSpline'
-        return tf.ElasticDeformationVolume(control_points, max_displacement, **self.params)
+        max_displacement = [self.params.pop('md')]*3
+        num_control_points = 7
+        self.params['image_interpolation'] = 'bspline'
+        return tf.ElasticDeformationVolume(num_control_points, max_displacement, **self.params)
 
 
 @TESTPIPELINE_REGISTRY.register()
