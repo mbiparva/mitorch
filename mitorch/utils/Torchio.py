@@ -22,6 +22,9 @@ if IMPORT_TORCHIO:
 
     import os.path
     import sys
+    import socket
+
+    socket_name = socket.gethostname()
 
     def add_path(path):
         if path not in sys.path:
@@ -29,6 +32,8 @@ if IMPORT_TORCHIO:
 
     this_dir = os.path.dirname(__file__)
     lib_path = os.path.normpath(os.path.join(this_dir, '..', '..', '..', 'torchio_package'))
+    if 'scinet' in socket_name:
+        lib_path = '/scratch/m/mgoubran/mbiparva/torchio_package/'
     assert os.path.exists(lib_path)
     add_path(os.path.normpath(lib_path))
 

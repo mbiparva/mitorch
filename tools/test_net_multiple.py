@@ -180,4 +180,6 @@ def test(cfg):
 
         logger.info(f'experiment {i} is done --- \n{output_df}\n')
 
-    process_output_results(exp_ls_results, cfg.OUTPUT_DIR, save=True)
+        logger.info(f'*** experiments saved')
+
+        process_output_results(exp_ls_results, cfg.OUTPUT_DIR, save=True)
