@@ -1,39 +1,14 @@
-DATA:
-  CROP_SCALE:
-  - 0.8
-  - 1.0
-  MAX_SIDE_SIZE: 192
-  CROP_SIZE: 160
-  ENFORCE_DIAG: false
-  ENFORCE_NIB_CANONICAL: false
-  EXP:
-    BODY_CRO: 0
-    BODY_FLI: 0
-    HEAD_ORI: 0
-    HEAD_RES: 0
-    INTENSITY: false
-    INTENSITY_SEL: 0
-  PADDING_MODE: mean
-  MIN_SIDE: false
-  UNI_SCALE: true
 MODEL:
-  MODEL_NAME: Unet3D  # Unet3D, NestedUnet3D
+  MODEL_NAME: Unet3D
 PROJECT:
   PA_INDICES: true
 TRAIN:
   DATASET: 'SRIBIL'
   CHECKPOINT_PERIOD: 1
 WMH:
-  HFB_MASKING_MODE: 'pipeline'  # manual, pipeline
+  HFB_MASKING_MODE: 'pipeline'
   BINARIZE_THRESHOLD: 0.5
-  ENABLE: true
   HFB_GT: true
-  PADDING_MODE: mean
-  FILL: 0
-  CROPPING: true
-  RESIZING_PADDING: false
-  MAX_SIDE_SIZE: 160
-  HFB_CHECKPOINT: ''
 SOLVER:
   MAX_EPOCH: 200
   BASE_LR: 0.001
