@@ -1155,6 +1155,20 @@ class Spike(Transformable):
         )
 
 
+class RandomSpike(Transformable):
+    def __init__(self, **kwargs):
+        self.transform = tio.RandomSpike(**kwargs)
+
+    def apply(self, volume):
+        image, annot, meta = volume
+
+        return (
+            self.transform(image),
+            annot,
+            meta
+        )
+
+
 class Ghosting(Transformable):
     def __init__(self, **kwargs):
         self.transform = tio.Ghosting(**kwargs)

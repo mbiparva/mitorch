@@ -146,7 +146,7 @@ class SpikeTestTransformations(BaseTransformations):
         super().__init__(cfg, params)
 
     def create_transform(self):
-        return tf.Spike(**self.params)
+        return tf.RandomSpike(**self.params)
 
 
 @TESTPIPELINE_REGISTRY.register()
