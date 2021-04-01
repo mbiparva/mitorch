@@ -17,7 +17,7 @@ from typing import Optional, Union, Tuple, Sequence, Iterable, List, Dict
 import nibabel as nib
 import scipy.ndimage as ndi
 
-IMPORT_TORCHIO = (False, True)[1]
+IMPORT_TORCHIO = (False, True)[0]
 if IMPORT_TORCHIO:
 
     import os.path
