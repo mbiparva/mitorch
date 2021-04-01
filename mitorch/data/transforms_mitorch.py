@@ -1040,7 +1040,7 @@ class OneHotAnnot(Transformable):
     def __init__(self, num_classes: int, dtype: torch.dtype = torch.float, dim: int = 0, ignore_background=True):
         assert isinstance(num_classes, int), 'num_classes must be int'
         assert isinstance(dim, int), 'dim must be int'
-        assert 1 < num_classes
+        assert 1 <= num_classes
         assert 0 <= dim
         assert isinstance(ignore_background, bool)
 

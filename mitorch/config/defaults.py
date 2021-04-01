@@ -64,7 +64,7 @@ _C.TRAIN.HPO = (False, True)[0]
 # Dataset.
 _C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb',
                     'TRAP', 'CAPTURE', 'TRACING', 'TRACINGSEG',
-                    'HPSubfield')[6]
+                    'HPSubfield')[1]
 
 # Input Modalities
 _C.TRAIN.IN_MOD = tuple({
