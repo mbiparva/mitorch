@@ -8,32 +8,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import plotly
 import seaborn as sn
-
-
-current_path = os.path.abspath('')
-
-exp_path = os.path.normpath(os.path.join(current_path, '..', 'wmh_pytorch', 'experiments', 'SRIBILTest'))
-
-exp_id = [
-    '20210331_011836_530936',
-    '20210402_041942_989499',
-][-1]
-
-
-exp_path_full = os.path.join(exp_path, exp_id)
-
-df_file_path = os.path.join(exp_path_full, 'exp_ls_results.pkl')
-
-assert os.path.exists(df_file_path)
-
-with open(df_file_path, 'rb') as fh:
-    exp_df = pkl.load(fh)
+import sys
 
 
 def plot_one_exp(exp_curr):
-    exp_id_curr, exp_desc_curr, exp_df_curr = exp_curr
-
-    print('plotting', exp_id_curr)
+    _, exp_desc_curr, exp_df_curr = exp_curr
 
     x_ind = exp_df_curr.index.to_numpy().astype(int)
 
@@ -44,7 +23,8 @@ def plot_one_exp(exp_curr):
     fig = plt.figure(figsize=(16, 9), dpi= 300, facecolor='w', edgecolor='k')
     ax = plt.gca()
 
-    ax.fill_between(x_ind, y_mean-y_std, y_mean+y_std, facecolor='dodgerblue', edgecolor='black', linewidth=2, antialiased=False, interpolate=False, alpha=0.20)
+    ax.fill_between(x_ind, y_mean-y_std, y_mean+y_std, facecolor='dodgerblue', edgecolor='black', linewidth=2,
+                    antialiased=False, interpolate=False, alpha=0.20)
     ax.plot(x_ind, y_mean, marker='v', markerfacecolor='orange', markersize=12, c='r', linewidth=3)
 
     ax.grid()
@@ -54,13 +34,43 @@ def plot_one_exp(exp_curr):
 
     fig.savefig(os.path.join(exp_path_full, f"{exp_id}_{exp_desc_curr[0]['t_name']}"))
 
-    fig.savefig(os.path.join(f"{exp_id}_{exp_desc_curr[0]['t_name']}"))
+    # fig.savefig(os.path.join(f"{exp_id}_{exp_desc_curr[0]['t_name']}"))
+
+    plt.close('all')
 
 
 def main():
-    for e in exp_df:
-        plot_one_exp(e)
+    print(f'loading {df_file_path}')
+    for exp_curr in exp_df:
+        exp_id_curr, exp_desc_curr, exp_df_curr = exp_curr
+
+        print(f'plotting {exp_id_curr}|{len(exp_df)}: {exp_desc_curr}')
+
+        plot_one_exp(exp_curr)
 
 
-if '__name__' == '__main__':
+if __name__ == '__main__':
+    exp_id = [
+        '20210402_041942_989499',  # 1x1
+        '20210402_042100_825498'  # 1x4
+        '20210402_042340_020114'  # 4x4
+        '20210402_042422_704225'  # 4x4 es
+    ][0]
+
+    if len(sys.argv) == 2:
+        exp_id = sys.argv[1]
+
+    current_path = os.path.abspath('')
+
+    exp_path = os.path.normpath(os.path.join(current_path, '..', '..', 'experiments', 'SRIBILTest'))
+
+    exp_path_full = os.path.join(exp_path, exp_id)
+
+    df_file_path = os.path.join(exp_path_full, 'exp_ls_results.pkl')
+
+    assert os.path.exists(df_file_path)
+
+    with open(df_file_path, 'rb') as fh:
+        exp_df = pkl.load(fh)
+
     main()
