@@ -60,12 +60,13 @@ class EpochLoop:
                 self.setup_tb_logger()
         worker.tb_logger_update(self.tb_logger_writer, e)
 
-    def save_checkpoint(self, cur_epoch, eval_metric):
+    def save_checkpoint(self, cur_epoch, eval_metric, every_epoch=False):
         if checkops.is_checkpoint_epoch(cur_epoch, self.cfg.TRAIN.CHECKPOINT_PERIOD):
             if self.cfg.DDP and self.cfg.DDP_CFG.RANK:
                 return
-            self.net_wrapper.save_checkpoint(self.cfg.OUTPUT_DIR, cur_epoch, best=False)
-            logger.info(f'checkpoint saved at epoch {cur_epoch} in the path {self.cfg.OUTPUT_DIR}')
+            if every_epoch:
+                self.net_wrapper.save_checkpoint(self.cfg.OUTPUT_DIR, cur_epoch, best=False)
+                logger.info(f'checkpoint saved at epoch {cur_epoch} in the path {self.cfg.OUTPUT_DIR}')
 
             # add if it is the best, save it separately too
             self.best_eval_metric = min(eval_metric, self.best_eval_metric)

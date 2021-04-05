@@ -87,6 +87,7 @@ class WMHTransformations(BaseTransformations):
             tf.ToTensorImageVolume(),
             tf.RandomOrientationTo('RPI'),
             tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
+            tf.NormalizeMeanStdSingleVolume(nonzero=False, channel_wise=True),
             tf.ConcatAnnot2ImgVolume(num_channels=-1),  # concat all except the last to the image
             tf.MaskIntensityVolume(mask_data=None),  # crop a tight 3D box
             tf.ConcatAnnot2ImgVolume(num_channels=-1),  # concat all annot to the image
@@ -105,7 +106,7 @@ class WMHTransformations(BaseTransformations):
             # tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
             # tf.ScaleIntensityRangePercentilesVolume(lower=0.0, upper=99.99, b_min=0, b_max=1,
             #                                         clip=False, relative=False),
-            tf.NormalizeMeanStdSingleVolume(nonzero=False, channel_wise=True),
+            # tf.NormalizeMeanStdSingleVolume(nonzero=False, channel_wise=True),
         ]
 
         return torch_tf.Compose(
