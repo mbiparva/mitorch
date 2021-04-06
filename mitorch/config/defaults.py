@@ -49,6 +49,10 @@ _C.PROJECT.TVSR = 0.80
 _C.PROJECT.TSR = 0.0
 _C.PROJECT.PA_INDICES = (False, True)[0]
 
+# Dataset list
+_C.PROJECT.KNOWN_DATASETS = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb',
+                             'TRAP', 'CAPTURE', 'TRACING', 'TRACINGSEG', 'HPSubfield')
+
 
 # ---------------------------------------------------------------------------- #
 # Training options.
@@ -61,7 +65,7 @@ _C.TRAIN.ENABLE = True
 # Train a single experiment or batch of hyper-parameter optimization experiments
 _C.TRAIN.HPO = (False, True)[0]
 
-# Dataset.
+# Dataset for training
 _C.TRAIN.DATASET = ('WMHSegmentationChallenge', 'SRIBIL', 'SRIBILhfb',
                     'TRAP', 'CAPTURE', 'TRACING', 'TRACINGSEG',
                     'HPSubfield')[1]
@@ -520,6 +524,8 @@ _C.HPSF.ENABLE = _C.TRAIN.DATASET in ('HPSubfield', )
 
 
 def init_dependencies(cfg):
+    assert cfg.TRAIN.DATASET in _C.PROJECT.KNOWN_DATASETS, 'dataset is unknown'
+
     cfg.TRAIN.IN_MOD = dict(_C.TRAIN.IN_MOD)[cfg.TRAIN.DATASET]
 
     cfg.TEST.IN_MOD = dict(_C.TEST.IN_MOD)[cfg.TEST.DATASET]
