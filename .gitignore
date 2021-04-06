@@ -131,6 +131,7 @@ dmypy.json
 __pycache__
 .ipynb_checkpoints
 notebook
+notebooks
 dataset
 experiments
 /tools/_local_spare_files/*
