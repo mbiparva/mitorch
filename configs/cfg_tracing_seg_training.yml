@@ -21,7 +21,30 @@ MODEL:
   ENCO_DEPTH: 5
   NUM_PRED_LEVELS: 3
   DROPOUT_RATE: 0.50
-  MODEL_NAME: 'Unet3D'
+  MODEL_NAME: 'Unet3D'  # 'Unet3D', 'NestedUnet3D', 'Unet3DCBAM', 'DAUnet3D'
+  SETTINGS:
+    NestedUnet3D:
+        DEEP_SUPERVISION: true
+        N_HOP_DENSE_SKIP_CONNECTION: 2
+        MODULATION_TYPE: concatenation
+    DAUnet3D:
+      GAM:
+        BLOCKS:
+          - -1
+      LAM:
+        BLOCKS:
+          - 3
+          - 4
+        RESIDUAL_RELATIVE: before
+        INPUT_REDUCTION_RATIO: 2
+        MIDDLE_REDUCTION_RATIO: 4
+        INTERNAL_MODULATION_TYPE: additive
+        CROSS_MODAL_MODULATION_TYPE: additive
+        REF_MODULATION_TYPE: additive
+        RESIDUAL: true
+        CHANNEL: true
+        SPATIAL: true
+        KERNEL_SIZE: 5
 SOLVER:
   OPTIMIZING_METHOD: 'adam'
   BASE_LR: 1e-3

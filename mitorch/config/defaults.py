@@ -245,7 +245,7 @@ _C.MODEL.NUM_PRED_LEVELS = 3
 _C.MODEL.INPUT_CHANNELS = 0  # will set later in the init_dependencies
 
 # Model settings
-_C.MODEL.SETTINGS = tuple({
+_C.MODEL.SETTINGS = CfgNode({
     'Unet3D': CfgNode({}),
     'NestedUnet3D': CfgNode({
         'DEEP_SUPERVISION': (False, True)[1],
@@ -300,7 +300,7 @@ _C.MODEL.SETTINGS = tuple({
             'KERNEL_SIZE': 3,
         }),
     }),
-}.items())
+})
 
 
 # -----------------------------------------------------------------------------
@@ -525,6 +525,8 @@ _C.HPSF.ENABLE = _C.TRAIN.DATASET in ('HPSubfield', )
 
 def init_dependencies(cfg):
     assert cfg.TRAIN.DATASET in _C.PROJECT.KNOWN_DATASETS, 'dataset is unknown'
+    
+    cfg.MODEL.SETTINGS = cfg.MODEL.SETTINGS[cfg.MODEL.MODEL_NAME]
 
     cfg.TRAIN.IN_MOD = dict(_C.TRAIN.IN_MOD)[cfg.TRAIN.DATASET]
 
