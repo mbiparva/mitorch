@@ -9,10 +9,11 @@ TEST:
   DATASET: 'SRIBILTest'
   BATCH_MODE: true
   BINARIZE_THRESHOLD: 0.50
-#  CHECKPOINT_FILE_PATH: '/scratch/m/mgoubran/mbiparva/wmh_pytorch/experiments/SRIBIL/20210319_170409_796145/checkpoints/checkpoint_epoch_00035_BEST.pyth'
+#  CHECKPOINT_FILE_PATH: '/scratch/m/mgoubran/mbiparva/wmh_pytorch/experiments/SRIBIL/20210319_170409_796145/checkpoints/checkpoint_epoch_00035_BEST.pyth' --- without
 #  CHECKPOINT_FILE_PATH: '/scratch/m/mgoubran/mbiparva/wmh_pytorch/experiments/SRIBIL/20210319_170429_109618/checkpoints/checkpoint_epoch_00073_BEST.pyth'
 #  CHECKPOINT_FILE_PATH: '/scratch/m/mgoubran/mbiparva/wmh_pytorch/experiments/SRIBIL/20210319_175207_238130/checkpoints/checkpoint_epoch_00171_BEST.pyth'
-  CHECKPOINT_FILE_PATH: '/scratch/m/mgoubran/mbiparva/wmh_pytorch/experiments/SRIBIL/20210322_111112_102101/checkpoints/checkpoint_epoch_00187_BEST.pyth'
+#  CHECKPOINT_FILE_PATH: '/scratch/m/mgoubran/mbiparva/wmh_pytorch/experiments/SRIBIL/20210322_111112_102101/checkpoints/checkpoint_epoch_00187_BEST.pyth'
+  CHECKPOINT_FILE_PATH: '/scratch/m/mgoubran/mbiparva/wmh_pytorch/experiments/SRIBIL/20210405_120919_840897/checkpoints/checkpoint_epoch_00192_BEST.pyth'  --- with
   DATA_PATH: ''
   ROBUST_EXP: true
   EVAL_METRICS:
