@@ -102,13 +102,12 @@ def create_transformations(cfg, exp):
     transformations_body = build_transformations(cfg, exp)
 
     transformations_tail = [
-        tf.NormalizeMeanStdSingleVolume(nonzero=False, channel_wise=True),
         tf.ConcatAnnot2ImgVolume(num_channels=-1),  # concat all except the last to the image
         tf.MaskIntensityVolume(mask_data=None),  # crop a tight 3D box
         tf.ConcatAnnot2ImgVolume(num_channels=-1),  # concat all annot to the image
         tf.CropForegroundVolume(margin=1),  # crop the brain region
         tf.ConcatImg2AnnotVolume(num_channels=2),
-        # tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
+        tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
     ]
 
     return torch_tf.Compose(
