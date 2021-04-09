@@ -411,8 +411,6 @@ def one_hot(labels: torch.Tensor, num_classes: int, dtype: torch.dtype, dim: int
         labels = labels.index_select(dim=dim, index=keep_ind)
 
     return labels
-<<<<<<< HEAD
-=======
 
 
 def k_space_motion_artifact(volume, time, **kwargs):
@@ -432,4 +430,3 @@ def k_space_motion_artifact(volume, time, **kwargs):
     assert 0.5 <= time < 1.0, 'time must be float between 0.0 (inclusive) and 1.0 (exclusive).'
 
     return ks_motion.apply_motion_from_affine_params(volume, time, **kwargs)
->>>>>>> 376197d... motion: I merely refactored and made some style fixes and relocation
