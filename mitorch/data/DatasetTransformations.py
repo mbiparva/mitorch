@@ -86,7 +86,7 @@ class WMHTransformations(BaseTransformations):
         transformations_body_ref = [
             tf.ToTensorImageVolume(),
             tf.RandomOrientationTo('RPI'),
-            tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
+            # tf.RandomResampleTomm(target_spacing=(1, 1, 1)),
             tf.ConcatAnnot2ImgVolume(num_channels=-1),  # concat all except the last to the image
             tf.MaskIntensityVolume(mask_data=None),  # crop a tight 3D box
             tf.ConcatAnnot2ImgVolume(num_channels=-1),  # concat all annot to the image
