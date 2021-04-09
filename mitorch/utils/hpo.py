@@ -1,7 +1,7 @@
-#  Copyright (c) 2020 Mahdi Biparva, mahdi.biparva@sri.utoronto.ca
-#  miTorch Deep Learning Package
+#  Copyright (c) 2021 Mahdi Biparva, mahdi.biparva@gmail.com
+#  miTorch: Medical Imaging with PyTorch
 #  Deep Learning Package for 3D medical imaging in PyTorch
-#  Implemented by Mahdi Biparva, May 2020
+#  Implemented by Mahdi Biparva, April 2021
 #  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
 from itertools import product

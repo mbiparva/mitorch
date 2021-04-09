@@ -1,24 +1,13 @@
-#  Copyright (c) 2020 Mahdi Biparva, mahdi.biparva@sri.utoronto.ca
-#  miTorch Deep Learning Package
+#  Copyright (c) 2021 Mahdi Biparva, mahdi.biparva@gmail.com
+#  miTorch: Medical Imaging with PyTorch
 #  Deep Learning Package for 3D medical imaging in PyTorch
-#  Implemented by Mahdi Biparva, May 2020
+#  Implemented by Mahdi Biparva, April 2021
 #  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
 
 """
 ****** NOTE: ALL THE CODE BELOW ARE TAKEN FROM MONAI WITH THE COPYRIGHT NOTE BELOW ******
                     https://github.com/Project-MONAI/MONAI
 """
-
-# Copyright 2020 MONAI Consortium
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#     http://www.apache.org/licenses/LICENSE-2.0
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 import collections
 from abc import ABC, abstractmethod

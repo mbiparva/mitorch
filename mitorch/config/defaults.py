@@ -526,7 +526,7 @@ _C.HPSF.ENABLE = _C.TRAIN.DATASET in ('HPSubfield', )
 def init_dependencies(cfg):
     assert cfg.TRAIN.DATASET in _C.PROJECT.KNOWN_DATASETS, 'dataset is unknown'
     
-    cfg.MODEL.SETTINGS = cfg.MODEL.SETTINGS[cfg.MODEL.MODEL_NAME]
+    cfg.MODEL.SETTINGS = cfg.MODEL.SETTINGS[cfg.MODEL.MODEL_NAME] if cfg.MODEL.MODEL_NAME in cfg.MODEL.SETTINGS else _C.MODEL.SETTINGS[cfg.MODEL.MODEL_NAME]
 
     cfg.TRAIN.IN_MOD = dict(_C.TRAIN.IN_MOD)[cfg.TRAIN.DATASET]
 

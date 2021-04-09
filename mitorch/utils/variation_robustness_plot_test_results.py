@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+#  Copyright (c) 2021 Mahdi Biparva, mahdi.biparva@gmail.com
+#  miTorch: Medical Imaging with PyTorch
+#  Deep Learning Package for 3D medical imaging in PyTorch
+#  Implemented by Mahdi Biparva, April 2021
+#  Brain Imaging Lab, Sunnybrook Research Institute (SRI)
+
 import os
 import pickle as pkl
 import numpy as np

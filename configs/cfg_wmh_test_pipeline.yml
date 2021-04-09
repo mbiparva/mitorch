@@ -1,3 +1,5 @@
+MODEL:
+  MODEL_NAME: Unet3D
 WMH:
   HFB_MASKING_MODE: 'pipeline'  # manual, pipeline
   BINARIZE_THRESHOLD: 0.5
