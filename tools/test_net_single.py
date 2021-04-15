@@ -121,7 +121,6 @@ def build_transformations():
     transformations = torch_tf.Compose([
         tf.ToTensorImageVolume(),
         tf.RandomOrientationTo('RPI'),
-        tf.NormalizeMeanStdSingleVolume(nonzero=False, channel_wise=True),
         tf.ConcatAnnot2ImgVolume(num_channels=-1),  # concat all except the last to the image
         tf.MaskIntensityVolume(mask_data=None),  # crop a tight 3D box
         tf.ConcatAnnot2ImgVolume(num_channels=-1),  # concat all annot to the image
@@ -133,7 +132,7 @@ def build_transformations():
         # # tf.ResizeImageVolume(cfg.DATA.MAX_SIDE_SIZE, min_side=cfg.DATA.MIN_SIDE),
         # # tf.PadToSizeVolume(cfg.DATA.MAX_SIDE_SIZE, padding_mode=cfg.DATA.PADDING_MODE),
         # tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
-        # # tf.NormalizeMeanStdVolume(mean=cfg.DATA.MEAN, std=cfg.DATA.STD, inplace=True),
+        tf.NormalizeMinMaxVolume(max_div=True, inplace=True),
     ])
 
     return transformations
