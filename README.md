@@ -1,7 +1,7 @@
 # miTorch: Medical Imaging in PyTorch
 By Mahdi Biparva (PhD in Computer Science)
 
-This package implements deep learning modules for medical imaging application in PyTorch.
+This package implements deep learning modules for medical imaging application in PyTorch. It contains different modules in the data-pipeline such as the data-loaders, data-containers, transformations etc. In the model-pipeline, there are several segmentation neural networks, training logics, loss function, metrics etc.
 
 
 ### License
@@ -10,13 +10,15 @@ TBC
 ### Citing miTorch
 If you find "miTorch: Medical Imaging in PyTorch" useful in your research, please consider citing the research paper:
 
-    @InProceedings{some_abbreviation,
-    author = {lname1, fname1 and lname2, fname2},
-    title = {miTorch: Medical Imaging in PyTorch},
-    booktitle = {Some venue},
-    month = {Month},
-    year = {Year}
-    }
+TBC
+
+<!--    @InProceedings{some_abbreviation,-->
+<!--    author = {lname1, fname1 and lname2, fname2},-->
+<!--    title = {miTorch: Medical Imaging in PyTorch},-->
+<!--    booktitle = {Some venue},-->
+<!--    month = {Month},-->
+<!--    year = {Year}-->
+<!--    }-->
 
 ## Contents
 
@@ -37,20 +39,20 @@ PyTorch package for medical imaging application in deep learning.
 The input is 3D volumes of various modalities and the task could be segmentation, classification, and transfer learning. 
 
 To name a few, the learning tasks are:
-  * Segmentation:
-     * Head-From-Brain (HFB) 
+  * 3D Medical Segmentation:
+     * Head-From-Brain / Skull-Stripping (HFB)
      * White-Matter-Hyperintensities (WMH)
-  * Classification
-  * Generative Networks 
+  * Robustness analysis test pipeline
+  * Self-supervised learning
   
 ## Requirements: Software
-TBC
+Currently it relies on Python and PyTorch ecosystem.
 
 ## Requirements: Hardware
-TBC
+GPU devices with CUDA capabilities are required.
 
 ## Installation
-TBC
+There is no installation needed at this moment. You would simply need to call the main function.
 
 ### Prerequisites
 * Python 3.7
@@ -60,16 +62,18 @@ TBC
 ## Preparation
 TBC
 
-## Demo: HFB 3D Segmentation
+## Demo: 3D Segmentation
 TBC
 
 ## Demo: WMH 3D Segmentation
 TBC
 
 ## Future Work
-TBC
+We are aiming to develop self-supervised learning modules to enhance the segmentation robustness.
 
 ## Contributors
   * Mahdi Biparva (core modeling and development)
-  * Parisa Mojiry (experimentation)
+  * Parsa Esfahanian (self-supervised development)
+  * Braedyn Au (Tracing Segmentation development)
+  * Parisa Mojiri (experimentation)
   * Maged Goubran (abstraction and methodologies)
