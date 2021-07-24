@@ -1489,3 +1489,31 @@ class ZoomVolume(MONAITransformVolume):
             **kwargs,
         )
 
+
+class RandomReordering(Randomizable):
+    def __init__(self, size, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if isinstance(size, numbers.Number):
+            self.size = (int(size), int(size), int(size))
+        else:
+            self.size = size
+
+    # todo: Type hinting for args and returns
+    def reorder_image(image):
+        x = list(enumerate(image))
+        random.shuffle(x)
+        indices, reordered_image = zip(*x)
+        return reordered_image, indices
+
+    def apply(self, volume):
+        image, annot, meta = volume
+        image, indices = self.reorder_image(image=image)
+        meta['indices'] = indices
+        return (
+            image,
+            annot,
+            meta
+        )
+
+    def __repr__(self):
+        return self.__class__.__name__ + f'(size={self.size})'
