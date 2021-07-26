@@ -19,6 +19,8 @@ import itertools
 import utils.MONAI_data as mn
 import utils.Torchio as tio
 
+from typing import Union
+
 if sys.version_info < (3, 3):
     Sequence = collections.Sequence
     Iterable = collections.Iterable
@@ -1490,30 +1492,25 @@ class ZoomVolume(MONAITransformVolume):
         )
 
 
-class RandomReordering(Randomizable):
+class RandomReordering(Transformable):
     def __init__(self, size, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if isinstance(size, numbers.Number):
-            self.size = (int(size), int(size), int(size))
-        else:
-            self.size = size
 
-    # todo: Type hinting for args and returns
-    def reorder_image(image):
-        x = list(enumerate(image))
-        random.shuffle(x)
-        indices, reordered_image = zip(*x)
+    def reorder_image(
+            image: torch.Tensor) -> Union[torch.Tensor, torch.Tensor]:
+        """
+        Image axis: channel, depth, width, height
+        Reordering happens on the `depth` axis.
+        """
+        indices = torch.randperm(image.shape[1])
+        reordered_image = image[:, indices, :, :]
         return reordered_image, indices
 
-    def apply(self, volume):
+    def apply(self, volume: torch.Tensor) -> tuple:
         image, annot, meta = volume
         image, indices = self.reorder_image(image=image)
         meta['indices'] = indices
-        return (
-            image,
-            annot,
-            meta
-        )
+        return (image, annot, meta)
 
     def __repr__(self):
         return self.__class__.__name__ + f'(size={self.size})'
