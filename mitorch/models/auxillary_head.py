@@ -1,11 +1,18 @@
+import torch
 import torch.nn as nn
 
-from utils.MONAI_networks.utils import MarkerLayer
+from einops import reduce
+
+VALID_MODES = ['mean', 'max']
 
 
 class AuxillaryHead(nn.Module):
-    def __init__(self, cfg):
+    def __init__(self, cfg, mode: str):
         super().__init__()
+
+        if mode not in VALID_MODES:
+            raise ValueError(f'Reduction mode `{mode}` is not valid.')
+        self.mode = mode
 
         self._create_net()
 
@@ -13,9 +20,7 @@ class AuxillaryHead(nn.Module):
         pass
 
     def forward(self, x):
-        output_list = list()
-        for name, module in self.net.features._modules.items():
-            x = module(x)
-            if isinstance(module, MarkerLayer):
-                output_list.append(x)
-        return output_list
+        return self._reduce(input=x)
+
+    def __reduce(self, input: torch.Tensor) -> torch.Tensor:
+        return reduce(input, 'b c d w h -> b d', self.mode)
