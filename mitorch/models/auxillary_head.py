@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+# pip install einops==0.3.0
 from einops import reduce
 
 VALID_MODES = ['mean', 'max']
