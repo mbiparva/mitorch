@@ -20,8 +20,11 @@ class AuxillaryHead(nn.Module):
     def _create_net(self):
         pass
 
+    # add a linear_mapping boolean argument
     def forward(self, x):
         return self._reduce(input=x)
+        # if linear_mapping:
+        #     do nn.linear input=d output=2
 
     def __reduce(self, input: torch.Tensor) -> torch.Tensor:
         return reduce(input, 'b c d w h -> b d', self.mode)
