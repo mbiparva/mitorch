@@ -32,29 +32,22 @@ class AuxillaryHead(nn.Module):
         return mapping(input)
 
 
-class CrossEntropyLoss(nn.CrossEntropyLoss):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+# class SliceOrderingNet(nn.Module):
+#     def __init__(self, net: nn.Module, mode: str):
+#         super().__init__()
 
+#         if mode not in VALID_MODES:
+#             raise ValueError(f'Reduction mode `{mode}` is not valid.')
+#         self.mode = mode
 
-batch = 10
-channel = 3
-depth = 30
-width = 512
-height = 512
+#         self.net = net()
+#         self.auxillary_head = AuxillaryHead()
 
-rand_tensor = torch.rand((batch, channel, depth, height, width))
+#         self._create_net()
 
-print(rand_tensor.size())
+#     def _create_net(self):
+#         pass
 
-net = AuxillaryHead(mode='mean', _map=True)
-
-output_tensor = net(rand_tensor)
-
-print(output_tensor.size())
-
-loss_function = CrossEntropyLoss()
-
-loss = loss_function(output_tensor, output_tensor)
-
-print(loss)
+#     # add a linear_mapping boolean argument
+#     def forward(self, x):
+#        head = x

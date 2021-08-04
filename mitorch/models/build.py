@@ -11,7 +11,7 @@
 import torch
 from fvcore.common.registry import Registry
 from torch import nn
-import utils.logging as logging
+import mitorch.utils.logging as logging
 
 logger = logging.get_logger(__name__)
 
