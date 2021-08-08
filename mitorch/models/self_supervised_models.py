@@ -14,11 +14,6 @@ class AuxillaryHead(nn.Module):
         self.mode = mode
         self.map = _map
 
-        self._create_net()
-
-    def _create_net(self):
-        pass
-
     def forward(self, x):
         reduced = self.__reduce(input=x)
         return self.__map(input=reduced) if self.map else reduced
