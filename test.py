@@ -55,6 +55,6 @@ print(output_tensor.size())
 
 loss_function = CrossEntropyLoss()
 
-loss = loss_function(output_tensor, output_tensor)
+loss = loss_function(input=output_tensor, target=output_tensor)
 
 print(loss)
